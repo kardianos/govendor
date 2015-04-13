@@ -1,5 +1,14 @@
 package rewrite
 
+import (
+	"bytes"
+	"encoding/json"
+	"os"
+	"path/filepath"
+
+	"github.com/dchest/safefile"
+)
+
 // VendorFile is the structure of the vendor file.
 type VendorFile struct {
 	// The name of the tool last used to write this file.
@@ -37,4 +46,25 @@ type VendorFile struct {
 		// parsed and written in the "time.RFC3339" format.
 		VersionTime string
 	}
+}
+
+func writeVendorFile(root string, vf *VendorFile) (err error) {
+	path := filepath.Join(root, internalVendor)
+	perm := os.FileMode(0777)
+	fi, err := os.Stat(path)
+	if err == nil {
+		perm = fi.Mode()
+	}
+
+	jb, err := json.Marshal(vf)
+	if err != nil {
+		return
+	}
+	buf := &bytes.Buffer{}
+	err = json.Indent(buf, jb, "", "\t")
+	if err != nil {
+		return
+	}
+	err = safefile.WriteFile(path, buf.Bytes(), perm)
+	return
 }

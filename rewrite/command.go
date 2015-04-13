@@ -6,12 +6,9 @@
 package rewrite
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
-
-	"github.com/dchest/safefile"
 )
 
 type ListStatus byte
@@ -82,22 +79,6 @@ func CmdInit() error {
 	return writeVendorFile(wd, vf)
 }
 
-func writeVendorFile(root string, vf *VendorFile) error {
-	path := filepath.Join(root, internalVendor)
-	perm := os.FileMode(0777)
-	fi, err := os.Stat(path)
-	if err == nil {
-		perm = fi.Mode()
-	}
-	f, err := safefile.Create(path, perm)
-	if err != nil {
-		return err
-	}
-	// TODO: capture Close err.
-	defer f.Close()
-	coder := json.NewEncoder(f)
-	return coder.Encode(vf)
-}
 func CmdList(status ListStatus) ([]ListItem, error) {
 	/*
 		1. Find vendor root.
@@ -115,6 +96,14 @@ func CmdList(status ListStatus) ([]ListItem, error) {
 	return nil, nil
 }
 
+func findRoot() (root string, err error) {
+	return "", nil
+}
+
+func rootImportPath(root string) (importPath string, err error) {
+	return "", nil
+}
+
 /*
 	Add, Update, and Remove will start with the same steps as List.
 	Rather then returning the results, it will find any affected files,
@@ -130,8 +119,4 @@ func CmdUpdate(importPath string) error {
 }
 func CmdRemove(importPath string) error {
 	return nil
-}
-
-func write() error {
-	return safefile.WriteFile("foo.go", []byte{}, 0777)
 }
