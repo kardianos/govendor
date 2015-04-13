@@ -6,9 +6,12 @@
 package rewrite
 
 import (
+	"encoding/json"
 	"errors"
-	"github.com/dchest/safefile"
+	"os"
 	"path/filepath"
+
+	"github.com/dchest/safefile"
 )
 
 type ListStatus byte
@@ -43,6 +46,7 @@ func (li ListItem) String() string {
 const (
 	vendorFilename = "vendor.json"
 	internalFolder = "internal"
+	toolName       = "github.com/kardianos/vendor"
 )
 
 var (
@@ -60,7 +64,39 @@ func CmdInit() error {
 		3. Create directory if it doesn't exist.
 		4. Create "internal/vendor.json" file.
 	*/
-	return nil
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	_, err = os.Stat(filepath.Join(wd, internalVendor))
+	if os.IsNotExist(err) == false {
+		return ErrVendorFileExists
+	}
+	err = os.MkdirAll(filepath.Join(wd, internalFolder), 0777)
+	if err != nil {
+		return err
+	}
+	vf := &VendorFile{
+		Tool: toolName,
+	}
+	return writeVendorFile(wd, vf)
+}
+
+func writeVendorFile(root string, vf *VendorFile) error {
+	path := filepath.Join(root, internalVendor)
+	perm := os.FileMode(0777)
+	fi, err := os.Stat(path)
+	if err == nil {
+		perm = fi.Mode()
+	}
+	f, err := safefile.Create(path, perm)
+	if err != nil {
+		return err
+	}
+	// TODO: capture Close err.
+	defer f.Close()
+	coder := json.NewEncoder(f)
+	return coder.Encode(vf)
 }
 func CmdList(status ListStatus) ([]ListItem, error) {
 	/*
