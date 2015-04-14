@@ -97,19 +97,15 @@ func CmdList(status ListStatus) ([]ListItem, error) {
 		  * Unused Vendor
 		6. Return Vendor import paths.
 	*/
-	wd, err := os.Getwd()
+	ctx, err := NewContextWD()
 	if err != nil {
 		return nil, err
 	}
-	root, err := findRoot(wd)
+	err = ctx.LoadImports()
 	if err != nil {
 		return nil, err
 	}
-	gopath, rootImportPath, err := findGOPATH(root)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("Root: %s\nGOPATH: %s\nRoot Import Path: %s\n", root, gopath, rootImportPath)
+	fmt.Printf("CTX: %#v\n", *ctx)
 	return nil, nil
 }
 

@@ -32,7 +32,6 @@ func findRoot(folder string) (root string, err error) {
 		nextFolder := filepath.Clean(filepath.Join(folder, ".."))
 
 		// Check for root folder.
-		// TODO: Also check for GOPATH root.
 		if nextFolder == folder {
 			return "", ErrMissingVendorFile
 		}
