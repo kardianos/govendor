@@ -16,6 +16,12 @@ type ListStatus byte
 
 func (ls ListStatus) String() string {
 	switch ls {
+	case StatusStd:
+		return "s"
+	case StatusLocal:
+		return "l"
+	case StatusVendor:
+		return "v"
 	case StatusExternal:
 		return "e"
 	case StatusInternal:
@@ -27,7 +33,10 @@ func (ls ListStatus) String() string {
 }
 
 const (
-	StatusVendor ListStatus = iota
+	StatusUnknown ListStatus = iota
+	StatusStd
+	StatusLocal
+	StatusVendor
 	StatusExternal
 	StatusInternal
 	StatusUnused
@@ -55,8 +64,17 @@ var (
 var (
 	ErrVendorFileExists  = errors.New(internalVendor + " file already exists.")
 	ErrMissingVendorFile = errors.New("Unable to find internal folder with vendor file.")
-	ErrNotInGOPATH       = errors.New("Package must be in GOPATH.")
+	ErrMissingGOROOT     = errors.New("Unable to determine GOROOT.")
+	ErrMissingGOPATH     = errors.New("Missing GOPATH.")
 )
+
+type ErrNotInGOPATH struct {
+	Missing string
+}
+
+func (err ErrNotInGOPATH) Error() string {
+	return fmt.Sprintf("Package %q not in GOPATH.", err.Missing)
+}
 
 func CmdInit() error {
 	/*
@@ -101,11 +119,13 @@ func CmdList(status ListStatus) ([]ListItem, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: Make a way to have imports NOT found in the GOPATH not be fatal
+	// but still report if wanted.
 	err = ctx.LoadImports()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("CTX: %#v\n", *ctx)
 	return nil, nil
 }
 
