@@ -46,6 +46,7 @@ func main() {
 		var list []rewrite.ListItem
 		switch {
 		case len(*listStatus) == 0:
+			list, err = rewrite.CmdList(rewrite.StatusVendor)
 		case strings.HasPrefix("external", *listStatus):
 			list, err = rewrite.CmdList(rewrite.StatusExternal)
 		case strings.HasPrefix("internal", *listStatus):

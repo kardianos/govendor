@@ -7,6 +7,7 @@ package rewrite
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -26,7 +27,8 @@ func (ls ListStatus) String() string {
 }
 
 const (
-	StatusExternal ListStatus = iota
+	StatusVendor ListStatus = iota
+	StatusExternal
 	StatusInternal
 	StatusUnused
 )
@@ -51,7 +53,9 @@ var (
 )
 
 var (
-	ErrVendorFileExists = errors.New(internalVendor + " file already exists.")
+	ErrVendorFileExists  = errors.New(internalVendor + " file already exists.")
+	ErrMissingVendorFile = errors.New("Unable to find internal folder with vendor file.")
+	ErrNotInGOPATH       = errors.New("Package must be in GOPATH.")
 )
 
 func CmdInit() error {
@@ -93,15 +97,20 @@ func CmdList(status ListStatus) ([]ListItem, error) {
 		  * Unused Vendor
 		6. Return Vendor import paths.
 	*/
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	root, err := findRoot(wd)
+	if err != nil {
+		return nil, err
+	}
+	gopath, rootImportPath, err := findGOPATH(root)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("Root: %s\nGOPATH: %s\nRoot Import Path: %s\n", root, gopath, rootImportPath)
 	return nil, nil
-}
-
-func findRoot() (root string, err error) {
-	return "", nil
-}
-
-func rootImportPath(root string) (importPath string, err error) {
-	return "", nil
 }
 
 /*
