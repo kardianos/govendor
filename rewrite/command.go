@@ -86,7 +86,8 @@ var (
 	ErrVendorExists      = errors.New("Package already exists as a vendor package.")
 	ErrLocalPackage      = errors.New("Cannot vendor a local package.")
 	ErrImportExists      = errors.New("Import exists. To update use update command.")
-	ErrImportNotExists   = errors.New("Import does not exist. To add use add command.")
+	ErrImportNotExists   = errors.New("Import does not exist.")
+	ErrNoLocalPath       = errors.New("Import is present in vendor file, but is missing local path.")
 )
 
 type ErrNotInGOPATH struct {
@@ -246,8 +247,24 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	if err != nil {
 		return err
 	}
-
 	err = CopyPackage(filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)), pkg.Dir)
+	if err != nil {
+		return err
+	}
+
+	err = ctx.AddImports(importPath)
+	if err != nil {
+		return err
+	}
+
+	// Determine which files to touch.
+	files := ctx.fileImports[importPath]
+
+	return RewriteFiles(files, []Rule{Rule{From: importPath, To: localImportPath}})
+}
+func CmdRemove(importPath string) error {
+	importPath = slashToImportPath(importPath)
+	ctx, err := NewContextWD()
 	if err != nil {
 		return err
 	}
@@ -257,16 +274,43 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		return err
 	}
 
-	files := ctx.fileImports[importPath]
+	localPath := ""
+	localFound := false
+	vendorFileIndex := 0
+	for i, pkg := range ctx.VendorFile.Package {
+		if pkg.Vendor == importPath {
+			localPath = pkg.Local
+			localFound = true
+			vendorFileIndex = i
+			break
+		}
+	}
+	if !localFound {
+		return ErrImportNotExists
+	}
+	if localPath == "" {
+		return ErrNoLocalPath
+	}
 
-	// Determine which files to touch.
-	err = RewriteFiles(files, []Rule{Rule{From: importPath, To: localImportPath}})
+	files := ctx.fileImports[localPath]
+
+	err = RewriteFiles(files, []Rule{Rule{From: localPath, To: importPath}})
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-func CmdRemove(importPath string) error {
-	return nil
+	err = RemovePackage(localPath)
+	if err != nil {
+		return err
+	}
+	nextPkg := make([]*VendorPackage, 0, len(ctx.VendorFile.Package)-1)
+	for i, pkg := range ctx.VendorFile.Package {
+		if i == vendorFileIndex {
+			continue
+		}
+		nextPkg = append(nextPkg, pkg)
+	}
+	ctx.VendorFile.Package = nextPkg
+
+	return writeVendorFile(ctx.RootDir, ctx.VendorFile)
 }

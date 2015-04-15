@@ -189,28 +189,7 @@ func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
 	for _, path := range alsoImportPath {
 		ctx.packageUnknown[path] = struct{}{}
 	}
-	err = ctx.resolveUnknown()
-	if err != nil {
-		return err
-	}
-
-	// Determine the status of remaining imports.
-	for _, pkg := range ctx.Package {
-		if pkg.Status != StatusUnknown {
-			continue
-		}
-		if _, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
-			pkg.Status = StatusInternal
-			continue
-		}
-		if strings.HasPrefix(pkg.ImportPath, ctx.RootImportPath) {
-			pkg.Status = StatusLocal
-			continue
-		}
-		pkg.Status = StatusExternal
-	}
-
-	return nil
+	return ctx.resolveUnknown()
 }
 
 func (ctx *Context) addFileImports(path, gopath string) error {
@@ -259,6 +238,16 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 	}
 
 	return nil
+}
+
+func (ctx *Context) AddImports(importPath ...string) error {
+	for _, imp := range importPath {
+		if _, found := ctx.Package[imp]; found {
+			continue
+		}
+		ctx.packageUnknown[imp] = struct{}{}
+	}
+	return ctx.resolveUnknown()
 }
 
 func (ctx *Context) resolveUnknown() error {
@@ -310,6 +299,22 @@ top:
 			}
 			continue top
 		}
+	}
+
+	// Determine the status of remaining imports.
+	for _, pkg := range ctx.Package {
+		if pkg.Status != StatusUnknown {
+			continue
+		}
+		if _, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
+			pkg.Status = StatusInternal
+			continue
+		}
+		if strings.HasPrefix(pkg.ImportPath, ctx.RootImportPath) {
+			pkg.Status = StatusLocal
+			continue
+		}
+		pkg.Status = StatusExternal
 	}
 	return nil
 }

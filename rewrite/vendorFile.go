@@ -11,22 +11,22 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dchest/safefile"
+	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
 
 // VendorFile is the structure of the vendor file.
 type VendorFile struct {
 	// The import path of the tool used to write this file.
 	// Examples: "github.com/kardianos/vendor" or "golang.org/x/tools/cmd/vendor".
-	Tool string
+	Tool	string
 
-	Package []*VendorPackage
+	Package	[]*VendorPackage
 }
 
 type VendorPackage struct {
 	// Vendor import path. Example "rsc.io/pdf".
 	// go get <Vendor> should fetch the remote vendor package.
-	Vendor string
+	Vendor	string
 
 	// Package path as found in GOPATH.
 	// Examples: "path/to/mypkg/internal/rsc.io/pdf".
@@ -35,18 +35,18 @@ type VendorPackage struct {
 	//
 	// Local should always use forward slashes and must not contain the
 	// path elements "." or "..".
-	Local string
+	Local	string
 
 	// The version of the package. This field must be persisted by all
 	// tools, but not all tools will interpret this field.
 	// The value of Version should be a single value that can be used
 	// to fetch the same or similar version.
 	// Examples: "abc104...438ade0", "v1.3.5"
-	Version string
+	Version	string
 
 	// VersionTime is the time the version was created. The time should be
 	// parsed and written in the "time.RFC3339" format.
-	VersionTime string
+	VersionTime	string
 }
 
 func writeVendorFile(root string, vf *VendorFile) (err error) {

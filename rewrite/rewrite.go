@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/dchest/safefile"
+	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
 
 /*
@@ -37,6 +37,7 @@ func CopyPackage(destPath, srcPath string) error {
 	}
 
 	fl, err := destDir.Readdir(-1)
+	destDir.Close()
 	if err != nil {
 		return err
 	}
@@ -57,6 +58,7 @@ func CopyPackage(destPath, srcPath string) error {
 	}
 
 	fl, err = srcDir.Readdir(-1)
+	srcDir.Close()
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,7 @@ func copyFile(destPath, srcPath string) error {
 	}
 	defer src.Close()
 
-	dest, err := os.Open(destPath)
+	dest, err := os.Create(destPath)
 	if err != nil {
 		return err
 	}
@@ -116,16 +118,16 @@ func RemovePackage(path string) error {
 
 // Rule provides the translation from origional import path to new import path.
 type Rule struct {
-	From string
-	To   string
+	From	string
+	To		string
 }
 
 // RewriteFiles modified the imports according to rules and works on the
 // file paths provided by filePaths.
 func RewriteFiles(filePaths []string, rules []Rule) error {
 	goprint := &printer.Config{
-		Mode:     printer.TabIndent,
-		Tabwidth: 4,
+		Mode:		printer.TabIndent,
+		Tabwidth:	4,
 	}
 	for _, path := range filePaths {
 		// Read the file into AST, modify the AST.
