@@ -1,7 +1,6 @@
 package rewrite
 
 import (
-	"fmt"
 	"go/parser"
 	"go/token"
 	"os"
@@ -20,10 +19,12 @@ type Context struct {
 
 	VendorFile *VendorFile
 
+	// Package is a map where the import path is the key.
+	// Populated with LoadPackage.
+	Package map[string]*Package
+
 	parserFileSet  *token.FileSet
-	packageCache   map[string]*Package
 	packageUnknown map[string]struct{}
-	packageMissing map[string]struct{}
 
 	vendorFileLocal map[string]*VendorPackage
 }
@@ -89,9 +90,9 @@ func NewContextWD() (*Context, error) {
 
 		// TODO: Probably want this to be part of the public API,
 		// probably a public method to copy to a slice.
-		packageCache:   make(map[string]*Package),
-		packageMissing: make(map[string]struct{}),
+		Package: make(map[string]*Package),
 	}
+
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ type File struct {
 	Imports []string
 }
 
-func (ctx *Context) LoadImports() error {
+func (ctx *Context) LoadPackage() error {
 	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() && info.Name()[0] == '.' {
 			return filepath.SkipDir
@@ -165,10 +166,10 @@ func (ctx *Context) LoadImports() error {
 	if err != nil {
 		return err
 	}
-	for _, pkg := range ctx.packageCache {
+	for _, pkg := range ctx.Package {
 		for _, f := range pkg.Files {
 			for _, imp := range f.Imports {
-				if _, found := ctx.packageCache[imp]; !found {
+				if _, found := ctx.Package[imp]; !found {
 					ctx.packageUnknown[imp] = struct{}{}
 				}
 			}
@@ -179,19 +180,20 @@ func (ctx *Context) LoadImports() error {
 		return err
 	}
 
-	// TODO: Determine the status of all imports.
-
-	for _, pkg := range ctx.packageCache {
-		fmt.Printf("PKG: %s\n", pkg.ImportPath)
-		for _, f := range pkg.Files {
-			fmt.Printf("\tFile: %s\n", f.Path)
-			for _, imp := range f.Imports {
-				fmt.Printf("\t\tImport: %v\n", imp)
-			}
+	// Determine the status of remaining imports.
+	for _, pkg := range ctx.Package {
+		if pkg.Status != StatusUnknown {
+			continue
 		}
-	}
-	for importPath := range ctx.packageMissing {
-		fmt.Printf("Missing: %s\n", importPath)
+		if _, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
+			pkg.Status = StatusInternal
+			continue
+		}
+		if strings.HasPrefix(pkg.ImportPath, ctx.RootImportPath) {
+			pkg.Status = StatusLocal
+			continue
+		}
+		pkg.Status = StatusExternal
 	}
 
 	return nil
@@ -214,13 +216,13 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 	importPath = strings.TrimPrefix(importPath, "/")
 	importPath = strings.TrimSuffix(importPath, "/")
 
-	pkg, found := ctx.packageCache[importPath]
+	pkg, found := ctx.Package[importPath]
 	if !found {
 		pkg = &Package{
 			Dir:        dir,
 			ImportPath: importPath,
 		}
-		ctx.packageCache[importPath] = pkg
+		ctx.Package[importPath] = pkg
 
 		if _, found := ctx.packageUnknown[importPath]; found {
 			delete(ctx.packageUnknown, importPath)
@@ -236,7 +238,7 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 		imp = strings.TrimSuffix(strings.TrimPrefix(imp, `"`), `"`)
 		pf.Imports[i] = imp
 
-		if _, found := ctx.packageCache[imp]; !found {
+		if _, found := ctx.Package[imp]; !found {
 			ctx.packageUnknown[imp] = struct{}{}
 		}
 	}
@@ -251,14 +253,18 @@ top:
 			dir, gopath, err := ctx.findImportDir(importPath, "")
 			if err != nil {
 				if _, ok := err.(ErrNotInGOPATH); ok {
-					ctx.packageMissing[importPath] = struct{}{}
+					ctx.Package[importPath] = &Package{
+						Dir:        "",
+						ImportPath: importPath,
+						Status:     StatusMissing,
+					}
 					delete(ctx.packageUnknown, importPath)
 					continue top
 				}
 				return err
 			}
 			if gopath == ctx.Goroot {
-				ctx.packageCache[importPath] = &Package{
+				ctx.Package[importPath] = &Package{
 					Dir:        dir,
 					ImportPath: importPath,
 					Status:     StatusStd,

@@ -10,18 +10,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 type ListStatus byte
 
 func (ls ListStatus) String() string {
 	switch ls {
+	case StatusUnknown:
+		return "?"
+	case StatusMissing:
+		return "m"
 	case StatusStd:
 		return "s"
 	case StatusLocal:
 		return "l"
-	case StatusVendor:
-		return "v"
 	case StatusExternal:
 		return "e"
 	case StatusInternal:
@@ -34,9 +38,9 @@ func (ls ListStatus) String() string {
 
 const (
 	StatusUnknown ListStatus = iota
+	StatusMissing
 	StatusStd
 	StatusLocal
-	StatusVendor
 	StatusExternal
 	StatusInternal
 	StatusUnused
@@ -49,6 +53,17 @@ type ListItem struct {
 
 func (li ListItem) String() string {
 	return li.Status.String() + " " + li.Path
+}
+
+type ListItemSort []ListItem
+
+func (li ListItemSort) Len() int      { return len(li) }
+func (li ListItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
+func (li ListItemSort) Less(i, j int) bool {
+	if li[i].Status == li[j].Status {
+		return strings.Compare(li[i].Path, li[j].Path) < 0
+	}
+	return li[i].Status > li[j].Status
 }
 
 const (
@@ -101,7 +116,7 @@ func CmdInit() error {
 	return writeVendorFile(wd, vf)
 }
 
-func CmdList(status ListStatus) ([]ListItem, error) {
+func CmdList() ([]ListItem, error) {
 	/*
 		1. Find vendor root.
 		2. Find vendor root import path via GOPATH.
@@ -120,12 +135,19 @@ func CmdList(status ListStatus) ([]ListItem, error) {
 		return nil, err
 	}
 
-	err = ctx.LoadImports()
+	err = ctx.LoadPackage()
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	li := make([]ListItem, 0, len(ctx.Package))
+	for _, pkg := range ctx.Package {
+		li = append(li, ListItem{Status: pkg.Status, Path: pkg.ImportPath})
+	}
+	// Sort li by Status, then Path.
+	sort.Sort(ListItemSort(li))
+
+	return li, nil
 }
 
 /*

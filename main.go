@@ -44,20 +44,37 @@ func main() {
 		err = rewrite.CmdRemove(*removeImport)
 	case "list":
 		var list []rewrite.ListItem
+		var status []rewrite.ListStatus
+		list, err = rewrite.CmdList()
 		switch {
 		case len(*listStatus) == 0:
-			list, err = rewrite.CmdList(rewrite.StatusVendor)
+			status = []rewrite.ListStatus{rewrite.StatusExternal, rewrite.StatusInternal, rewrite.StatusUnused, rewrite.StatusMissing, rewrite.StatusLocal}
 		case strings.HasPrefix("external", *listStatus):
-			list, err = rewrite.CmdList(rewrite.StatusExternal)
+			status = []rewrite.ListStatus{rewrite.StatusExternal}
 		case strings.HasPrefix("internal", *listStatus):
-			list, err = rewrite.CmdList(rewrite.StatusInternal)
+			status = []rewrite.ListStatus{rewrite.StatusInternal}
 		case strings.HasPrefix("unused", *listStatus):
-			list, err = rewrite.CmdList(rewrite.StatusUnused)
+			status = []rewrite.ListStatus{rewrite.StatusUnused}
+		case strings.HasPrefix("missing", *listStatus):
+			status = []rewrite.ListStatus{rewrite.StatusMissing}
+		case strings.HasPrefix("local", *listStatus):
+			status = []rewrite.ListStatus{rewrite.StatusLocal}
+		case strings.HasPrefix("std", *listStatus):
+			status = []rewrite.ListStatus{rewrite.StatusStd}
 		default:
 			kp.UsageErrorf("Unknown status to print: %s", *listStatus)
 		}
 		for _, item := range list {
-			fmt.Println(item)
+			print := false
+			for _, s := range status {
+				if item.Status == s {
+					print = true
+					break
+				}
+			}
+			if print {
+				fmt.Println(item)
+			}
 		}
 	default:
 		kp.Usage()
