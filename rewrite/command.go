@@ -85,6 +85,8 @@ var (
 	ErrMissingGOPATH     = errors.New("Missing GOPATH.")
 	ErrVendorExists      = errors.New("Package already exists as a vendor package.")
 	ErrLocalPackage      = errors.New("Cannot vendor a local package.")
+	ErrImportExists      = errors.New("Import exists. To update use update command.")
+	ErrImportNotExists   = errors.New("Import does not exist. To add use add command.")
 )
 
 type ErrNotInGOPATH struct {
@@ -162,6 +164,31 @@ func CmdList() ([]ListItem, error) {
 */
 
 func CmdAdd(importPath string) error {
+	return addUpdateImportPath(importPath, verifyAdd)
+}
+
+func CmdUpdate(importPath string) error {
+	return addUpdateImportPath(importPath, verifyUpdate)
+}
+
+func verifyAdd(ctx *Context, importPath string) error {
+	for _, pkg := range ctx.VendorFile.Package {
+		if pkg.Vendor == importPath {
+			return ErrImportExists
+		}
+	}
+	return nil
+}
+func verifyUpdate(ctx *Context, importPath string) error {
+	for _, pkg := range ctx.VendorFile.Package {
+		if pkg.Vendor == importPath {
+			return nil
+		}
+	}
+	return ErrImportNotExists
+}
+
+func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath string) error) error {
 	importPath = slashToImportPath(importPath)
 	ctx, err := NewContextWD()
 	if err != nil {
@@ -169,6 +196,11 @@ func CmdAdd(importPath string) error {
 	}
 
 	err = ctx.LoadPackage(importPath)
+	if err != nil {
+		return err
+	}
+
+	err = verify(ctx, importPath)
 	if err != nil {
 		return err
 	}
@@ -196,16 +228,26 @@ func CmdAdd(importPath string) error {
 
 	// Update vendor file with correct Local field.
 	// TODO: find the Version and VersionTime.
-	ctx.VendorFile.Package = append(ctx.VendorFile.Package, &VendorPackage{
-		Vendor: importPath,
-		Local:  localImportPath,
-	})
+	var vp *VendorPackage
+	for _, pkg := range ctx.VendorFile.Package {
+		if pkg.Vendor == importPath {
+			vp = pkg
+			break
+		}
+	}
+	if vp == nil {
+		vp = &VendorPackage{
+			Vendor: importPath,
+			Local:  localImportPath,
+		}
+		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+	}
 	err = writeVendorFile(ctx.RootDir, ctx.VendorFile)
 	if err != nil {
 		return err
 	}
 
-	err = CopyPackage(pkg.Dir, filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)))
+	err = CopyPackage(filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)), pkg.Dir)
 	if err != nil {
 		return err
 	}
@@ -223,9 +265,6 @@ func CmdAdd(importPath string) error {
 		return err
 	}
 
-	return nil
-}
-func CmdUpdate(importPath string) error {
 	return nil
 }
 func CmdRemove(importPath string) error {
