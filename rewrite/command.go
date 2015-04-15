@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -73,7 +74,8 @@ const (
 )
 
 var (
-	internalVendor = filepath.Join(internalFolder, vendorFilename)
+	internalVendor      = filepath.Join(internalFolder, vendorFilename)
+	internalFolderSlash = string(filepath.Separator) + internalFolder + string(filepath.Separator)
 )
 
 var (
@@ -81,6 +83,8 @@ var (
 	ErrMissingVendorFile = errors.New("Unable to find internal folder with vendor file.")
 	ErrMissingGOROOT     = errors.New("Unable to determine GOROOT.")
 	ErrMissingGOPATH     = errors.New("Missing GOPATH.")
+	ErrVendorExists      = errors.New("Package already exists as a vendor package.")
+	ErrLocalPackage      = errors.New("Cannot vendor a local package.")
 )
 
 type ErrNotInGOPATH struct {
@@ -158,6 +162,67 @@ func CmdList() ([]ListItem, error) {
 */
 
 func CmdAdd(importPath string) error {
+	importPath = slashToImportPath(importPath)
+	ctx, err := NewContextWD()
+	if err != nil {
+		return err
+	}
+
+	err = ctx.LoadPackage(importPath)
+	if err != nil {
+		return err
+	}
+
+	pkg := ctx.Package[importPath]
+	if pkg.Status != StatusExternal {
+		if pkg.Status == StatusInternal {
+			return ErrVendorExists
+		}
+		if pkg.Status == StatusLocal {
+			return ErrLocalPackage
+		}
+		return ErrNotInGOPATH{importPath}
+	}
+
+	// Determine correct local import path (from GOPATH).
+	/*
+		"crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
+		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg"
+		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
+	*/
+	// The following method "cheats" and doesn't look at any external vendor file.
+	ss := strings.Split(importPath, internalFolderSlash)
+	localImportPath := path.Join(ctx.RootImportPath, internalFolder, ss[len(ss)-1])
+
+	// Update vendor file with correct Local field.
+	// TODO: find the Version and VersionTime.
+	ctx.VendorFile.Package = append(ctx.VendorFile.Package, &VendorPackage{
+		Vendor: importPath,
+		Local:  localImportPath,
+	})
+	err = writeVendorFile(ctx.RootDir, ctx.VendorFile)
+	if err != nil {
+		return err
+	}
+
+	err = CopyPackage(pkg.Dir, filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)))
+	if err != nil {
+		return err
+	}
+
+	err = ctx.LoadPackage(importPath)
+	if err != nil {
+		return err
+	}
+
+	files := ctx.fileImports[importPath]
+
+	// Determine which files to touch.
+	err = RewriteFiles(files, []Rule{Rule{From: importPath, To: localImportPath}})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 func CmdUpdate(importPath string) error {

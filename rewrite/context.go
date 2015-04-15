@@ -1,3 +1,7 @@
+// Copyright 2015 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package rewrite
 
 import (
@@ -6,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -25,8 +30,9 @@ type Context struct {
 
 	parserFileSet  *token.FileSet
 	packageUnknown map[string]struct{}
+	fileImports    map[string][]string // ImportPath -> []file paths.
 
-	vendorFileLocal map[string]*VendorPackage
+	vendorFileLocal map[string]*VendorPackage // Vendor file "Local" field lookup for packages.
 }
 
 func NewContextWD() (*Context, error) {
@@ -45,21 +51,27 @@ func NewContextWD() (*Context, error) {
 	}
 
 	// Get GOROOT. First check ENV, then run "go env" and find the GOROOT line.
-	cmd := exec.Command("go", "env")
-	goEnv, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-	var goroot = ""
-	const gorootLookFor = `GOROOT="`
-	for _, line := range strings.Split(string(goEnv), "\n") {
-		if strings.HasPrefix(line, gorootLookFor) == false {
-			continue
+	goroot := os.Getenv("GOROOT")
+	if len(goroot) == 0 {
+		// If GOROOT is not set, get from go cmd.
+		cmd := exec.Command("go", "env")
+		goEnv, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, err
 		}
-		goroot = strings.TrimPrefix(line, gorootLookFor)
-		goroot = strings.TrimSuffix(goroot, `"`)
-		goroot = filepath.Join(goroot, "src")
-		break
+		const gorootLookFor = `GOROOT=`
+		for _, line := range strings.Split(string(goEnv), "\n") {
+			if strings.HasPrefix(line, gorootLookFor) == false {
+				continue
+			}
+			goroot = strings.TrimPrefix(line, gorootLookFor)
+			goroot, err = strconv.Unquote(goroot)
+			if err != nil {
+				return nil, err
+			}
+			goroot = filepath.Join(goroot, "src")
+			break
+		}
 	}
 	if goroot == "" {
 		return nil, ErrMissingGOROOT
@@ -84,13 +96,12 @@ func NewContextWD() (*Context, error) {
 
 		VendorFile: vf,
 
+		Package: make(map[string]*Package),
+
 		parserFileSet:   token.NewFileSet(),
 		packageUnknown:  make(map[string]struct{}),
 		vendorFileLocal: make(map[string]*VendorPackage, len(vf.Package)),
-
-		// TODO: Probably want this to be part of the public API,
-		// probably a public method to copy to a slice.
-		Package: make(map[string]*Package),
+		fileImports:     make(map[string][]string),
 	}
 
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
@@ -133,9 +144,7 @@ func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err e
 	for _, gopath := range ctx.GopathList {
 		if strings.HasPrefix(dir, gopath) {
 			importPath = strings.TrimPrefix(dir, gopath)
-			if filepath.Separator == '\\' {
-				importPath = strings.Replace(importPath, `\`, "/", -1)
-			}
+			importPath = slashToImportPath(importPath)
 			return importPath, gopath, nil
 		}
 	}
@@ -153,7 +162,7 @@ type File struct {
 	Imports []string
 }
 
-func (ctx *Context) LoadPackage() error {
+func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
 	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() && info.Name()[0] == '.' {
 			return filepath.SkipDir
@@ -172,8 +181,13 @@ func (ctx *Context) LoadPackage() error {
 				if _, found := ctx.Package[imp]; !found {
 					ctx.packageUnknown[imp] = struct{}{}
 				}
+				fileList := ctx.fileImports[imp]
+				ctx.fileImports[imp] = append(fileList, f.Path)
 			}
 		}
+	}
+	for _, path := range alsoImportPath {
+		ctx.packageUnknown[path] = struct{}{}
 	}
 	err = ctx.resolveUnknown()
 	if err != nil {
@@ -210,9 +224,7 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 
 	dir, _ := filepath.Split(path)
 	importPath := strings.TrimPrefix(dir, gopath)
-	if filepath.Separator == '\\' {
-		importPath = strings.Replace(importPath, `\`, "/", -1)
-	}
+	importPath = slashToImportPath(importPath)
 	importPath = strings.TrimPrefix(importPath, "/")
 	importPath = strings.TrimSuffix(importPath, "/")
 
@@ -235,7 +247,10 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 	pkg.Files = append(pkg.Files, pf)
 	for i := range f.Imports {
 		imp := f.Imports[i].Path.Value
-		imp = strings.TrimSuffix(strings.TrimPrefix(imp, `"`), `"`)
+		imp, err = strconv.Unquote(imp)
+		if err != nil {
+			return err
+		}
 		pf.Imports[i] = imp
 
 		if _, found := ctx.Package[imp]; !found {

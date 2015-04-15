@@ -1,8 +1,13 @@
+// Copyright 2015 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package rewrite
 
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func findRoot(folder string) (root string, err error) {
@@ -20,4 +25,14 @@ func findRoot(folder string) (root string, err error) {
 		}
 		folder = nextFolder
 	}
+}
+
+func slashToFilepath(path string) string {
+	if '/' == filepath.Separator {
+		return path
+	}
+	return strings.Replace(path, "/", string(filepath.Separator), -1)
+}
+func slashToImportPath(path string) string {
+	return strings.Replace(path, `\`, "/", -1)
 }
