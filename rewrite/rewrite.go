@@ -5,6 +5,7 @@
 package rewrite
 
 import (
+	"fmt"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/dchest/safefile"
 )
@@ -169,12 +171,15 @@ type Rule struct {
 
 // RewriteFiles modified the imports according to rules and works on the
 // file paths provided by filePaths.
-func RewriteFiles(filePaths []string, rules []Rule) error {
+func (ctx *Context) RewriteFiles(filePaths []string, rules []Rule) error {
 	goprint := &printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
 	}
 	for _, path := range filePaths {
+		if strings.HasPrefix(path, ctx.RootDir) == false {
+			return fmt.Errorf("Will not rewrite. Path %q not found in root dir %q.", path, ctx.RootDir)
+		}
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
 		f, err := parser.ParseFile(fileset, path, nil, parser.ParseComments)
