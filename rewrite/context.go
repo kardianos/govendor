@@ -281,6 +281,7 @@ top:
 				return err
 			}
 			info, err := df.Readdir(-1)
+			df.Close()
 			if err != nil {
 				return err
 			}
