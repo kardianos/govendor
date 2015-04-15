@@ -171,8 +171,8 @@ type Rule struct {
 // file paths provided by filePaths.
 func RewriteFiles(filePaths []string, rules []Rule) error {
 	goprint := &printer.Config{
-		Mode:     printer.TabIndent,
-		Tabwidth: 4,
+		Mode:     printer.TabIndent | printer.UseSpaces,
+		Tabwidth: 8,
 	}
 	for _, path := range filePaths {
 		// Read the file into AST, modify the AST.
