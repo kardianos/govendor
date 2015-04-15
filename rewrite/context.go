@@ -23,6 +23,9 @@ type Context struct {
 	parserFileSet  *token.FileSet
 	packageCache   map[string]*Package
 	packageUnknown map[string]struct{}
+	packageMissing map[string]struct{}
+
+	vendorFileLocal map[string]*VendorPackage
 }
 
 func NewContextWD() (*Context, error) {
@@ -80,14 +83,24 @@ func NewContextWD() (*Context, error) {
 
 		VendorFile: vf,
 
-		parserFileSet:  token.NewFileSet(),
+		parserFileSet:   token.NewFileSet(),
+		packageUnknown:  make(map[string]struct{}),
+		vendorFileLocal: make(map[string]*VendorPackage, len(vf.Package)),
+
+		// TODO: Probably want this to be part of the public API,
+		// probably a public method to copy to a slice.
 		packageCache:   make(map[string]*Package),
-		packageUnknown: make(map[string]struct{}),
+		packageMissing: make(map[string]struct{}),
 	}
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
 	if err != nil {
 		return nil, err
 	}
+
+	for _, pkg := range ctx.VendorFile.Package {
+		ctx.vendorFileLocal[pkg.Local] = pkg
+	}
+
 	return ctx, nil
 }
 
@@ -166,6 +179,8 @@ func (ctx *Context) LoadImports() error {
 		return err
 	}
 
+	// TODO: Determine the status of all imports.
+
 	for _, pkg := range ctx.packageCache {
 		fmt.Printf("PKG: %s\n", pkg.ImportPath)
 		for _, f := range pkg.Files {
@@ -175,8 +190,8 @@ func (ctx *Context) LoadImports() error {
 			}
 		}
 	}
-	for importPath := range ctx.packageUnknown {
-		fmt.Printf("Waiting: %s\n", importPath)
+	for importPath := range ctx.packageMissing {
+		fmt.Printf("Missing: %s\n", importPath)
 	}
 
 	return nil
@@ -235,6 +250,11 @@ top:
 		for importPath := range ctx.packageUnknown {
 			dir, gopath, err := ctx.findImportDir(importPath, "")
 			if err != nil {
+				if _, ok := err.(ErrNotInGOPATH); ok {
+					ctx.packageMissing[importPath] = struct{}{}
+					delete(ctx.packageUnknown, importPath)
+					continue top
+				}
 				return err
 			}
 			if gopath == ctx.Goroot {

@@ -120,12 +120,11 @@ func CmdList(status ListStatus) ([]ListItem, error) {
 		return nil, err
 	}
 
-	// TODO: Make a way to have imports NOT found in the GOPATH not be fatal
-	// but still report if wanted.
 	err = ctx.LoadImports()
 	if err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
