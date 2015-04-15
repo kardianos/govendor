@@ -299,7 +299,7 @@ func CmdRemove(importPath string) error {
 		return err
 	}
 
-	err = RemovePackage(localPath)
+	err = RemovePackage(filepath.Join(ctx.RootGopath, slashToFilepath(localPath)))
 	if err != nil {
 		return err
 	}

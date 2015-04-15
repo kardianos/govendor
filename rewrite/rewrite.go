@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
+	"github.com/dchest/safefile"
 )
 
 /*
@@ -112,22 +112,67 @@ func copyFile(destPath, srcPath string) error {
 // RemovePackage removes the specified folder files. If folder is empty when
 // done (no nested folders, remove the folder and any empty parent folders.
 func RemovePackage(path string) error {
-	// TODO: RemoveFolder
-	return nil
+	// Ensure the path is empty of files.
+	dir, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	fl, err := dir.Readdir(-1)
+	dir.Close()
+	if err != nil {
+		return err
+	}
+	for _, fi := range fl {
+		if fi.IsDir() {
+			continue
+		}
+		err = os.Remove(filepath.Join(path, fi.Name()))
+		if err != nil {
+			return err
+		}
+	}
+
+	// Ignore errors here.
+	for {
+		dir, err := os.Open(path)
+		if err != nil {
+			return nil
+		}
+
+		fl, err := dir.Readdir(1)
+		dir.Close()
+		if err != nil {
+			return nil
+		}
+		if len(fl) > 0 {
+			return nil
+		}
+		err = os.Remove(path)
+		if err != nil {
+			return nil
+		}
+		nextPath := filepath.Clean(filepath.Join(path, ".."))
+		// Check for root.
+		if nextPath == path {
+			return nil
+		}
+		path = nextPath
+	}
 }
 
 // Rule provides the translation from origional import path to new import path.
 type Rule struct {
-	From	string
-	To		string
+	From string
+	To   string
 }
 
 // RewriteFiles modified the imports according to rules and works on the
 // file paths provided by filePaths.
 func RewriteFiles(filePaths []string, rules []Rule) error {
 	goprint := &printer.Config{
-		Mode:		printer.TabIndent,
-		Tabwidth:	4,
+		Mode:     printer.TabIndent,
+		Tabwidth: 4,
 	}
 	for _, path := range filePaths {
 		// Read the file into AST, modify the AST.
