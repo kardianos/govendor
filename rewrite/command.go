@@ -76,8 +76,7 @@ const (
 )
 
 var (
-	internalVendor      = filepath.Join(internalFolder, vendorFilename)
-	internalFolderSlash = string(filepath.Separator) + internalFolder + string(filepath.Separator)
+	internalVendor = filepath.Join(internalFolder, vendorFilename)
 )
 
 var (
@@ -251,7 +250,7 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
 	*/
 	// The following method "cheats" and doesn't look at any external vendor file.
-	ss := strings.Split(importPath, internalFolderSlash)
+	ss := strings.SplitN(importPath, "/"+internalFolder+"/", 2)
 	localImportPath := path.Join(ctx.RootImportPath, internalFolder, ss[len(ss)-1])
 
 	importPath, err = verify(ctx, importPath, localImportPath)
@@ -276,7 +275,6 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	}
 
 	// Update vendor file with correct Local field.
-	// TODO: find the Version and VersionTime.
 	var vp *VendorPackage
 	for _, vpkg := range ctx.VendorFile.Package {
 		if vpkg.Vendor == importPath {
@@ -291,6 +289,7 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
+	// Find the VCS information.
 	vcs, err := FindVcs(pkg.Gopath, pkg.Dir)
 	if err != nil {
 		return err
@@ -302,10 +301,14 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	if vcs.VersionTime != nil {
 		vp.VersionTime = vcs.VersionTime.Format(time.RFC3339)
 	}
+
+	// Write the vendor file.
 	err = writeVendorFile(ctx.RootDir, ctx.VendorFile)
 	if err != nil {
 		return err
 	}
+
+	// Copy the package locally.
 	err = CopyPackage(filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)), pkg.Dir)
 	if err != nil {
 		return err
