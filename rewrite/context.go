@@ -143,7 +143,7 @@ func (ctx *Context) findImportDir(importPath, useGopath string) (dir, gopath str
 func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err error) {
 	for _, gopath := range ctx.GopathList {
 		if fileHasPrefix(dir, gopath) {
-			importPath = strings.TrimPrefix(dir, gopath)
+			importPath = fileTrimPrefix(dir, gopath)
 			importPath = slashToImportPath(importPath)
 			return importPath, gopath, nil
 		}
@@ -203,7 +203,7 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 	}
 
 	dir, _ := filepath.Split(path)
-	importPath := strings.TrimPrefix(dir, gopath)
+	importPath := fileTrimPrefix(dir, gopath)
 	importPath = slashToImportPath(importPath)
 	importPath = strings.TrimPrefix(importPath, "/")
 	importPath = strings.TrimSuffix(importPath, "/")

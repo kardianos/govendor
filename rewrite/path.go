@@ -45,3 +45,10 @@ func fileHasPrefix(s, prefix string) bool {
 	}
 	return strings.HasPrefix(s, prefix)
 }
+
+func fileTrimPrefix(s, prefix string) string {
+	if fileHasPrefix(s, prefix) {
+		return s[len(prefix):]
+	}
+	return s
+}
