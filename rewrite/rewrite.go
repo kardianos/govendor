@@ -139,12 +139,14 @@ func RemovePackage(path string) error {
 	for {
 		dir, err := os.Open(path)
 		if err != nil {
+			// fmt.Fprintf(os.Stderr, "Failedd to open directory %q: %v\n", path, err)
 			return nil
 		}
 
 		fl, err := dir.Readdir(1)
 		dir.Close()
-		if err != nil {
+		if err != nil && err != io.EOF {
+			// fmt.Fprintf(os.Stderr, "Failedd to list directory %q: %v\n", path, err)
 			return nil
 		}
 		if len(fl) > 0 {
@@ -152,6 +154,7 @@ func RemovePackage(path string) error {
 		}
 		err = os.Remove(path)
 		if err != nil {
+			// fmt.Fprintf(os.Stderr, "Failedd to remove empty directory %q: %v\n", path, err)
 			return nil
 		}
 		nextPath := filepath.Clean(filepath.Join(path, ".."))
