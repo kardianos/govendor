@@ -71,12 +71,14 @@ func (VcsGit) Find(dir string) (*VcsInfo, error) {
 	info := &VcsInfo{}
 
 	cmd := exec.Command("git", "diff", "--quiet")
+	cmd.Dir = dir
 	err = cmd.Run()
 	if err != nil {
 		info.Dirty = true
 	}
 
-	cmd = exec.Command("git", "show", "--pretty=format:%H@%ci", "-s")
+	cmd = exec.Command("git", "show", "--pretty=format:%H@%ai", "-s")
+	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -108,6 +110,7 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 
 	// Get info.
 	cmd := exec.Command("hg", "identify", "-i")
+	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -120,6 +123,7 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 	}
 
 	cmd = exec.Command("hg", "log", "-r", rev)
+	cmd.Dir = dir
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
