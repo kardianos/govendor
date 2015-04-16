@@ -5,7 +5,6 @@
 package rewrite
 
 import (
-	"fmt"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -181,7 +180,7 @@ func (ctx *Context) RewriteFiles(filePaths map[string]struct{}, rules []Rule) er
 	}
 	for path := range filePaths {
 		if strings.HasPrefix(path, ctx.RootDir) == false {
-			return fmt.Errorf("Will not rewrite. Path %q not found in root dir %q.", path, ctx.RootDir)
+			continue
 		}
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
