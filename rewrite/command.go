@@ -292,27 +292,22 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		return err
 	}
 
-	err = ctx.AddImports(importPath)
+	err = ctx.AddImports(importPath, localImportPath)
 	if err != nil {
 		return err
 	}
 
 	// Determine which files to touch.
-	fileUnique := make(map[string]struct{}, len(ctx.VendorFile.Package)*3)
+	files := make(map[string]struct{}, len(ctx.VendorFile.Package)*3)
 
 	// Rules are all lines in the vendor file.
 	rules := make([]Rule, 0, len(ctx.VendorFile.Package))
 	for _, vp := range ctx.VendorFile.Package {
-		for _, f := range ctx.fileImports[vp.Vendor] {
-			fileUnique[f] = struct{}{}
+		for f := range ctx.fileImports[vp.Vendor] {
+			files[f] = struct{}{}
 		}
 		rules = append(rules, Rule{From: vp.Vendor, To: vp.Local})
 	}
-	files := make([]string, 0, len(fileUnique))
-	for f := range fileUnique {
-		files = append(files, f)
-	}
-
 	return ctx.RewriteFiles(files, rules)
 }
 func CmdRemove(importPath string) error {
