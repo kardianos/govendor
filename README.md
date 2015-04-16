@@ -3,7 +3,23 @@ Follows the recommendation to use import path re-writes and avoid GOPATH
 changes and go tool changes. Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec .
 
-*Work in progress*
+### Status
+The vendor tool will copy packages locally and re-write the imports.
+It will also record the imports used, both from where they are from
+and where they are stored.
+
+The vendor tool is ready for use.
+
+Tasks that are planned:
+ * Adding any available version or version time to the vendor file.
+ * Proper inspection of source vendor files.
+ * Sorting of packages in vendor file.
+
+Tasks that are NOT planned at this time.
+ * "Transactional" re-writes (rename temp files all at once).
+ * CLI convenience tools such as add all external or remove all unsued.
+ * CLI checks that only shows what it would do if it ran.
+ * CLI ouput of diffs to stdout, no file re-writes.
 
 ### FAQ
 Q: Why not use an existing tool?
