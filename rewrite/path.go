@@ -7,6 +7,7 @@ package rewrite
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -35,4 +36,12 @@ func slashToFilepath(path string) string {
 }
 func slashToImportPath(path string) string {
 	return strings.Replace(path, `\`, "/", -1)
+}
+
+func fileHasPrefix(s, prefix string) bool {
+	if runtime.GOOS == "windows" {
+		s = strings.ToLower(s)
+		prefix = strings.ToLower(prefix)
+	}
+	return strings.HasPrefix(s, prefix)
 }

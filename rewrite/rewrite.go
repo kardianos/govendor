@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
@@ -179,7 +178,7 @@ func (ctx *Context) RewriteFiles(filePaths map[string]struct{}, rules []Rule) er
 		Tabwidth: 8,
 	}
 	for path := range filePaths {
-		if strings.HasPrefix(path, ctx.RootDir) == false {
+		if fileHasPrefix(path, ctx.RootDir) == false {
 			continue
 		}
 		// Read the file into AST, modify the AST.

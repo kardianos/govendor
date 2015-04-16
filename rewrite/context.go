@@ -142,7 +142,7 @@ func (ctx *Context) findImportDir(importPath, useGopath string) (dir, gopath str
 // findImportPath takes a absolute directory and returns the import path and go path.
 func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err error) {
 	for _, gopath := range ctx.GopathList {
-		if strings.HasPrefix(dir, gopath) {
+		if fileHasPrefix(dir, gopath) {
 			importPath = strings.TrimPrefix(dir, gopath)
 			importPath = slashToImportPath(importPath)
 			return importPath, gopath, nil

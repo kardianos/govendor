@@ -46,7 +46,7 @@ func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
 		if nextPath == path {
 			return nil, nil
 		}
-		if strings.HasPrefix(nextPath, root) == false {
+		if fileHasPrefix(nextPath, root) == false {
 			return nil, nil
 		}
 		path = nextPath
