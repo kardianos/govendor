@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 type ListStatus byte
@@ -251,9 +252,9 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	// Update vendor file with correct Local field.
 	// TODO: find the Version and VersionTime.
 	var vp *VendorPackage
-	for _, pkg := range ctx.VendorFile.Package {
-		if pkg.Vendor == importPath {
-			vp = pkg
+	for _, vpkg := range ctx.VendorFile.Package {
+		if vpkg.Vendor == importPath {
+			vp = vpkg
 			break
 		}
 	}
@@ -263,6 +264,14 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 			Local:  localImportPath,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+	}
+	vcs, err := FindVcs(pkg.Gopath, pkg.Dir)
+	if err != nil {
+		return err
+	}
+	vp.Version = vcs.Version
+	if vcs.VersionTime != nil {
+		vp.VersionTime = vcs.VersionTime.Format(time.RFC3339)
 	}
 	err = writeVendorFile(ctx.RootDir, ctx.VendorFile)
 	if err != nil {

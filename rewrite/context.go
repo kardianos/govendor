@@ -154,6 +154,7 @@ func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err e
 type Package struct {
 	Dir        string
 	ImportPath string
+	Gopath     string
 	Files      []*File
 	Status     ListStatus
 }
@@ -212,6 +213,7 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 		pkg = &Package{
 			Dir:        dir,
 			ImportPath: importPath,
+			Gopath:     gopath,
 		}
 		ctx.Package[importPath] = pkg
 
@@ -272,6 +274,7 @@ top:
 					Dir:        dir,
 					ImportPath: importPath,
 					Status:     StatusStd,
+					Gopath:     ctx.Goroot,
 				}
 				delete(ctx.packageUnknown, importPath)
 				continue top
