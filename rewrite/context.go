@@ -69,13 +69,13 @@ func NewContextWD() (*Context, error) {
 			if err != nil {
 				return nil, err
 			}
-			goroot = filepath.Join(goroot, "src")
 			break
 		}
 	}
 	if goroot == "" {
 		return nil, ErrMissingGOROOT
 	}
+	goroot = filepath.Join(goroot, "src")
 
 	// Get the GOPATHs. Prepend the GOROOT to the list.
 	all := os.Getenv("GOPATH")
@@ -269,7 +269,7 @@ top:
 				}
 				return err
 			}
-			if gopath == ctx.Goroot {
+			if fileStringEquals(gopath, ctx.Goroot) {
 				ctx.Package[importPath] = &Package{
 					Dir:        dir,
 					ImportPath: importPath,

@@ -52,3 +52,11 @@ func fileTrimPrefix(s, prefix string) string {
 	}
 	return s
 }
+
+func fileStringEquals(s1, s2 string) string {
+	if runtime.GOOS == "windows" {
+		s1 = strings.ToLower(s1)
+		s2 = strings.ToLower(a2)
+	}
+	return s1 == s2
+}
