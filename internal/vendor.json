@@ -2,22 +2,10 @@
 	"Tool": "github.com/kardianos/vendor",
 	"Package": [
 		{
-			"Vendor": "github.com/alecthomas/units",
-			"Local": "github.com/kardianos/vendor/internal/github.com/alecthomas/units",
-			"Version": "6b4e7dc5e3143b85ea77909c72caf89416fc2915",
-			"VersionTime": "2015-01-09T11:21:28+11:00"
-		},
-		{
 			"Vendor": "github.com/dchest/safefile",
 			"Local": "github.com/kardianos/vendor/internal/github.com/dchest/safefile",
 			"Version": "74b1ec0619e722c9f674d1a21e1a703fe90c4371",
 			"VersionTime": "2015-04-10T19:48:00+02:00"
-		},
-		{
-			"Vendor": "gopkg.in/alecthomas/kingpin.v1",
-			"Local": "github.com/kardianos/vendor/internal/gopkg.in/alecthomas/kingpin.v1",
-			"Version": "55a69a226d28a43b913720f5d765706d49c8fa9e",
-			"VersionTime": "2015-02-10T15:09:13+11:00"
 		}
 	]
 }
