@@ -4,6 +4,22 @@ changes and go tool changes. Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the establishment a final vendor file
 specification and be a useful tool.
 
+### Examples
+```
+# Add external packages.
+vendor add -status external
+
+# Add a specific package.
+vendor add github.com/kardianos/osext
+
+# Update vendor packages.
+vendor update -status internal
+
+# Revert back to normal GOPATH packages.
+vendor remove -status internal
+```
+
+### Status
 Tasks that are planned:
  * Proper inspection of source vendor files (see rewrite/path.go findLocalImportPath).
  * Remove the package "import" comment from copied re-written packages.
