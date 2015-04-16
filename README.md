@@ -3,20 +3,17 @@ Follows the recommendation to use import path re-writes and avoid GOPATH
 changes and go tool changes. Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec .
 
-### Status
-The vendor tool will copy packages locally and re-write the imports.
-It will also record the imports used, both from where they are from
-and where they are stored. For git and mercurial repos it will also
-record the version and time of the source.
+### Goals
+ * Aid in the establishment a final vendor file specification.
+ * Be a useful tool.
 
 Tasks that are planned:
  * Proper inspection of source vendor files.
 
-Tasks that are NOT planned at this time.
+Tasks that are not planned at this time, but could be added in the future.
+ * CLI convenience commands: "add all external" or "remove all unused".
  * "Transactional" re-writes (rename temp files all at once).
- * CLI convenience tools such as add all external or remove all unsued.
- * CLI checks that only shows what it would do if it ran.
- * CLI ouput of diffs to stdout, no file re-writes.
+ * Command to check for newer versions, either in GOPATH or remote repo.
 
 ### FAQ
 Q: Why not use an existing tool?

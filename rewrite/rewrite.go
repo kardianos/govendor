@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dchest/safefile"
+	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
 
 /*

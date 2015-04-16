@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dchest/safefile"
+	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
 
 // VendorFile is the structure of the vendor file.

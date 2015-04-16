@@ -12,7 +12,7 @@ import (
 
 	"github.com/kardianos/vendor/rewrite"
 
-	kp "gopkg.in/alecthomas/kingpin.v1"
+	kp "github.com/kardianos/vendor/internal/gopkg.in/alecthomas/kingpin.v1"
 )
 
 var (
