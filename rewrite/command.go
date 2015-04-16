@@ -174,10 +174,10 @@ func CmdUpdate(importPath string) error {
 	return addUpdateImportPath(importPath, verifyUpdate)
 }
 
-func verifyAdd(ctx *Context, importPath, local string) error {
+func verifyAdd(ctx *Context, importPath, local string) (string, error) {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Vendor == importPath {
-			return ErrImportExists
+			return importPath, ErrImportExists
 		}
 	}
 	// Check fo existing internal folders present.
@@ -186,32 +186,37 @@ func verifyAdd(ctx *Context, importPath, local string) error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No folder present, no need to check for files.
-			return nil
+			return importPath, nil
 		}
-		return err
+		return importPath, err
 	}
 	fl, err := dir.Readdir(-1)
 	dir.Close()
 	if err != nil {
-		return err
+		return importPath, err
 	}
 	for _, fi := range fl {
 		if fi.IsDir() == false {
-			return ErrFilesExists
+			return importPath, ErrFilesExists
 		}
 	}
-	return nil
+	return importPath, nil
 }
-func verifyUpdate(ctx *Context, importPath, local string) error {
+func verifyUpdate(ctx *Context, importPath, local string) (string, error) {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Vendor == importPath {
-			return nil
+			return importPath, nil
 		}
 	}
-	return ErrImportNotExists
+	for _, pkg := range ctx.VendorFile.Package {
+		if pkg.Local == importPath {
+			return pkg.Vendor, nil
+		}
+	}
+	return importPath, ErrImportNotExists
 }
 
-func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath, local string) error) error {
+func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath, local string) (string, error)) error {
 	importPath = slashToImportPath(importPath)
 	ctx, err := NewContextWD()
 	if err != nil {
@@ -233,7 +238,12 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	ss := strings.Split(importPath, internalFolderSlash)
 	localImportPath := path.Join(ctx.RootImportPath, internalFolder, ss[len(ss)-1])
 
-	err = verify(ctx, importPath, localImportPath)
+	importPath, err = verify(ctx, importPath, localImportPath)
+	if err != nil {
+		return err
+	}
+
+	err = ctx.AddImports(importPath)
 	if err != nil {
 		return err
 	}
@@ -318,6 +328,7 @@ func CmdRemove(importPath string) error {
 	}
 
 	localPath := ""
+	vendorPath := importPath
 	localFound := false
 	vendorFileIndex := 0
 	for i, pkg := range ctx.VendorFile.Package {
@@ -329,6 +340,17 @@ func CmdRemove(importPath string) error {
 		}
 	}
 	if !localFound {
+		for i, pkg := range ctx.VendorFile.Package {
+			if pkg.Local == importPath {
+				localPath = pkg.Local
+				vendorPath = pkg.Vendor
+				localFound = true
+				vendorFileIndex = i
+				break
+			}
+		}
+	}
+	if !localFound {
 		return ErrImportNotExists
 	}
 	if localPath == "" {
@@ -337,7 +359,7 @@ func CmdRemove(importPath string) error {
 
 	files := ctx.fileImports[localPath]
 
-	err = ctx.RewriteFiles(files, []Rule{Rule{From: localPath, To: importPath}})
+	err = ctx.RewriteFiles(files, []Rule{Rule{From: localPath, To: vendorPath}})
 	if err != nil {
 		return err
 	}

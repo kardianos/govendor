@@ -188,7 +188,9 @@ func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
 		}
 	}
 	for _, path := range alsoImportPath {
-		ctx.packageUnknown[path] = struct{}{}
+		if _, found := ctx.Package[path]; !found {
+			ctx.packageUnknown[path] = struct{}{}
+		}
 	}
 	return ctx.resolveUnknown()
 }
