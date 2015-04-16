@@ -88,6 +88,7 @@ var (
 	ErrImportExists      = errors.New("Import exists. To update use update command.")
 	ErrImportNotExists   = errors.New("Import does not exist.")
 	ErrNoLocalPath       = errors.New("Import is present in vendor file, but is missing local path.")
+	ErrFilesExists       = errors.New("Files exists at destination of internal vendor path.")
 )
 
 type ErrNotInGOPATH struct {
@@ -172,15 +173,35 @@ func CmdUpdate(importPath string) error {
 	return addUpdateImportPath(importPath, verifyUpdate)
 }
 
-func verifyAdd(ctx *Context, importPath string) error {
+func verifyAdd(ctx *Context, importPath, local string) error {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Vendor == importPath {
 			return ErrImportExists
 		}
 	}
+	// Check fo existing internal folders present.
+	dirPath := filepath.Join(ctx.RootGopath, local)
+	dir, err := os.Open(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// No folder present, no need to check for files.
+			return nil
+		}
+		return err
+	}
+	fl, err := dir.Readdir(-1)
+	dir.Close()
+	if err != nil {
+		return err
+	}
+	for _, fi := range fl {
+		if fi.IsDir() == false {
+			return ErrFilesExists
+		}
+	}
 	return nil
 }
-func verifyUpdate(ctx *Context, importPath string) error {
+func verifyUpdate(ctx *Context, importPath, local string) error {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Vendor == importPath {
 			return nil
@@ -189,7 +210,7 @@ func verifyUpdate(ctx *Context, importPath string) error {
 	return ErrImportNotExists
 }
 
-func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath string) error) error {
+func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath, local string) error) error {
 	importPath = slashToImportPath(importPath)
 	ctx, err := NewContextWD()
 	if err != nil {
@@ -201,7 +222,17 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		return err
 	}
 
-	err = verify(ctx, importPath)
+	// Determine correct local import path (from GOPATH).
+	/*
+		"crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
+		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg"
+		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
+	*/
+	// The following method "cheats" and doesn't look at any external vendor file.
+	ss := strings.Split(importPath, internalFolderSlash)
+	localImportPath := path.Join(ctx.RootImportPath, internalFolder, ss[len(ss)-1])
+
+	err = verify(ctx, importPath, localImportPath)
 	if err != nil {
 		return err
 	}
@@ -216,16 +247,6 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		}
 		return ErrNotInGOPATH{importPath}
 	}
-
-	// Determine correct local import path (from GOPATH).
-	/*
-		"crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
-		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg"
-		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
-	*/
-	// The following method "cheats" and doesn't look at any external vendor file.
-	ss := strings.Split(importPath, internalFolderSlash)
-	localImportPath := path.Join(ctx.RootImportPath, internalFolder, ss[len(ss)-1])
 
 	// Update vendor file with correct Local field.
 	// TODO: find the Version and VersionTime.
@@ -258,10 +279,22 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	}
 
 	// Determine which files to touch.
-	files := ctx.fileImports[importPath]
+	fileUnique := make(map[string]struct{}, len(ctx.VendorFile.Package)*3)
 
-	// TODO: also check for any existing vendor file paths to update.
-	return ctx.RewriteFiles(files, []Rule{Rule{From: importPath, To: localImportPath}})
+	// Rules are all lines in the vendor file.
+	rules := make([]Rule, 0, len(ctx.VendorFile.Package))
+	for _, vp := range ctx.VendorFile.Package {
+		for _, f := range ctx.fileImports[vp.Vendor] {
+			fileUnique[f] = struct{}{}
+		}
+		rules = append(rules, Rule{From: vp.Vendor, To: vp.Local})
+	}
+	files := make([]string, 0, len(fileUnique))
+	for f := range fileUnique {
+		files = append(files, f)
+	}
+
+	return ctx.RewriteFiles(files, rules)
 }
 func CmdRemove(importPath string) error {
 	importPath = slashToImportPath(importPath)
