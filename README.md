@@ -11,7 +11,6 @@ Tasks that are planned:
  * Proper inspection of source vendor files.
 
 Tasks that are not planned at this time, but could be added in the future.
- * CLI convenience commands: "add all external" or "remove all unused".
  * "Transactional" re-writes (rename temp files all at once).
  * Command to check for newer versions, either in GOPATH or remote repo.
 

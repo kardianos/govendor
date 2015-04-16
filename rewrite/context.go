@@ -157,6 +157,8 @@ type Package struct {
 	Gopath     string
 	Files      []*File
 	Status     ListStatus
+
+	referenced map[string]*Package
 }
 type File struct {
 	Path    string
@@ -319,6 +321,39 @@ top:
 			continue
 		}
 		pkg.Status = StatusExternal
+	}
+
+	// Determine any un-used internal vendor imports.
+	// 1. populate the references.
+	for _, pkg := range ctx.Package {
+		pkg.referenced = make(map[string]*Package, len(pkg.referenced))
+	}
+	for _, pkg := range ctx.Package {
+		for _, f := range pkg.Files {
+			for _, imp := range f.Imports {
+				if other, found := ctx.Package[imp]; found {
+					other.referenced[pkg.ImportPath] = pkg
+				}
+			}
+		}
+	}
+
+	// 2. Mark as unused and remove all. Loop until it stops marking more
+	// as unused.
+	for {
+		altered := false
+		for _, pkg := range ctx.Package {
+			if len(pkg.referenced) == 0 && pkg.Status == StatusInternal {
+				altered = true
+				pkg.Status = StatusUnused
+				for _, other := range ctx.Package {
+					delete(other.referenced, pkg.ImportPath)
+				}
+			}
+		}
+		if !altered {
+			break
+		}
 	}
 
 	// Add files to import map.
