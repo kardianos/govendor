@@ -10,8 +10,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
-	"github.com/dchest/safefile"
+	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
 
 // VendorFile is the structure of the vendor file.
@@ -49,6 +51,17 @@ type VendorPackage struct {
 	VersionTime string
 }
 
+type vendorPackageSort []*VendorPackage
+
+func (vp vendorPackageSort) Len() int      { return len(vp) }
+func (vp vendorPackageSort) Swap(i, j int) { vp[i], vp[j] = vp[j], vp[i] }
+func (vp vendorPackageSort) Less(i, j int) bool {
+	if vp[i].Local == vp[j].Local {
+		return strings.Compare(vp[i].Vendor, vp[j].Vendor) < 0
+	}
+	return strings.Compare(vp[i].Local, vp[j].Local) < 0
+}
+
 func writeVendorFile(root string, vf *VendorFile) (err error) {
 	path := filepath.Join(root, internalVendor)
 	perm := os.FileMode(0777)
@@ -60,6 +73,8 @@ func writeVendorFile(root string, vf *VendorFile) (err error) {
 	if vf.Package == nil {
 		vf.Package = []*VendorPackage{}
 	}
+
+	sort.Sort(vendorPackageSort(vf.Package))
 
 	jb, err := json.Marshal(vf)
 	if err != nil {

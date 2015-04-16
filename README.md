@@ -6,14 +6,11 @@ https://github.com/kardianos/vendor-spec .
 ### Status
 The vendor tool will copy packages locally and re-write the imports.
 It will also record the imports used, both from where they are from
-and where they are stored.
-
-The vendor tool is ready for use.
+and where they are stored. For git and mercurial repos it will also
+record the version and time of the source.
 
 Tasks that are planned:
- * Adding any available version or version time to the vendor file.
  * Proper inspection of source vendor files.
- * Sorting of packages in vendor file.
 
 Tasks that are NOT planned at this time.
  * "Transactional" re-writes (rename temp files all at once).

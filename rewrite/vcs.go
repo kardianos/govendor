@@ -13,6 +13,7 @@ import (
 )
 
 type VcsInfo struct {
+	Dirty       bool
 	Version     string
 	VersionTime *time.Time
 }
@@ -67,27 +68,27 @@ func (VcsGit) Find(dir string) (*VcsInfo, error) {
 	}
 
 	// Get info.
-	cmd := exec.Command("git", "log", "-n", "1")
+	info := &VcsInfo{}
+
+	cmd := exec.Command("git", "diff", "--quiet")
+	err = cmd.Run()
+	if err != nil {
+		info.Dirty = true
+	}
+
+	cmd = exec.Command("git", "show", "--pretty=format:%H@%ci", "-s")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
-	info := &VcsInfo{}
-	for _, line := range strings.Split(string(output), "\n") {
-		if strings.HasPrefix(line, "commit ") {
-			ss := strings.Split(line, " ")
-			info.Version = strings.TrimSpace(ss[len(ss)-1])
-		}
-		if strings.HasPrefix(line, "Date:") {
-			line = strings.TrimPrefix(line, "Date:")
-			tm, err := time.Parse("Mon Jan 02 15:04:05 2006 -0700", strings.TrimSpace(line))
-			if err == nil {
-				info.VersionTime = &tm
-			} else {
-				return nil, err
-			}
-		}
+	line := strings.TrimSpace(string(output))
+	ss := strings.Split(line, "@")
+	info.Version = ss[0]
+	tm, err := time.Parse("2006-01-02 15:04:05 -0700", ss[1])
+	if err != nil {
+		return nil, err
 	}
+	info.VersionTime = &tm
 	return info, nil
 }
 
@@ -106,8 +107,20 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 	}
 
 	// Get info.
-	cmd := exec.Command("hg", "log", "-l", "1")
+	cmd := exec.Command("hg", "identify", "-i")
 	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	rev := strings.TrimSpace(string(output))
+	if strings.HasSuffix(rev, "+") {
+		return &VcsInfo{
+			Dirty: true,
+		}, nil
+	}
+
+	cmd = exec.Command("hg", "log", "-r", rev)
+	output, err = cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
