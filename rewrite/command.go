@@ -100,6 +100,14 @@ func (err ErrNotInGOPATH) Error() string {
 	return fmt.Sprintf("Package %q not in GOPATH.", err.Missing)
 }
 
+type ErrDirtyPackage struct {
+	ImportPath string
+}
+
+func (err ErrDirtyPackage) Error() string {
+	return fmt.Sprintf("Package %q has uncommited changes in the vcs.", err.ImportPath)
+}
+
 func CmdInit() error {
 	/*
 		1. Determine if CWD contains "internal/vendor.json".
@@ -278,6 +286,9 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	vcs, err := FindVcs(pkg.Gopath, pkg.Dir)
 	if err != nil {
 		return err
+	}
+	if vcs.Dirty {
+		return ErrDirtyPackage{pkg.ImportPath}
 	}
 	vp.Version = vcs.Version
 	if vcs.VersionTime != nil {

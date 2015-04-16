@@ -109,6 +109,8 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 	}
 
 	// Get info.
+	info := &VcsInfo{}
+
 	cmd := exec.Command("hg", "identify", "-i")
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
@@ -117,9 +119,8 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 	}
 	rev := strings.TrimSpace(string(output))
 	if strings.HasSuffix(rev, "+") {
-		return &VcsInfo{
-			Dirty: true,
-		}, nil
+		info.Dirty = true
+		rev = strings.TrimSuffix(rev, "+")
 	}
 
 	cmd = exec.Command("hg", "log", "-r", rev)
@@ -128,7 +129,6 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	info := &VcsInfo{}
 	for _, line := range strings.Split(string(output), "\n") {
 		if strings.HasPrefix(line, "changeset:") {
 			ss := strings.Split(line, ":")
