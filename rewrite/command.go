@@ -243,15 +243,12 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		return err
 	}
 
-	// Determine correct local import path (from GOPATH).
-	/*
-		"crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
-		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg"
-		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
-	*/
-	// The following method "cheats" and doesn't look at any external vendor file.
-	ss := strings.SplitN(importPath, "/"+internalFolder+"/", 2)
-	localImportPath := path.Join(ctx.RootImportPath, internalFolder, ss[len(ss)-1])
+	localImportPath, err := findLocalImportPath(ctx, importPath)
+	if err != nil {
+		return err
+	}
+	// Adjust relative local path to GOPATH import path.
+	localImportPath = path.Join(ctx.RootImportPath, internalFolder, localImportPath)
 
 	importPath, err = verify(ctx, importPath, localImportPath)
 	if err != nil {

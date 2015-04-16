@@ -60,3 +60,20 @@ func fileStringEquals(s1, s2 string) bool {
 	}
 	return s1 == s2
 }
+
+// findLocalImportPath determines the correct local import path (from GOPATH)
+// and from any nested internal vendor files. It returns a string relative to
+// the root "internal" folder.
+func findLocalImportPath(ctx *Context, importPath string) (string, error) {
+	/*
+		"crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
+		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg"
+		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
+	*/
+	// The following method "cheats" and doesn't look at any external vendor file.
+	ss := strings.SplitN(importPath, "/"+internalFolder+"/", 2)
+
+	// TODO: Look for any vendor files. If the import is contained in a vendor file
+	// return the vendor field for that package.
+	return ss[len(ss)-1], nil
+}
