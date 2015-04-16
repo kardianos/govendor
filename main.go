@@ -17,7 +17,12 @@ import (
 var help = `vendor: copy go packages locally and re-write imports.
 vendor init
 vendor list [status]
-vendor {add, update, remove} [-status] <import or status>
+vendor {add, update, remove} [-status] <import-path or status>
+
+Expanding "..."
+	A package import path may be expanded to other paths that
+	show up in "vendor list" be ending the "import-path" with "...".
+	NOTE: this uses the import tree from "vendor list" and NOT the file system.
 
 Status list:
 	external - package does not share root path
@@ -33,6 +38,7 @@ Status can be referenced by their initial letters.
 	
 Example:
 	vendor add github.com/kardianos/osext
+	vendor update github.com/kardianos/...
 	vendor add -status external
 	vendor update -status ext
 	vendor remove -status internal
@@ -137,13 +143,37 @@ func main() {
 			}
 		} else {
 			for _, arg := range args {
-				switch cmd {
-				case "add":
-					err = rewrite.CmdAdd(arg)
-				case "update":
-					err = rewrite.CmdUpdate(arg)
-				case "remove":
-					err = rewrite.CmdRemove(arg)
+				// Expand the list based on the analysis of the import tree.
+				if strings.HasSuffix(arg, "...") {
+					list, err := rewrite.CmdList()
+					if err != nil {
+						printHelpExit(err)
+					}
+					base := strings.TrimSuffix(arg, "...")
+
+					for _, item := range list {
+						if strings.HasPrefix(item.Path, base) == false && strings.HasPrefix(item.VendorPath, base) == false {
+							continue
+						}
+
+						switch cmd {
+						case "add":
+							err = rewrite.CmdAdd(item.Path)
+						case "update":
+							err = rewrite.CmdUpdate(item.Path)
+						case "remove":
+							err = rewrite.CmdRemove(item.Path)
+						}
+					}
+				} else {
+					switch cmd {
+					case "add":
+						err = rewrite.CmdAdd(arg)
+					case "update":
+						err = rewrite.CmdUpdate(arg)
+					case "remove":
+						err = rewrite.CmdRemove(arg)
+					}
 				}
 			}
 		}

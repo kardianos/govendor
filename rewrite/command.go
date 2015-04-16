@@ -49,8 +49,9 @@ const (
 )
 
 type ListItem struct {
-	Status ListStatus
-	Path   string
+	Status     ListStatus
+	Path       string
+	VendorPath string
 }
 
 func (li ListItem) String() string {
@@ -157,14 +158,21 @@ func CmdList() ([]ListItem, error) {
 		return nil, err
 	}
 
-	li := make([]ListItem, 0, len(ctx.Package))
+	list := make([]ListItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
-		li = append(li, ListItem{Status: pkg.Status, Path: pkg.ImportPath})
+		li := ListItem{
+			Status: pkg.Status,
+			Path:   pkg.ImportPath,
+		}
+		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
+			li.VendorPath = vp.Vendor
+		}
+		list = append(list, li)
 	}
 	// Sort li by Status, then Path.
-	sort.Sort(ListItemSort(li))
+	sort.Sort(ListItemSort(list))
 
-	return li, nil
+	return list, nil
 }
 
 /*
