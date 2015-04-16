@@ -1,11 +1,8 @@
 ## Vendor tool for Go
 Follows the recommendation to use import path re-writes and avoid GOPATH
 changes and go tool changes. Uses the following vendor file specification:
-https://github.com/kardianos/vendor-spec .
-
-### Goals
- * Aid in the establishment a final vendor file specification.
- * Be a useful tool.
+https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the establishment a final vendor file
+specification and be a useful tool.
 
 Tasks that are planned:
  * Proper inspection of source vendor files (see rewrite/path.go findLocalImportPath).
