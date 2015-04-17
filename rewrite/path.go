@@ -12,7 +12,7 @@ import (
 )
 
 func findRoot(folder string) (root string, err error) {
-	for {
+	for i := 0; i <= looplimit; i++ {
 		test := filepath.Join(folder, internalVendor)
 		_, err := os.Stat(test)
 		if os.IsNotExist(err) == false {
@@ -26,6 +26,7 @@ func findRoot(folder string) (root string, err error) {
 		}
 		folder = nextFolder
 	}
+	return "", ErrLoopLimit{"findRoot()"}
 }
 
 func slashToFilepath(path string) string {

@@ -376,7 +376,7 @@ top:
 
 	// 2. Mark as unused and remove all. Loop until it stops marking more
 	// as unused.
-	for {
+	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for _, pkg := range ctx.Package {
 			if len(pkg.referenced) == 0 && pkg.Status == StatusInternal {
@@ -389,6 +389,9 @@ top:
 		}
 		if !altered {
 			break
+		}
+		if i == looplimit {
+			return ErrLoopLimit{"resolveUnknown() Mark Unused"}
 		}
 	}
 

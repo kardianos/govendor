@@ -72,6 +72,8 @@ const (
 	vendorFilename = "vendor.json"
 	internalFolder = "internal"
 	toolName       = "github.com/kardianos/vendor"
+
+	looplimit = 10000
 )
 
 var (
@@ -105,6 +107,14 @@ type ErrDirtyPackage struct {
 
 func (err ErrDirtyPackage) Error() string {
 	return fmt.Sprintf("Package %q has uncommited changes in the vcs.", err.ImportPath)
+}
+
+type ErrLoopLimit struct {
+	Loop string
+}
+
+func (err ErrLoopLimit) Error() string {
+	return fmt.Sprintf("BUG: Loop limit of %d was reached for loop %s. Please report this bug.", looplimit, err.Loop)
 }
 
 func CmdInit() error {

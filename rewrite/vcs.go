@@ -30,7 +30,7 @@ var VcsRegistry = []Vcs{
 
 func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
 	path := packageDir
-	for {
+	for i := 0; i <= looplimit; i++ {
 		for _, vcs := range VcsRegistry {
 			info, err = vcs.Find(path)
 			if err != nil {
@@ -51,6 +51,7 @@ func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
 		}
 		path = nextPath
 	}
+	return nil, ErrLoopLimit{"FindVcs()"}
 }
 
 type VcsGit struct{}

@@ -136,7 +136,7 @@ func RemovePackage(path string) error {
 	}
 
 	// Ignore errors here.
-	for {
+	for i := 0; i <= looplimit; i++ {
 		dir, err := os.Open(path)
 		if err != nil {
 			// fmt.Fprintf(os.Stderr, "Failedd to open directory %q: %v\n", path, err)
@@ -164,6 +164,7 @@ func RemovePackage(path string) error {
 		}
 		path = nextPath
 	}
+	return ErrLoopLimit{"RemovePackage() remove parent folders"}
 }
 
 // Rule provides the translation from origional import path to new import path.
