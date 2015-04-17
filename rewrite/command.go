@@ -98,7 +98,7 @@ type ErrNotInGOPATH struct {
 }
 
 func (err ErrNotInGOPATH) Error() string {
-	return fmt.Sprintf("Package %q not in GOPATH.", err.Missing)
+	return fmt.Sprintf("Package %q not a go package or not in GOPATH.", err.Missing)
 }
 
 type ErrDirtyPackage struct {
@@ -270,7 +270,10 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		return err
 	}
 
-	pkg := ctx.Package[importPath]
+	pkg, foundPkg := ctx.Package[importPath]
+	if !foundPkg {
+		return ErrNotInGOPATH{importPath}
+	}
 	if pkg.Status != StatusExternal {
 		if pkg.Status == StatusInternal {
 			return ErrVendorExists

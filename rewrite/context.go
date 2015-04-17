@@ -262,8 +262,10 @@ func (ctx *Context) AddImports(importPath ...string) error {
 }
 
 func (ctx *Context) resolveUnknown() error {
+	pkgUnknownCount := 0
 top:
-	for len(ctx.packageUnknown) > 0 {
+	for pkgUnknownCount != len(ctx.packageUnknown) {
+		pkgUnknownCount = len(ctx.packageUnknown)
 		for importPath := range ctx.packageUnknown {
 			dir, gopath, err := ctx.findImportDir(importPath, "")
 			if err != nil {
