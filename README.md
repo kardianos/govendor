@@ -22,8 +22,6 @@ vendor remove -status internal
 ### Status
 Tasks that are planned:
  * Proper inspection of source vendor files (see rewrite/path.go findLocalImportPath).
- * Remove the package "import" comment from copied re-written packages.
-    This comment will be enforced starting in go1.5 for user packages.
 
 Tasks that are not planned at this time, but could be done in the future.
  * Speed up working with multiple packages at once by altering the rewrite API.

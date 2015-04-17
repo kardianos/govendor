@@ -5,6 +5,7 @@
 package rewrite
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
@@ -172,15 +174,16 @@ type Rule struct {
 
 // RewriteFiles modified the imports according to rules and works on the
 // file paths provided by filePaths.
-func (ctx *Context) RewriteFiles(filePaths map[string]struct{}, rules []Rule) error {
+func (ctx *Context) RewriteFiles(filePaths map[string]*File, rules []Rule) error {
 	goprint := &printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
 	}
-	for path := range filePaths {
+	for path, fileInfo := range filePaths {
 		if fileHasPrefix(path, ctx.RootDir) == false {
 			continue
 		}
+
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
 		f, err := parser.ParseFile(fileset, path, nil, parser.ParseComments)
@@ -199,6 +202,30 @@ func (ctx *Context) RewriteFiles(filePaths map[string]struct{}, rules []Rule) er
 				}
 				impNode.Path.Value = strconv.Quote(rule.To)
 				break
+			}
+		}
+
+		// Remove import comment.
+		if fileInfo.Package.Status == StatusInternal {
+			var ic *ast.Comment
+			if f.Name != nil {
+				pos := f.Name.Pos()
+			big:
+				// Find the next comment after the package name.
+				for _, cblock := range f.Comments {
+					for _, c := range cblock.List {
+						if c.Pos() > pos {
+							ic = c
+							break big
+						}
+					}
+				}
+			}
+			if ic != nil {
+				// If it starts with the import text, assume it is the import comment and remove.
+				if index := strings.Index(ic.Text, " import "); index > 0 && index < 5 {
+					ic.Text = ""
+				}
 			}
 		}
 

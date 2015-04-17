@@ -30,7 +30,7 @@ type Context struct {
 
 	parserFileSet  *token.FileSet
 	packageUnknown map[string]struct{}
-	fileImports    map[string]map[string]struct{} // ImportPath -> []file paths.
+	fileImports    map[string]map[string]*File // ImportPath -> []file paths.
 
 	vendorFileLocal map[string]*VendorPackage // Vendor file "Local" field lookup for packages.
 }
@@ -101,7 +101,7 @@ func NewContextWD() (*Context, error) {
 		parserFileSet:   token.NewFileSet(),
 		packageUnknown:  make(map[string]struct{}),
 		vendorFileLocal: make(map[string]*VendorPackage, len(vf.Package)),
-		fileImports:     make(map[string]map[string]struct{}),
+		fileImports:     make(map[string]map[string]*File),
 	}
 
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
@@ -161,6 +161,7 @@ type Package struct {
 	referenced map[string]*Package
 }
 type File struct {
+	Package *Package
 	Path    string
 	Imports []string
 }
@@ -224,6 +225,7 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 		}
 	}
 	pf := &File{
+		Package: pkg,
 		Path:    path,
 		Imports: make([]string, len(f.Imports)),
 	}
@@ -362,10 +364,10 @@ top:
 			for _, imp := range f.Imports {
 				fileList := ctx.fileImports[imp]
 				if fileList == nil {
-					fileList = make(map[string]struct{}, 1)
+					fileList = make(map[string]*File, 1)
 					ctx.fileImports[imp] = fileList
 				}
-				fileList[f.Path] = struct{}{}
+				fileList[f.Path] = f
 			}
 		}
 	}
