@@ -159,8 +159,9 @@ func CmdList() ([]ListItem, error) {
 	list := make([]ListItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
 		li := ListItem{
-			Status: pkg.Status,
-			Path:   pkg.ImportPath,
+			Status:     pkg.Status,
+			Path:       pkg.ImportPath,
+			VendorPath: pkg.VendorPath,
 		}
 		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
 			li.VendorPath = vp.Vendor
@@ -327,9 +328,37 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		}
 		rules = append(rules, Rule{From: vp.Vendor, To: vp.Local})
 	}
+	// Add local package files.
 	for _, f := range ctx.Package[localImportPath].Files {
 		files[f.Path] = f
 	}
+	// Rewrite any external package where the local path is different then the vendor path.
+	for _, pkg := range ctx.Package {
+		if pkg.Status != StatusExternal {
+			continue
+		}
+		if pkg.ImportPath == pkg.VendorPath {
+			continue
+		}
+		for _, otherPkg := range ctx.Package {
+			if pkg == otherPkg {
+				continue
+			}
+			if otherPkg.Status != StatusInternal {
+				continue
+			}
+			if otherPkg.VendorPath != pkg.VendorPath {
+				continue
+			}
+
+			for fpath, f := range ctx.fileImports[pkg.ImportPath] {
+				files[fpath] = f
+			}
+			rules = append(rules, Rule{From: pkg.ImportPath, To: otherPkg.ImportPath})
+			break
+		}
+	}
+
 	return ctx.RewriteFiles(files, rules)
 }
 func CmdRemove(importPath string) error {

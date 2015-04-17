@@ -154,6 +154,7 @@ func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err e
 type Package struct {
 	Dir        string
 	ImportPath string
+	VendorPath string
 	Gopath     string
 	Files      []*File
 	Status     ListStatus
@@ -219,6 +220,7 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 		pkg = &Package{
 			Dir:        dir,
 			ImportPath: importPath,
+			VendorPath: importPath,
 			Gopath:     gopath,
 		}
 		ctx.Package[importPath] = pkg
@@ -269,6 +271,7 @@ top:
 					ctx.Package[importPath] = &Package{
 						Dir:        "",
 						ImportPath: importPath,
+						VendorPath: importPath,
 						Status:     StatusMissing,
 					}
 					delete(ctx.packageUnknown, importPath)
@@ -280,6 +283,7 @@ top:
 				ctx.Package[importPath] = &Package{
 					Dir:        dir,
 					ImportPath: importPath,
+					VendorPath: importPath,
 					Status:     StatusStd,
 					Gopath:     ctx.Goroot,
 				}
@@ -317,8 +321,9 @@ top:
 		if pkg.Status != StatusUnknown {
 			continue
 		}
-		if _, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
+		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
 			pkg.Status = StatusInternal
+			pkg.VendorPath = vp.Vendor
 			continue
 		}
 		if strings.HasPrefix(pkg.ImportPath, ctx.RootImportPath) {
@@ -326,6 +331,32 @@ top:
 			continue
 		}
 		pkg.Status = StatusExternal
+	}
+
+	// Check all "external" packages for vendor.
+	for _, pkg := range ctx.Package {
+		if pkg.Status != StatusExternal {
+			continue
+		}
+		root, err := findRoot(pkg.Dir)
+		if err != nil {
+			// No vendor file found.
+			if err == ErrMissingVendorFile {
+				continue
+			}
+			return err
+		}
+		vf, err := readVendorFile(root)
+		if err != nil {
+			return err
+		}
+		for _, vp := range vf.Package {
+			if vp.Local == pkg.ImportPath {
+				// Return the vendor path the vendor package used.
+				pkg.VendorPath = vp.Vendor
+				break
+			}
+		}
 	}
 
 	// Determine any un-used internal vendor imports.
