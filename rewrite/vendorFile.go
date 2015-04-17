@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 )
@@ -57,9 +56,9 @@ func (vp vendorPackageSort) Len() int      { return len(vp) }
 func (vp vendorPackageSort) Swap(i, j int) { vp[i], vp[j] = vp[j], vp[i] }
 func (vp vendorPackageSort) Less(i, j int) bool {
 	if vp[i].Local == vp[j].Local {
-		return strings.Compare(vp[i].Vendor, vp[j].Vendor) < 0
+		return vp[i].Vendor < vp[j].Vendor
 	}
-	return strings.Compare(vp[i].Local, vp[j].Local) < 0
+	return vp[i].Local < vp[j].Local
 }
 
 func writeVendorFile(root string, vf *VendorFile) (err error) {
