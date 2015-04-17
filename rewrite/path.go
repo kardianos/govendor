@@ -67,13 +67,32 @@ func fileStringEquals(s1, s2 string) bool {
 func findLocalImportPath(ctx *Context, importPath string) (string, error) {
 	/*
 		"crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
-		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg"
+		"yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg" (IIF yourpkg is a vendor package)
+		"yours/internal/myinternal" -> "path/to/mypkg/internal/yours/internal/myinternal" (IIF myinternal is not a vendor package)
 		"github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
 	*/
-	// The following method "cheats" and doesn't look at any external vendor file.
-	ss := strings.SplitN(importPath, "/"+internalFolder+"/", 2)
-
-	// TODO: Look for any vendor files. If the import is contained in a vendor file
-	// return the vendor field for that package.
-	return ss[len(ss)-1], nil
+	dir, _, err := ctx.findImportDir(importPath, "")
+	if err != nil {
+		return "", err
+	}
+	root, err := findRoot(dir)
+	if err != nil {
+		// No vendor file found. Return origional.
+		if err == ErrMissingVendorFile {
+			return importPath, nil
+		}
+		return "", err
+	}
+	vf, err := readVendorFile(root)
+	if err != nil {
+		return "", err
+	}
+	for _, pkg := range vf.Package {
+		if pkg.Local == importPath {
+			// Return the vendor path the vendor package used.
+			return pkg.Vendor, nil
+		}
+	}
+	// Vendor file exists, but the package is not a vendor package.
+	return importPath, nil
 }

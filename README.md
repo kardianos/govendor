@@ -23,13 +23,11 @@ vendor list
 ```
 
 ### Status
-Tasks that are planned:
- * Proper inspection of source vendor files (see rewrite/path.go findLocalImportPath).
-
 Tasks that are not planned at this time, but could be done in the future.
  * Speed up working with multiple packages at once by altering the rewrite API.
  * "Transactional" re-writes (rename temp files all at once).
  * Command to check for newer versions, either in GOPATH or remote repo.
+ * A -v verbose flag to print what it is doing.
 
 ### FAQ
 Q: Why not use an existing tool?
