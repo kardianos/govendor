@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -64,7 +63,7 @@ func (li ListItemSort) Len() int      { return len(li) }
 func (li ListItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
 func (li ListItemSort) Less(i, j int) bool {
 	if li[i].Status == li[j].Status {
-		return strings.Compare(li[i].Path, li[j].Path) < 0
+		return li[i].Path < li[j].Path
 	}
 	return li[i].Status > li[j].Status
 }
