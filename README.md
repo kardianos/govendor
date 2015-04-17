@@ -17,6 +17,9 @@ vendor update -status internal
 
 # Revert back to normal GOPATH packages.
 vendor remove -status internal
+
+# List package.
+vendor list
 ```
 
 ### Status

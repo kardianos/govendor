@@ -327,6 +327,9 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		}
 		rules = append(rules, Rule{From: vp.Vendor, To: vp.Local})
 	}
+	for _, f := range ctx.Package[localImportPath].Files {
+		files[f.Path] = f
+	}
 	return ctx.RewriteFiles(files, rules)
 }
 func CmdRemove(importPath string) error {

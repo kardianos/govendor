@@ -224,7 +224,7 @@ func (ctx *Context) RewriteFiles(filePaths map[string]*File, rules []Rule) error
 			if ic != nil {
 				// If it starts with the import text, assume it is the import comment and remove.
 				if index := strings.Index(ic.Text, " import "); index > 0 && index < 5 {
-					ic.Text = ""
+					ic.Text = strings.Repeat(" ", len(ic.Text))
 				}
 			}
 		}
