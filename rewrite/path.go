@@ -39,7 +39,7 @@ func slashToImportPath(path string) string {
 }
 
 func fileHasPrefix(s, prefix string) bool {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		s = strings.ToLower(s)
 		prefix = strings.ToLower(prefix)
 	}
