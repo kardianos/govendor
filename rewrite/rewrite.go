@@ -206,7 +206,8 @@ func (ctx *Context) RewriteFiles(filePaths map[string]*File, rules []Rule) error
 		}
 
 		// Remove import comment.
-		if fileInfo.Package.Status == StatusInternal {
+		st := fileInfo.Package.Status
+		if st == StatusInternal || st == StatusUnused {
 			var ic *ast.Comment
 			if f.Name != nil {
 				pos := f.Name.Pos()

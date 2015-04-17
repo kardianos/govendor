@@ -285,6 +285,7 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 			Local:  localImportPath,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+		ctx.vendorFileLocal[vp.Local] = vp
 	}
 	// Find the VCS information.
 	vcs, err := FindVcs(pkg.Gopath, pkg.Dir)

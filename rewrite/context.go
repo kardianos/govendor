@@ -168,6 +168,9 @@ type File struct {
 
 func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
 	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return err
+		}
 		if info.IsDir() && info.Name()[0] == '.' {
 			return filepath.SkipDir
 		}
