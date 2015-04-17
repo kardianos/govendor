@@ -54,7 +54,7 @@ func fileTrimPrefix(s, prefix string) string {
 }
 
 func fileStringEquals(s1, s2 string) bool {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		s1 = strings.ToLower(s1)
 		s2 = strings.ToLower(s2)
 	}
