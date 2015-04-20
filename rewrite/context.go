@@ -262,60 +262,56 @@ func (ctx *Context) AddImports(importPath ...string) error {
 }
 
 func (ctx *Context) resolveUnknown() error {
-	pkgUnknownCount := 0
 top:
-	for pkgUnknownCount != len(ctx.packageUnknown) {
-		pkgUnknownCount = len(ctx.packageUnknown)
-		for importPath := range ctx.packageUnknown {
-			dir, gopath, err := ctx.findImportDir(importPath, "")
-			if err != nil {
-				if _, ok := err.(ErrNotInGOPATH); ok {
-					ctx.Package[importPath] = &Package{
-						Dir:        "",
-						ImportPath: importPath,
-						VendorPath: importPath,
-						Status:     StatusMissing,
-					}
-					delete(ctx.packageUnknown, importPath)
-					continue top
-				}
-				return err
-			}
-			if fileStringEquals(gopath, ctx.Goroot) {
+	for importPath := range ctx.packageUnknown {
+		dir, gopath, err := ctx.findImportDir(importPath, "")
+		if err != nil {
+			if _, ok := err.(ErrNotInGOPATH); ok {
 				ctx.Package[importPath] = &Package{
-					Dir:        dir,
+					Dir:        "",
 					ImportPath: importPath,
 					VendorPath: importPath,
-					Status:     StatusStd,
-					Gopath:     ctx.Goroot,
+					Status:     StatusMissing,
 				}
 				delete(ctx.packageUnknown, importPath)
-				continue top
+				goto top
 			}
-			df, err := os.Open(dir)
-			if err != nil {
-				return err
-			}
-			info, err := df.Readdir(-1)
-			df.Close()
-			if err != nil {
-				return err
-			}
-			for _, fi := range info {
-				if fi.IsDir() {
-					continue
-				}
-				if fi.Name()[0] == '.' {
-					continue
-				}
-				path := filepath.Join(dir, fi.Name())
-				err = ctx.addFileImports(path, gopath)
-				if err != nil {
-					return err
-				}
-			}
-			continue top
+			return err
 		}
+		if fileStringEquals(gopath, ctx.Goroot) {
+			ctx.Package[importPath] = &Package{
+				Dir:        dir,
+				ImportPath: importPath,
+				VendorPath: importPath,
+				Status:     StatusStd,
+				Gopath:     ctx.Goroot,
+			}
+			delete(ctx.packageUnknown, importPath)
+			goto top
+		}
+		df, err := os.Open(dir)
+		if err != nil {
+			return err
+		}
+		info, err := df.Readdir(-1)
+		df.Close()
+		if err != nil {
+			return err
+		}
+		for _, fi := range info {
+			if fi.IsDir() {
+				continue
+			}
+			if fi.Name()[0] == '.' {
+				continue
+			}
+			path := filepath.Join(dir, fi.Name())
+			err = ctx.addFileImports(path, gopath)
+			if err != nil {
+				return err
+			}
+		}
+		goto top
 	}
 
 	// Determine the status of remaining imports.
