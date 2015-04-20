@@ -342,8 +342,10 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		rules = append(rules, Rule{From: vp.Vendor, To: vp.Local})
 	}
 	// Add local package files.
-	for _, f := range ctx.Package[localImportPath].Files {
-		files[f.Path] = f
+	if localPkg, found := ctx.Package[localImportPath]; found {
+		for _, f := range localPkg.Files {
+			files[f.Path] = f
+		}
 	}
 	// Rewrite any external package where the local path is different then the vendor path.
 	for _, pkg := range ctx.Package {
