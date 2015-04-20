@@ -4,6 +4,16 @@ changes and go tool changes. Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the establishment a final vendor file
 specification and be a useful tool.
 
+### What this vendor tool features:
+ * Tested cross platform support
+ * Import path re-writes
+ * Package import comment removal
+ * Inspection of the current state package locations
+ * Handles packages, not directory trees
+ * Handles the simple and complex cases
+ * Use "..." to also handle packages in sub-folders
+ * Handle packages based on their status
+
 ### Examples
 ```
 # Add external packages.
@@ -41,3 +51,10 @@ I also wanted a test bed to test the proposed vendor-spec.
 Q: Why this design and not X?
 
 A: See https://github.com/kardianos/vendor-spec#faq .
+
+------------
+
+Q: Why do we need a standard vendor file format?
+
+A: So many different tools, such as godoc.org and vendoring tools, can correctly
+identify vendor packages.
