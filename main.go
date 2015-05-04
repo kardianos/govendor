@@ -19,6 +19,18 @@ vendor init
 vendor list [status]
 vendor {add, update, remove} [-status] <import-path or status>
 
+	init
+		create a vendor file if it does not exist.
+	
+	add
+		copy one or more packages into the internal folder and re-write paths.
+	
+	update
+		update one or more packages from GOPATH into the internal folder.
+	
+	remove
+		remove one or more packages from the internal folder and re-write packages to vendor paths.
+
 Expanding "..."
 	A package import path may be expanded to other paths that
 	show up in "vendor list" be ending the "import-path" with "...".

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// rewrite contains commands for writing the altered import statements.
+// Package rewrite contains commands for writing the altered import statements.
 package rewrite
 
 import (
@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// ListStatus indicates the status of the import.
 type ListStatus byte
 
 func (ls ListStatus) String() string {
@@ -38,15 +39,23 @@ func (ls ListStatus) String() string {
 }
 
 const (
+	// StatusUnknown indicates the status was unable to be obtained.
 	StatusUnknown ListStatus = iota
+	// StatusMissing indicates import not found in GOROOT or GOPATH.
 	StatusMissing
+	// StatusStd indicates import found in GOROOT.
 	StatusStd
+	// StatusLocal indicates import is part of the local project.
 	StatusLocal
+	// StatusExternal indicates import is found in GOPATH and not copied.
 	StatusExternal
+	// StatusInternal indicates import has been copied locally under internal.
 	StatusInternal
+	// StatusUnused indicates import has been copied, but is no longer used.
 	StatusUnused
 )
 
+// ListItem represents a package in the current project.
 type ListItem struct {
 	Status     ListStatus
 	Path       string
@@ -57,11 +66,11 @@ func (li ListItem) String() string {
 	return li.Status.String() + " " + li.Path
 }
 
-type ListItemSort []ListItem
+type listItemSort []ListItem
 
-func (li ListItemSort) Len() int      { return len(li) }
-func (li ListItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
-func (li ListItemSort) Less(i, j int) bool {
+func (li listItemSort) Len() int      { return len(li) }
+func (li listItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
+func (li listItemSort) Less(i, j int) bool {
 	if li[i].Status == li[j].Status {
 		return li[i].Path < li[j].Path
 	}
@@ -179,7 +188,7 @@ func CmdList() ([]ListItem, error) {
 		list = append(list, li)
 	}
 	// Sort li by Status, then Path.
-	sort.Sort(ListItemSort(list))
+	sort.Sort(listItemSort(list))
 
 	return list, nil
 }
@@ -420,7 +429,7 @@ func CmdRemove(importPath string) error {
 
 	files := ctx.fileImports[localPath]
 
-	err = ctx.RewriteFiles(files, []Rule{Rule{From: localPath, To: vendorPath}})
+	err = ctx.RewriteFiles(files, []Rule{{From: localPath, To: vendorPath}})
 	if err != nil {
 		return err
 	}
