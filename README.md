@@ -98,8 +98,13 @@ vendor list
 ```
 
 ### Status
-Tasks that are not planned at this time, but could be done in the future.
+Tasks that are planned.
+ * Add a duplicate status in cases where a person adds the wrong path.
+ * Add flag "-short" to the init command and "Short" field in the vendor file.
+    Keeps paths unique, but removes extra folders.
  * Speed up working with multiple packages at once by altering the rewrite API.
+
+Tasks that are not planned at this time, but could be done in the future.
  * "Transactional" re-writes (rename temp files all at once).
  * Command to check for newer versions, either in GOPATH or remote repo.
  * A -v verbose flag to print what it is doing.
