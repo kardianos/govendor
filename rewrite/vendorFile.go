@@ -21,6 +21,9 @@ type VendorFile struct {
 	// Examples: "github.com/kardianos/vendor" or "golang.org/x/tools/cmd/vendor".
 	Tool string
 
+	// Comment is free text for human use.
+	Comment string `json:",omitempty"`
+
 	Package []*VendorPackage
 }
 
@@ -48,11 +51,15 @@ type VendorPackage struct {
 	// RevisionTime is the time the revision was created. The time should be
 	// parsed and written in the "time.RFC3339" format.
 	RevisionTime string
+
+	// Comment is free text for human use.
+	Comment string `json:",omitempty"`
 }
 
 // VendorFile is the structure of the vendor file.
 type readonlyVendorFile struct {
 	Tool    string
+	Comment string
 	Package []*readonlyVendorPackage
 }
 
@@ -61,6 +68,7 @@ type readonlyVendorPackage struct {
 	Local        string
 	Revision     string
 	RevisionTime string
+	Comment      string
 
 	Version     string
 	VersionTime string
@@ -117,6 +125,7 @@ func readVendorFile(root string) (*VendorFile, error) {
 	}
 	vf := &VendorFile{
 		Tool:    rvf.Tool,
+		Comment: rvf.Comment,
 		Package: make([]*VendorPackage, len(rvf.Package)),
 	}
 	for i, rpkg := range rvf.Package {
@@ -125,6 +134,7 @@ func readVendorFile(root string) (*VendorFile, error) {
 			Local:        rpkg.Local,
 			Revision:     rpkg.Revision,
 			RevisionTime: rpkg.RevisionTime,
+			Comment:      rpkg.Comment,
 		}
 		vf.Package[i] = pkg
 
