@@ -79,6 +79,8 @@ extra package layers. For an example of what a I mean here look at
 https://github.com/kardianos/vendor-spec#example how the context package is
 venored.
 
+The project must be within a GOPATH.
+
 ### Examples
 ```
 # Add external packages.
