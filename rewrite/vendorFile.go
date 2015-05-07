@@ -38,15 +38,31 @@ type VendorPackage struct {
 	// path elements "." or "..".
 	Local string
 
-	// The version of the package. This field must be persisted by all
+	// The revision of the package. This field must be persisted by all
 	// tools, but not all tools will interpret this field.
-	// The value of Version should be a single value that can be used
-	// to fetch the same or similar version.
+	// The value of Revision should be a single value that can be used
+	// to fetch the same or similar revision.
 	// Examples: "abc104...438ade0", "v1.3.5"
-	Version string
+	Revision string
 
-	// VersionTime is the time the version was created. The time should be
+	// RevisionTime is the time the revision was created. The time should be
 	// parsed and written in the "time.RFC3339" format.
+	RevisionTime string
+}
+
+// VendorFile is the structure of the vendor file.
+type readonlyVendorFile struct {
+	Tool    string
+	Package []*readonlyVendorPackage
+}
+
+type readonlyVendorPackage struct {
+	Vendor       string
+	Local        string
+	Revision     string
+	RevisionTime string
+
+	Version     string
 	VersionTime string
 }
 
@@ -94,6 +110,30 @@ func readVendorFile(root string) (*VendorFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	var vf = &VendorFile{}
-	return vf, json.Unmarshal(bb, vf)
+	var rvf = &readonlyVendorFile{}
+	err = json.Unmarshal(bb, rvf)
+	if err != nil {
+		return nil, err
+	}
+	vf := &VendorFile{
+		Tool:    rvf.Tool,
+		Package: make([]*VendorPackage, len(rvf.Package)),
+	}
+	for i, rpkg := range rvf.Package {
+		pkg := &VendorPackage{
+			Vendor:       rpkg.Vendor,
+			Local:        rpkg.Local,
+			Revision:     rpkg.Revision,
+			RevisionTime: rpkg.RevisionTime,
+		}
+		vf.Package[i] = pkg
+
+		if len(rpkg.Version) != 0 {
+			pkg.Revision = rpkg.Version
+		}
+		if len(rpkg.VersionTime) != 0 {
+			pkg.RevisionTime = rpkg.VersionTime
+		}
+	}
+	return vf, nil
 }

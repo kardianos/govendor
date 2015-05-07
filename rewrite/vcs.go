@@ -14,8 +14,8 @@ import (
 
 type VcsInfo struct {
 	Dirty       bool
-	Version     string
-	VersionTime *time.Time
+	Revision     string
+	RevisionTime *time.Time
 }
 
 type Vcs interface {
@@ -86,12 +86,12 @@ func (VcsGit) Find(dir string) (*VcsInfo, error) {
 	}
 	line := strings.TrimSpace(string(output))
 	ss := strings.Split(line, "@")
-	info.Version = ss[0]
+	info.Revision = ss[0]
 	tm, err := time.Parse("2006-01-02 15:04:05 -0700", ss[1])
 	if err != nil {
 		return nil, err
 	}
-	info.VersionTime = &tm
+	info.RevisionTime = &tm
 	return info, nil
 }
 
@@ -133,13 +133,13 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 	for _, line := range strings.Split(string(output), "\n") {
 		if strings.HasPrefix(line, "changeset:") {
 			ss := strings.Split(line, ":")
-			info.Version = strings.TrimSpace(ss[len(ss)-1])
+			info.Revision = strings.TrimSpace(ss[len(ss)-1])
 		}
 		if strings.HasPrefix(line, "date:") {
 			line = strings.TrimPrefix(line, "date:")
 			tm, err := time.Parse("Mon Jan 02 15:04:05 2006 -0700", strings.TrimSpace(line))
 			if err == nil {
-				info.VersionTime = &tm
+				info.RevisionTime = &tm
 			}
 		}
 	}

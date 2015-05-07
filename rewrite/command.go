@@ -317,9 +317,9 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	if vcs.Dirty {
 		return ErrDirtyPackage{pkg.ImportPath}
 	}
-	vp.Version = vcs.Version
-	if vcs.VersionTime != nil {
-		vp.VersionTime = vcs.VersionTime.Format(time.RFC3339)
+	vp.Revision = vcs.Revision
+	if vcs.RevisionTime != nil {
+		vp.RevisionTime = vcs.RevisionTime.Format(time.RFC3339)
 	}
 
 	// Write the vendor file.
