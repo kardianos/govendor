@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
-func findRoot(folder string) (root string, err error) {
+func findRoot(folder, vendorPath string) (root string, err error) {
 	for i := 0; i <= looplimit; i++ {
-		test := filepath.Join(folder, internalVendor)
+		test := filepath.Join(folder, vendorPath)
 		_, err := os.Stat(test)
 		if os.IsNotExist(err) == false {
 			return folder, nil
@@ -76,7 +76,7 @@ func findLocalImportPath(ctx *Context, importPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	root, err := findRoot(dir)
+	root, err := findRoot(dir, vendorFilename)
 	if err != nil {
 		// No vendor file found. Return origional.
 		if err == ErrMissingVendorFile {

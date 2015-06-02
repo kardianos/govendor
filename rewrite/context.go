@@ -42,7 +42,7 @@ func NewContextWD() (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	root, err := findRoot(wd)
+	root, err := findRoot(wd, internalVendor)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ top:
 		if pkg.Status != StatusExternal {
 			continue
 		}
-		root, err := findRoot(pkg.Dir)
+		root, err := findRoot(pkg.Dir, vendorFilename)
 		if err != nil {
 			// No vendor file found.
 			if err == ErrMissingVendorFile {
