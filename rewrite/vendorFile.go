@@ -38,7 +38,7 @@ func readVendorFile(root string) (*vendorfile.File, error) {
 		return nil, err
 	}
 	defer f.Close()
-	
+
 	err = vf.Unmarshal(f)
 	if err != nil {
 		return nil, err

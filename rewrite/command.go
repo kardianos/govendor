@@ -302,8 +302,9 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	}
 	if vp == nil {
 		vp = &vendorfile.Package{
+			Add:       true,
 			Canonical: importPath,
-			Local:  localImportPath,
+			Local:     localImportPath,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 		ctx.vendorFileLocal[vp.Local] = vp
@@ -437,14 +438,11 @@ func CmdRemove(importPath string) error {
 	if err != nil {
 		return err
 	}
-	nextPkg := make([]*vendorfile.Package, 0, len(ctx.VendorFile.Package)-1)
 	for i, pkg := range ctx.VendorFile.Package {
 		if i == vendorFileIndex {
-			continue
+			pkg.Remove = true
 		}
-		nextPkg = append(nextPkg, pkg)
 	}
-	ctx.VendorFile.Package = nextPkg
 
 	return writeVendorFile(ctx.RootDir, ctx.VendorFile)
 }

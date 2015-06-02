@@ -34,10 +34,10 @@ type Package struct {
 	index int
 
 	// If delete is set to true the package will not be written to the vendor file.
-	Delete bool
+	Remove bool
 
 	// If new is set to true the package will be treated as a new package to the file.
-	New bool
+	Add bool
 
 	// See the vendor spec for definitions.
 	Canonical    string
@@ -156,10 +156,10 @@ func (vf *File) toAll() {
 	deleteCount := 0
 	for _, pkg := range vf.Package {
 		switch {
-		case pkg.Delete:
+		case pkg.Remove:
 			rawPackageList[pkg.index] = nil
 			deleteCount++
-		case pkg.New:
+		case pkg.Add:
 			obj := make(map[string]interface{}, 5)
 			rawPackageList = append(rawPackageList, obj)
 
