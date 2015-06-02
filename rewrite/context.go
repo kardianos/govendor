@@ -47,7 +47,7 @@ func NewContextWD() (*Context, error) {
 		return nil, err
 	}
 
-	vf, err := readVendorFile(root)
+	vf, err := readVendorFile(root, internalVendor)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +346,7 @@ top:
 			}
 			return err
 		}
-		vf, err := readVendorFile(root)
+		vf, err := readVendorFile(root, vendorFilename)
 		if err != nil {
 			return err
 		}

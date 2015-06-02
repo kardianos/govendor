@@ -84,7 +84,7 @@ func findLocalImportPath(ctx *Context, importPath string) (string, error) {
 		}
 		return "", err
 	}
-	vf, err := readVendorFile(root)
+	vf, err := readVendorFile(root, vendorFilename)
 	if err != nil {
 		return "", err
 	}

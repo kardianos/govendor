@@ -30,8 +30,8 @@ func writeVendorFile(root string, vf *vendorfile.File) (err error) {
 	return
 }
 
-func readVendorFile(root string) (*vendorfile.File, error) {
-	path := filepath.Join(root, internalVendor)
+func readVendorFile(root, vendorPath string) (*vendorfile.File, error) {
+	path := filepath.Join(root, vendorPath)
 	vf := &vendorfile.File{}
 	f, err := os.Open(path)
 	if err != nil {
