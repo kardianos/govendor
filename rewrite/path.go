@@ -91,7 +91,7 @@ func findLocalImportPath(ctx *Context, importPath string) (string, error) {
 	for _, pkg := range vf.Package {
 		if pkg.Local == importPath {
 			// Return the vendor path the vendor package used.
-			return pkg.Vendor, nil
+			return pkg.Canonical, nil
 		}
 	}
 	// Vendor file exists, but the package is not a vendor package.

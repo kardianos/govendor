@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	"github.com/kardianos/vendor/vendorfile"
 )
 
 // ListStatus indicates the status of the import.
@@ -80,7 +82,6 @@ func (li listItemSort) Less(i, j int) bool {
 const (
 	vendorFilename = "vendor.json"
 	internalFolder = "internal"
-	toolName       = "github.com/kardianos/vendor"
 
 	looplimit = 10000
 )
@@ -145,9 +146,7 @@ func CmdInit() error {
 	if err != nil {
 		return err
 	}
-	vf := &VendorFile{
-		Tool: toolName,
-	}
+	vf := &vendorfile.File{}
 	return writeVendorFile(wd, vf)
 }
 
@@ -183,7 +182,7 @@ func CmdList() ([]ListItem, error) {
 			VendorPath: pkg.VendorPath,
 		}
 		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
-			li.VendorPath = vp.Vendor
+			li.VendorPath = vp.Canonical
 		}
 		list = append(list, li)
 	}
@@ -210,7 +209,7 @@ func CmdUpdate(importPath string) error {
 
 func verifyAdd(ctx *Context, importPath, local string) (string, error) {
 	for _, pkg := range ctx.VendorFile.Package {
-		if pkg.Vendor == importPath {
+		if pkg.Canonical == importPath {
 			return importPath, ErrImportExists
 		}
 	}
@@ -238,13 +237,13 @@ func verifyAdd(ctx *Context, importPath, local string) (string, error) {
 }
 func verifyUpdate(ctx *Context, importPath, local string) (string, error) {
 	for _, pkg := range ctx.VendorFile.Package {
-		if pkg.Vendor == importPath {
+		if pkg.Canonical == importPath {
 			return importPath, nil
 		}
 	}
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Local == importPath {
-			return pkg.Vendor, nil
+			return pkg.Canonical, nil
 		}
 	}
 	return importPath, ErrImportNotExists
@@ -294,16 +293,16 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	}
 
 	// Update vendor file with correct Local field.
-	var vp *VendorPackage
+	var vp *vendorfile.Package
 	for _, vpkg := range ctx.VendorFile.Package {
-		if vpkg.Vendor == importPath {
+		if vpkg.Canonical == importPath {
 			vp = vpkg
 			break
 		}
 	}
 	if vp == nil {
-		vp = &VendorPackage{
-			Vendor: importPath,
+		vp = &vendorfile.Package{
+			Canonical: importPath,
 			Local:  localImportPath,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
@@ -345,10 +344,10 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	// Rules are all lines in the vendor file.
 	rules := make([]Rule, 0, len(ctx.VendorFile.Package))
 	for _, vp := range ctx.VendorFile.Package {
-		for fpath, f := range ctx.fileImports[vp.Vendor] {
+		for fpath, f := range ctx.fileImports[vp.Canonical] {
 			files[fpath] = f
 		}
-		rules = append(rules, Rule{From: vp.Vendor, To: vp.Local})
+		rules = append(rules, Rule{From: vp.Canonical, To: vp.Local})
 	}
 	// Add local package files.
 	if localPkg, found := ctx.Package[localImportPath]; found {
@@ -402,7 +401,7 @@ func CmdRemove(importPath string) error {
 	localFound := false
 	vendorFileIndex := 0
 	for i, pkg := range ctx.VendorFile.Package {
-		if pkg.Vendor == importPath {
+		if pkg.Canonical == importPath {
 			localPath = pkg.Local
 			localFound = true
 			vendorFileIndex = i
@@ -413,7 +412,7 @@ func CmdRemove(importPath string) error {
 		for i, pkg := range ctx.VendorFile.Package {
 			if pkg.Local == importPath {
 				localPath = pkg.Local
-				vendorPath = pkg.Vendor
+				vendorPath = pkg.Canonical
 				localFound = true
 				vendorFileIndex = i
 				break
@@ -438,7 +437,7 @@ func CmdRemove(importPath string) error {
 	if err != nil {
 		return err
 	}
-	nextPkg := make([]*VendorPackage, 0, len(ctx.VendorFile.Package)-1)
+	nextPkg := make([]*vendorfile.Package, 0, len(ctx.VendorFile.Package)-1)
 	for i, pkg := range ctx.VendorFile.Package {
 		if i == vendorFileIndex {
 			continue

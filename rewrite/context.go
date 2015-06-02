@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/kardianos/vendor/vendorfile"
 )
 
 type Context struct {
@@ -22,7 +24,7 @@ type Context struct {
 	RootGopath     string
 	RootImportPath string
 
-	VendorFile *VendorFile
+	VendorFile *vendorfile.File
 
 	// Package is a map where the import path is the key.
 	// Populated with LoadPackage.
@@ -32,7 +34,7 @@ type Context struct {
 	packageUnknown map[string]struct{}
 	fileImports    map[string]map[string]*File // ImportPath -> []file paths.
 
-	vendorFileLocal map[string]*VendorPackage // Vendor file "Local" field lookup for packages.
+	vendorFileLocal map[string]*vendorfile.Package // Vendor file "Local" field lookup for packages.
 }
 
 func NewContextWD() (*Context, error) {
@@ -100,7 +102,7 @@ func NewContextWD() (*Context, error) {
 
 		parserFileSet:   token.NewFileSet(),
 		packageUnknown:  make(map[string]struct{}),
-		vendorFileLocal: make(map[string]*VendorPackage, len(vf.Package)),
+		vendorFileLocal: make(map[string]*vendorfile.Package, len(vf.Package)),
 		fileImports:     make(map[string]map[string]*File),
 	}
 
@@ -321,7 +323,7 @@ top:
 		}
 		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
 			pkg.Status = StatusInternal
-			pkg.VendorPath = vp.Vendor
+			pkg.VendorPath = vp.Canonical
 			continue
 		}
 		if strings.HasPrefix(pkg.ImportPath, ctx.RootImportPath) {
@@ -351,7 +353,7 @@ top:
 		for _, vp := range vf.Package {
 			if vp.Local == pkg.ImportPath {
 				// Return the vendor path the vendor package used.
-				pkg.VendorPath = vp.Vendor
+				pkg.VendorPath = vp.Canonical
 				break
 			}
 		}
