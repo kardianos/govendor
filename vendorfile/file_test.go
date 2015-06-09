@@ -52,3 +52,112 @@ func TestUpdate(t *testing.T) {
 		t.Fatal("Got:", buf.String())
 	}
 }
+
+func TestRemove(t *testing.T) {
+	var from = `{
+	"package": [
+		{
+			"canonical": "pkg1"
+		},
+		{
+			"canonical": "pkg2"
+		},
+		{
+			"canonical": "pkg3"
+		}
+	]
+}`
+	var to = `{
+	"comment": "",
+	"package": [
+		{
+			"canonical": "pkg1",
+			"comment": "",
+			"local": "",
+			"revision": "",
+			"revisionTime": ""
+		}
+	]
+}`
+
+	vf := &File{}
+
+	err := vf.Unmarshal(strings.NewReader(from))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vf.Package[1].Remove = true
+	vf.Package[2].Remove = true
+
+	buf := &bytes.Buffer{}
+	err = vf.Marshal(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if buf.String() != to {
+		t.Fatal("Got:", buf.String())
+	}
+}
+
+func TestAdd(t *testing.T) {
+	var from = `{
+	"package": [
+		{
+			"canonical": "pkg1"
+		}
+	]
+}`
+	var to = `{
+	"comment": "",
+	"package": [
+		{
+			"canonical": "pkg1",
+			"comment": "",
+			"local": "",
+			"revision": "",
+			"revisionTime": ""
+		},
+		{
+			"canonical": "pkg2",
+			"comment": "",
+			"local": "",
+			"revision": "",
+			"revisionTime": ""
+		},
+		{
+			"canonical": "pkg3",
+			"comment": "",
+			"local": "",
+			"revision": "",
+			"revisionTime": ""
+		}
+	]
+}`
+
+	vf := &File{}
+
+	err := vf.Unmarshal(strings.NewReader(from))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vf.Package = append(vf.Package, &Package{
+		Add:       true,
+		Canonical: "pkg2",
+	}, &Package{
+		Add:       true,
+		Canonical: "pkg3",
+	})
+
+	buf := &bytes.Buffer{}
+	err = vf.Marshal(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if buf.String() != to {
+		t.Fatal("Got:", buf.String())
+	}
+}

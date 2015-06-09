@@ -137,6 +137,7 @@ func (vf *File) toFields() {
 		}
 		pkg := &Package{}
 		vf.Package[index] = pkg
+		pkg.index = index
 		setField(&pkg.Canonical, object, canonicalNames)
 		setField(&pkg.Local, object, localNames)
 		setField(&pkg.Revision, object, revisionNames)
