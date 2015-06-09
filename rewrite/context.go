@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -202,20 +203,22 @@ func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
 	return ctx.resolveUnknown()
 }
 
-func (ctx *Context) addFileImports(path, gopath string) error {
-	if strings.HasSuffix(path, ".go") == false {
-		return nil
-	}
-	f, err := parser.ParseFile(ctx.parserFileSet, path, nil, parser.ImportsOnly)
-	if err != nil {
-		return err
-	}
-
-	dir, _ := filepath.Split(path)
+func (ctx *Context) addFileImports(pathname, gopath string) error {
+	dir, _ := filepath.Split(pathname)
 	importPath := fileTrimPrefix(dir, gopath)
 	importPath = slashToImportPath(importPath)
 	importPath = strings.TrimPrefix(importPath, "/")
 	importPath = strings.TrimSuffix(importPath, "/")
+
+	delete(ctx.packageUnknown, importPath)
+
+	if strings.HasSuffix(pathname, ".go") == false {
+		return nil
+	}
+	f, err := parser.ParseFile(ctx.parserFileSet, pathname, nil, parser.ImportsOnly)
+	if err != nil {
+		return err
+	}
 
 	pkg, found := ctx.Package[importPath]
 	if !found {
@@ -226,14 +229,10 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 			Gopath:     gopath,
 		}
 		ctx.Package[importPath] = pkg
-
-		if _, found := ctx.packageUnknown[importPath]; found {
-			delete(ctx.packageUnknown, importPath)
-		}
 	}
 	pf := &File{
 		Package: pkg,
-		Path:    path,
+		Path:    pathname,
 		Imports: make([]string, len(f.Imports)),
 	}
 	pkg.Files = append(pkg.Files, pf)
@@ -242,6 +241,9 @@ func (ctx *Context) addFileImports(path, gopath string) error {
 		imp, err = strconv.Unquote(imp)
 		if err != nil {
 			return err
+		}
+		if strings.HasPrefix(imp, "./") {
+			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
 

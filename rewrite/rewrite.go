@@ -180,14 +180,14 @@ func (ctx *Context) RewriteFiles(filePaths map[string]*File, rules []Rule) error
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
 	}
-	for path, fileInfo := range filePaths {
-		if fileHasPrefix(path, ctx.RootDir) == false {
+	for pathname, fileInfo := range filePaths {
+		if fileHasPrefix(pathname, ctx.RootDir) == false {
 			continue
 		}
 
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
-		f, err := parser.ParseFile(fileset, path, nil, parser.ParseComments)
+		f, err := parser.ParseFile(fileset, pathname, nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}
@@ -234,11 +234,11 @@ func (ctx *Context) RewriteFiles(filePaths map[string]*File, rules []Rule) error
 		// Don't sort or modify the imports to minimize diffs.
 
 		// Write the AST back to disk.
-		fi, err := os.Stat(path)
+		fi, err := os.Stat(pathname)
 		if err != nil {
 			return err
 		}
-		w, err := safefile.Create(path, fi.Mode())
+		w, err := safefile.Create(pathname, fi.Mode())
 		if err != nil {
 			return err
 		}
