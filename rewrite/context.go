@@ -124,7 +124,7 @@ func (ctx *Context) findImportDir(importPath, useGopath string) (dir, gopath str
 	if len(useGopath) != 0 {
 		paths = []string{useGopath}
 	}
-	if importPath == "builtin" || importPath == "unsafe" {
+	if importPath == "builtin" || importPath == "unsafe" || importPath == "C" {
 		return filepath.Join(ctx.Goroot, importPath), ctx.Goroot, nil
 	}
 	for _, gopath = range paths {
