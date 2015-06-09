@@ -9,7 +9,6 @@ package vendorfile
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io"
 	"io/ioutil"
 	"sort"
@@ -200,7 +199,7 @@ func (vf *File) toAll() {
 // Retains read fields.
 func (vf *File) Marshal(w io.Writer) (err error) {
 	if vf.all == nil {
-		return errors.New("Field all is nil")
+		vf.all = map[string]interface{}{}
 	}
 	vf.toAll()
 
