@@ -10,7 +10,6 @@ import (
 	"os"
 )
 
-
 func main() {
 	printHelp, err := run(os.Stdout, os.Args)
 	if err != nil {
