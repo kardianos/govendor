@@ -268,9 +268,14 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	// Adjust relative local path to GOPATH import path.
 	localImportPath = path.Join(ctx.RootImportPath, internalFolder, localImportPath)
 
+	localCopyExists := false
 	importPath, err = verify(ctx, importPath, localImportPath)
 	if err != nil {
-		return err
+		if err == ErrFilesExists {
+			localCopyExists = true
+		} else {
+			return err
+		}
 	}
 
 	err = ctx.AddImports(importPath)
@@ -309,31 +314,33 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 		ctx.vendorFileLocal[vp.Local] = vp
 	}
-	// Find the VCS information.
-	vcs, err := FindVcs(pkg.Gopath, pkg.Dir)
-	if err != nil {
-		return err
-	}
-	if vcs != nil {
-		if vcs.Dirty {
-			return ErrDirtyPackage{pkg.ImportPath}
+	if !localCopyExists {
+		// Find the VCS information.
+		vcs, err := FindVcs(pkg.Gopath, pkg.Dir)
+		if err != nil {
+			return err
 		}
-		vp.Revision = vcs.Revision
-		if vcs.RevisionTime != nil {
-			vp.RevisionTime = vcs.RevisionTime.Format(time.RFC3339)
+		if vcs != nil {
+			if vcs.Dirty {
+				return ErrDirtyPackage{pkg.ImportPath}
+			}
+			vp.Revision = vcs.Revision
+			if vcs.RevisionTime != nil {
+				vp.RevisionTime = vcs.RevisionTime.Format(time.RFC3339)
+			}
 		}
-	}
 
-	// Write the vendor file.
-	err = writeVendorFile(ctx.RootDir, ctx.VendorFile)
-	if err != nil {
-		return err
-	}
+		// Write the vendor file.
+		err = writeVendorFile(ctx.RootDir, ctx.VendorFile)
+		if err != nil {
+			return err
+		}
 
-	// Copy the package locally.
-	err = CopyPackage(filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)), pkg.Dir)
-	if err != nil {
-		return err
+		// Copy the package locally.
+		err = CopyPackage(filepath.Join(ctx.RootGopath, slashToFilepath(localImportPath)), pkg.Dir)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = ctx.AddImports(importPath, localImportPath)
