@@ -314,12 +314,14 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 	if err != nil {
 		return err
 	}
-	if vcs.Dirty {
-		return ErrDirtyPackage{pkg.ImportPath}
-	}
-	vp.Revision = vcs.Revision
-	if vcs.RevisionTime != nil {
-		vp.RevisionTime = vcs.RevisionTime.Format(time.RFC3339)
+	if vcs != nil {
+		if vcs.Dirty {
+			return ErrDirtyPackage{pkg.ImportPath}
+		}
+		vp.Revision = vcs.Revision
+		if vcs.RevisionTime != nil {
+			vp.RevisionTime = vcs.RevisionTime.Format(time.RFC3339)
+		}
 	}
 
 	// Write the vendor file.
