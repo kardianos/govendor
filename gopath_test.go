@@ -112,17 +112,17 @@ func (g *gopathTest) Setup(at string, files ...FileSpec) {
 	}
 }
 
-func (g *gopathTest) Vendor(argLine, expectedOutput string) {
+func (g *gopathTest) Vendor(name, argLine, expectedOutput string) {
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
 	printHelp, err := run(output, args)
 	if err != nil {
-		g.t.Fatal(err)
+		g.t.Fatalf("(%s) Error: %v", name, err)
 	}
 	if printHelp == true {
-		g.t.Fatal("Printed help")
+		g.t.Fatalf("(%s) Printed help", name)
 	}
 	if output.String() != expectedOutput {
-		g.t.Fatalf("Got\n%s", output.String())
+		g.t.Fatalf("(%s) Got\n%s", name, output.String())
 	}
 }
