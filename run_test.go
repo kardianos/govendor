@@ -5,32 +5,32 @@
 package main
 
 import (
-	"bytes"
-	"strings"
 	"testing"
 )
 
-func TestRun(t *testing.T) {
-	t.Fatal("TODO: Create test.")
-	// 1. Setup on-disk GOPATH and env var.
-	// 2. Populate GOPATH with example packages.
-	// 3. Set current working directory to project root.
-	// 4. Run vendor command(s).
-	// 5. Inspect project workspace for desired result.
-
-}
-
-func testCmd(t *testing.T, expectedOutput, argLine string) {
-	output := &bytes.Buffer{}
-	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
-	printHelp, err := run(output, args)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if printHelp == true {
-		t.Fatal("Printed help")
-	}
-	if output.String() != expectedOutput {
-		t.Fatal("Got", output.String())
-	}
+func TestSimple(t *testing.T) {
+	g := newGopathTest(t)
+	defer g.Clean()
+	
+	g.Setup("co1/pk1",
+		File("a.go", "co2/pk1", "co2/pk2"),
+		File("b.go", "co2/pk1", "bytes"),
+	)
+	g.Setup("co2/pk1",
+		File("a.go", "strings"),
+	)
+	g.Setup("co2/pk2",
+		File("a.go", "strings"),
+	)
+	g.In("co1")
+	g.Vendor("init", "")
+	g.Vendor("list", `e co2/pk1
+e co2/pk2
+l co1/pk1
+`)
+	g.Vendor("add -status ext", "")
+	g.Vendor("list", `i co1/internal/co2/pk1
+i co1/internal/co2/pk2
+l co1/pk1
+`)
 }
