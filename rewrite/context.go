@@ -47,8 +47,11 @@ func NewContextWD() (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewContext(root)
+}
 
-	vf, err := readVendorFile(root, internalVendor)
+func NewContext(root string) (*Context, error) {
+	vf, err := readVendorFile(filepath.Join(root, internalVendor))
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +351,7 @@ top:
 			}
 			return err
 		}
-		vf, err := readVendorFile(root, vendorFilename)
+		vf, err := readVendorFile(filepath.Join(root, vendorFilename))
 		if err != nil {
 			return err
 		}

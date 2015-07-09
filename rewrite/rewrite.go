@@ -175,7 +175,7 @@ type Rule struct {
 
 // RewriteFiles modified the imports according to rules and works on the
 // file paths provided by filePaths.
-func (ctx *Context) RewriteFiles(filePaths map[string]*File, rules []Rule) error {
+func RewriteFiles(ctx *Context, filePaths map[string]*File, rules []Rule) error {
 	goprint := &printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,

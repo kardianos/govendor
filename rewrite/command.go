@@ -392,7 +392,7 @@ func addUpdateImportPath(importPath string, verify func(ctx *Context, importPath
 		}
 	}
 
-	return ctx.RewriteFiles(files, rules)
+	return RewriteFiles(ctx, files, rules)
 }
 func CmdRemove(importPath string) error {
 	importPath = slashToImportPath(importPath)
@@ -438,7 +438,7 @@ func CmdRemove(importPath string) error {
 
 	files := ctx.fileImports[localPath]
 
-	err = ctx.RewriteFiles(files, []Rule{{From: localPath, To: vendorPath}})
+	err = RewriteFiles(ctx, files, []Rule{{From: localPath, To: vendorPath}})
 	if err != nil {
 		return err
 	}
