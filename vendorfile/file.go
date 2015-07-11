@@ -4,6 +4,7 @@
 
 // vendorfile is the meta-data file for vendoring.
 // Round-trips unknown fields.
+// It will also allow moving the vendor file to new locations.
 package vendorfile
 
 import (

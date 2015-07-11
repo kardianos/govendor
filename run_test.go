@@ -5,62 +5,81 @@
 package main
 
 import (
+	"bytes"
+	"strings"
 	"testing"
+
+	"github.com/kardianos/vendor/internal/gt"
 )
 
+func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
+	output := &bytes.Buffer{}
+	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
+	printHelp, err := run(output, args)
+	if err != nil {
+		g.Fatalf("(%s) Error: %v", name, err)
+	}
+	if printHelp == true {
+		g.Fatalf("(%s) Printed help", name)
+	}
+	if output.String() != expectedOutput {
+		g.Fatalf("(%s) Got\n%s", name, output.String())
+	}
+}
+
 func TestSimple(t *testing.T) {
-	g := newGopathTest(t)
+	g := gt.New(t)
 	defer g.Clean()
-	
+
 	g.Setup("co1/pk1",
-		File("a.go", "co2/pk1", "co2/pk2"),
-		File("b.go", "co2/pk1", "bytes"),
+		gt.File("a.go", "co2/pk1", "co2/pk2"),
+		gt.File("b.go", "co2/pk1", "bytes"),
 	)
 	g.Setup("co2/pk1",
-		File("a.go", "strings"),
+		gt.File("a.go", "strings"),
 	)
 	g.Setup("co2/pk2",
-		File("a.go", "strings"),
+		gt.File("a.go", "strings"),
 	)
 	g.In("co1")
-	g.Vendor("", "init", "")
-	g.Vendor("", "list", `e co2/pk1
+	Vendor(g, "", "init", "")
+	Vendor(g, "", "list", `e co2/pk1
 e co2/pk2
 l co1/pk1
 `)
-	g.Vendor("", "add -status ext", "")
-	g.Vendor("", "list", `i co1/internal/co2/pk1
+	Vendor(g, "", "add -status ext", "")
+	Vendor(g, "", "list", `i co1/internal/co2/pk1
 i co1/internal/co2/pk2
 l co1/pk1
 `)
 }
 
 func TestDuplicatePackage(t *testing.T) {
-	g := newGopathTest(t)
+	g := gt.New(t)
 	defer g.Clean()
-	
+
 	g.Setup("co1/pk1",
-		File("a.go", "co2/pk1", "co3/pk1"),
+		gt.File("a.go", "co2/pk1", "co3/pk1"),
 	)
 	g.Setup("co2/pk1",
-		File("a.go", "co3/pk1"),
+		gt.File("a.go", "co3/pk1"),
 	)
 	g.Setup("co3/pk1",
-		File("a.go", "strings"),
+		gt.File("a.go", "strings"),
 	)
 	g.In("co2")
-	g.Vendor("co2 init", "init", "")
-	g.Vendor("co2 add", "add -status ext", "")
-	
+	Vendor(g, "co2 init", "init", "")
+	Vendor(g, "co2 add", "add -status ext", "")
+
 	g.In("co1")
-	g.Vendor("co1 init", "init", "")
-	g.Vendor("co1 pre list", "list", `e co2/internal/co3/pk1
+	Vendor(g, "co1 init", "init", "")
+	Vendor(g, "co1 pre list", "list", `e co2/internal/co3/pk1
 e co2/pk1
 e co3/pk1
 l co1/pk1
 `)
-	g.Vendor("co1 add", "add -status ext", "")
-	g.Vendor("co1 list", "list", `i co1/internal/co2/pk1
+	Vendor(g, "co1 add", "add -status ext", "")
+	Vendor(g, "co1 list", "list", `i co1/internal/co2/pk1
 i co1/internal/co3/pk1
 l co1/pk1
 `)
