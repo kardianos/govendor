@@ -74,21 +74,31 @@ type File struct {
 
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
-func NewContextWD(vendorFolder string) (*Context, error) {
+func NewContextWD() (*Context, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
-	root, err := findRoot(wd, vendorFilename)
+	pathToVendorFile := vendorFilename
+	rootIndicator := "vendor"
+	vendorFolder := "vendor"
+	rewrite := os.Getenv("GO15VENDOREXPERIMENT") != "1"
+	if rewrite {
+		pathToVendorFile = filepath.Join("internal", vendorFilename)
+		rootIndicator = pathToVendorFile
+		vendorFolder = "internal"
+	}
+	root, err := findRoot(wd, rootIndicator)
 	if err != nil {
 		return nil, err
 	}
-	return NewContext(root, vendorFilename, vendorFolder)
+
+	return NewContext(root, pathToVendorFile, vendorFolder, rewrite)
 }
 
 // NewContext creates new context from a given root folder and vendor file path.
 // The vendorFolder is where vendor packages should be placed.
-func NewContext(root, vendorFilePathRel, vendorFolder string) (*Context, error) {
+func NewContext(root, vendorFilePathRel, vendorFolder string, rewrite bool) (*Context, error) {
 	vendorFilePath := filepath.Join(root, vendorFilePathRel)
 	vf, err := readVendorFile(vendorFilePath)
 	if err != nil {
@@ -143,7 +153,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string) (*Context, error) 
 		GopathList: gopathGoroot,
 		Goroot:     goroot,
 
-		Rewrite: true,
+		Rewrite: rewrite,
 
 		VendorFile:     vf,
 		VendorFilePath: vendorFilePath,
@@ -296,7 +306,6 @@ func (ctx *Context) AddImport(sourcePath string) error {
 			Add:       true,
 			Canonical: canonicalImportPath,
 			Local:     localImportPath,
-			Source:    sourcePath,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}

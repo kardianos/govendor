@@ -15,7 +15,7 @@ import (
 )
 
 func ctx(g *gt.GopathTest) *Context {
-	c, err := NewContext(g.Current(), "vendor.json", "internal")
+	c, err := NewContext(g.Current(), "vendor.json", "internal", true)
 	if err != nil {
 		g.Fatal(err)
 	}
