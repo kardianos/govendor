@@ -5,6 +5,7 @@
 package context
 
 import (
+	"fmt"
 	"sort"
 )
 
@@ -64,7 +65,10 @@ type ListItem struct {
 }
 
 func (li ListItem) String() string {
-	return li.Status.String() + " " + li.Path
+	if len(li.VendorPath) == 0 || li.VendorPath == li.Path {
+		return fmt.Sprintf("%s %s", li.Status, li.Path)
+	}
+	return fmt.Sprintf("%s %s [%s]", li.Status, li.Path, li.VendorPath)
 }
 
 type listItemSort []ListItem
@@ -78,16 +82,21 @@ func (li listItemSort) Less(i, j int) bool {
 	return li[i].Status > li[j].Status
 }
 
+// ListStatus obtains the current package status list.
 func (ctx *Context) ListStatus() ([]ListItem, error) {
+	var err error
+	if !ctx.loaded {
+		err = ctx.loadPackage()
+		if err != nil {
+			return nil, err
+		}
+	}
 	list := make([]ListItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
 		li := ListItem{
 			Status:     pkg.Status,
-			Path:       pkg.ImportPath,
-			VendorPath: pkg.VendorPath,
-		}
-		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
-			li.VendorPath = vp.Canonical
+			Path:       pkg.CanonicalPath,
+			VendorPath: pkg.LocalPath,
 		}
 		list = append(list, li)
 	}

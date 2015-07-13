@@ -78,6 +78,12 @@ func (g *GopathTest) Clean() {
 		g.Fatal(err)
 	}
 }
+func (g *GopathTest) Check(err error) {
+	if err == nil {
+		return
+	}
+	g.Fatal(err)
+}
 
 type FileSpec struct {
 	Pkg     string

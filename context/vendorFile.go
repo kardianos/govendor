@@ -12,6 +12,7 @@ import (
 	"github.com/kardianos/vendor/vendorfile"
 )
 
+// WriteVendorFile writes the current vendor file to the context location.
 func (ctx *Context) WriteVendorFile() (err error) {
 	perm := os.FileMode(0777)
 	fi, err := os.Stat(ctx.VendorFilePath)

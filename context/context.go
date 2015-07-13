@@ -31,7 +31,7 @@ const (
 
 // Context represents the current project context.
 type Context struct {
-	// TODO: Rethink which of these should be public. Most actions should be methods.
+	Rewrite bool
 
 	GopathList []string
 	Goroot     string
@@ -48,11 +48,28 @@ type Context struct {
 	// Populated with LoadPackage.
 	Package map[string]*Package
 
-	parserFileSet  *token.FileSet
-	packageUnknown map[string]struct{}
-	fileImports    map[string]map[string]*File // ImportPath -> []file paths.
+	loaded bool
+}
 
-	vendorFileLocal map[string]*vendorfile.Package // Vendor file "Local" field lookup for packages.
+// Package maintains information pertaining to a package.
+type Package struct {
+	Dir           string
+	CanonicalPath string
+	LocalPath     string
+	SourcePath    string
+	Gopath        string
+	Files         []*File
+	Status        ListStatus
+
+	// used in resolveUnknown function. Not persisted.
+	referenced map[string]*Package
+}
+
+// File holds a reference to the imports in a file and the file locaiton.
+type File struct {
+	Package *Package
+	Path    string
+	Imports []string
 }
 
 // NewContextWD creates a new context. It looks for a root folder by finding
@@ -86,7 +103,8 @@ func NewContext(root, vendorFilePathRel, vendorFolder string) (*Context, error) 
 	if len(goroot) == 0 {
 		// If GOROOT is not set, get from go cmd.
 		cmd := exec.Command("go", "env")
-		goEnv, err := cmd.CombinedOutput()
+		var goEnv []byte
+		goEnv, err = cmd.CombinedOutput()
 		if err != nil {
 			return nil, err
 		}
@@ -125,16 +143,13 @@ func NewContext(root, vendorFilePathRel, vendorFolder string) (*Context, error) 
 		GopathList: gopathGoroot,
 		Goroot:     goroot,
 
+		Rewrite: true,
+
 		VendorFile:     vf,
 		VendorFilePath: vendorFilePath,
 		VendorFolder:   vendorFolder,
 
 		Package: make(map[string]*Package),
-
-		parserFileSet:   token.NewFileSet(),
-		packageUnknown:  make(map[string]struct{}),
-		vendorFileLocal: make(map[string]*vendorfile.Package, len(vf.Package)),
-		fileImports:     make(map[string]map[string]*File),
 	}
 
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
@@ -142,76 +157,49 @@ func NewContext(root, vendorFilePathRel, vendorFolder string) (*Context, error) 
 		return nil, err
 	}
 
-	for _, pkg := range ctx.VendorFile.Package {
-		ctx.vendorFileLocal[pkg.Local] = pkg
-	}
-
 	return ctx, nil
 }
 
-// findImportDir finds the absolute directory. If gopath is not empty, it is used.
-func (ctx *Context) findImportDir(importPath, useGopath string) (dir, gopath string, err error) {
-	paths := ctx.GopathList
-	if len(useGopath) != 0 {
-		paths = []string{useGopath}
-	}
-	if importPath == "builtin" || importPath == "unsafe" || importPath == "C" {
-		return filepath.Join(ctx.Goroot, importPath), ctx.Goroot, nil
-	}
-	for _, gopath = range paths {
-		dir := filepath.Join(gopath, importPath)
-		fi, err := os.Stat(dir)
-		if os.IsNotExist(err) {
+func (ctx *Context) vendorFilePackageLocal(local string) *vendorfile.Package {
+	for _, pkg := range ctx.VendorFile.Package {
+		if pkg.Remove {
 			continue
 		}
-		if fi.IsDir() == false {
+		if pkg.Local == local {
+			return pkg
+		}
+	}
+	return nil
+}
+
+func (ctx *Context) vendorFilePackageCanonical(canonical string) *vendorfile.Package {
+	for _, pkg := range ctx.VendorFile.Package {
+		if pkg.Remove {
 			continue
 		}
-		return dir, gopath, nil
-	}
-	return "", "", ErrNotInGOPATH{importPath}
-}
-
-// findImportPath takes a absolute directory and returns the import path and go path.
-func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err error) {
-	for _, gopath := range ctx.GopathList {
-		if pathos.FileHasPrefix(dir, gopath) {
-			importPath = pathos.FileTrimPrefix(dir, gopath)
-			importPath = pathos.SlashToImportPath(importPath)
-			return importPath, gopath, nil
+		if pkg.Canonical == canonical {
+			return pkg
 		}
 	}
-	return "", "", ErrNotInGOPATH{dir}
+	return nil
 }
 
-type Package struct {
-	Dir        string
-	ImportPath string
-	VendorPath string
-	Gopath     string
-	Files      []*File
-	Status     ListStatus
-
-	referenced map[string]*Package
-}
-type File struct {
-	Package *Package
-	Path    string
-	Imports []string
-}
-
-func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
+// LoadPackage sets up the context with package information.
+func (ctx *Context) loadPackage(alsoImportPath ...string) error {
+	ctx.loaded = true
+	packageUnknown := make(map[string]struct{}, 30)
 	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return err
 		}
-		if info.IsDir() && info.Name()[0] == '.' {
+		name := info.Name()
+		if info.IsDir() && (name[0] == '.' || name[0] == '_' || name == "testdata") {
 			return filepath.SkipDir
 		}
 		if info.IsDir() {
 			return nil
 		}
-		return ctx.addFileImports(path, ctx.RootGopath)
+		return ctx.addFileImports(path, ctx.RootGopath, packageUnknown)
 	})
 	if err != nil {
 		return err
@@ -220,36 +208,59 @@ func (ctx *Context) LoadPackage(alsoImportPath ...string) error {
 		for _, f := range pkg.Files {
 			for _, imp := range f.Imports {
 				if _, found := ctx.Package[imp]; !found {
-					ctx.packageUnknown[imp] = struct{}{}
+					packageUnknown[imp] = struct{}{}
 				}
 			}
 		}
 	}
 	for _, path := range alsoImportPath {
 		if _, found := ctx.Package[path]; !found {
-			ctx.packageUnknown[path] = struct{}{}
+			packageUnknown[path] = struct{}{}
 		}
 	}
-	return ctx.resolveUnknown()
+	return ctx.resolveUnknown(packageUnknown)
+}
+
+// updatePackageReferences populates the referenced field in each Package.
+func (ctx *Context) updatePackageReferences() {
+	for _, pkg := range ctx.Package {
+		pkg.referenced = make(map[string]*Package, len(pkg.referenced))
+	}
+	for _, pkg := range ctx.Package {
+		for _, f := range pkg.Files {
+			for _, imp := range f.Imports {
+				if other, found := ctx.Package[imp]; found {
+					other.referenced[pkg.CanonicalPath] = pkg
+				}
+			}
+		}
+	}
 }
 
 // AddImport adds the package to the context. The vendorFolder is where the
 // package should be added to relative to the project root.
-// TODO: support adding multiple imports in same call.
-func (ctx *Context) AddImport(importPath string) error {
-	importPath = pathos.SlashToImportPath(importPath)
+func (ctx *Context) AddImport(sourcePath string) error {
+	var err error
+	if !ctx.loaded {
+		err = ctx.loadPackage()
+		if err != nil {
+			return err
+		}
+	}
+	sourcePath = pathos.SlashToImportPath(sourcePath)
 
-	err := ctx.LoadPackage(importPath)
+	canonicalImportPath, err := findLocalImportPath(ctx, sourcePath)
 	if err != nil {
 		return err
 	}
 
-	localImportPath, err := findLocalImportPath(ctx, importPath)
+	err = ctx.resolveUnknownList(sourcePath, canonicalImportPath)
 	if err != nil {
 		return err
 	}
+
 	// Adjust relative local path to GOPATH import path.
-	localImportPath = path.Join(ctx.RootImportPath, ctx.VendorFolder, localImportPath)
+	localImportPath := path.Join(ctx.RootImportPath, ctx.VendorFolder, canonicalImportPath)
 
 	localCopyExists := false
 	// TODO: set localCopyExists flag
@@ -264,14 +275,9 @@ func (ctx *Context) AddImport(importPath string) error {
 		}
 	}*/
 
-	err = ctx.addImports(importPath)
-	if err != nil {
-		return err
-	}
-
-	pkg, foundPkg := ctx.Package[importPath]
+	pkg, foundPkg := ctx.Package[sourcePath]
 	if !foundPkg {
-		return ErrNotInGOPATH{importPath}
+		return ErrNotInGOPATH{sourcePath}
 	}
 	if pkg.Status != StatusExternal {
 		if pkg.Status == StatusInternal {
@@ -280,65 +286,88 @@ func (ctx *Context) AddImport(importPath string) error {
 		if pkg.Status == StatusLocal {
 			return ErrLocalPackage
 		}
-		return ErrNotInGOPATH{importPath}
+		return ErrNotInGOPATH{sourcePath}
 	}
 
 	// Update vendor file with correct Local field.
-	var vp *vendorfile.Package
-	for _, vpkg := range ctx.VendorFile.Package {
-		if vpkg.Canonical == importPath {
-			vp = vpkg
-			break
-		}
-	}
+	vp := ctx.vendorFilePackageCanonical(canonicalImportPath)
 	if vp == nil {
 		vp = &vendorfile.Package{
 			Add:       true,
-			Canonical: importPath,
+			Canonical: canonicalImportPath,
 			Local:     localImportPath,
+			Source:    sourcePath,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
-		ctx.vendorFileLocal[vp.Local] = vp
 	}
 	if !localCopyExists {
 		// Find the VCS information.
-		vcs, err := vcs.FindVcs(pkg.Gopath, pkg.Dir)
+		system, err := vcs.FindVcs(pkg.Gopath, pkg.Dir)
 		if err != nil {
 			return err
 		}
-		if vcs != nil {
-			if vcs.Dirty {
-				return ErrDirtyPackage{pkg.ImportPath}
+		if system != nil {
+			if system.Dirty {
+				return ErrDirtyPackage{pkg.CanonicalPath}
 			}
-			vp.Revision = vcs.Revision
-			if vcs.RevisionTime != nil {
-				vp.RevisionTime = vcs.RevisionTime.Format(time.RFC3339)
+			vp.Revision = system.Revision
+			if system.RevisionTime != nil {
+				vp.RevisionTime = system.RevisionTime.Format(time.RFC3339)
 			}
 		}
 
 		// Copy the package locally.
-		// TODO: do not copy locally, just mark as needing a copy.
-		/*err = CopyPackage(filepath.Join(ctx.RootGopath, pathos.SlashToFilepath(localImportPath)), pkg.Dir)
+		err = CopyPackage(filepath.Join(ctx.RootGopath, pathos.SlashToFilepath(localImportPath)), pkg.Dir)
 		if err != nil {
 			return err
-		}*/
+		}
+	}
+
+	if ctx.Rewrite {
+		err = RewriteFiles(ctx, localImportPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Remove unused external packages from listing.
+	ctx.updatePackageReferences()
+top:
+	for i := 0; i <= looplimit; i++ {
+		altered := false
+		for path, pkg := range ctx.Package {
+			if len(pkg.referenced) == 0 && pkg.Status == StatusExternal {
+				altered = true
+				delete(ctx.Package, path)
+				for _, other := range ctx.Package {
+					delete(other.referenced, path)
+				}
+				continue top
+			}
+		}
+		if !altered {
+			break
+		}
+		if i == looplimit {
+			return errLoopLimit{"resolveUnknown() Mark Unused"}
+		}
 	}
 	return nil
 }
 
-func (ctx *Context) addFileImports(pathname, gopath string) error {
+func (ctx *Context) addFileImports(pathname, gopath string, packageUnknown map[string]struct{}) error {
 	dir, _ := filepath.Split(pathname)
 	importPath := pathos.FileTrimPrefix(dir, gopath)
 	importPath = pathos.SlashToImportPath(importPath)
 	importPath = strings.TrimPrefix(importPath, "/")
 	importPath = strings.TrimSuffix(importPath, "/")
 
-	delete(ctx.packageUnknown, importPath)
+	delete(packageUnknown, importPath)
 
 	if strings.HasSuffix(pathname, ".go") == false {
 		return nil
 	}
-	f, err := parser.ParseFile(ctx.parserFileSet, pathname, nil, parser.ImportsOnly)
+	f, err := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly)
 	if err != nil {
 		return err
 	}
@@ -346,10 +375,10 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	pkg, found := ctx.Package[importPath]
 	if !found {
 		pkg = &Package{
-			Dir:        dir,
-			ImportPath: importPath,
-			VendorPath: importPath,
-			Gopath:     gopath,
+			Dir:           dir,
+			CanonicalPath: importPath,
+			LocalPath:     importPath,
+			Gopath:        gopath,
 		}
 		ctx.Package[importPath] = pkg
 	}
@@ -371,49 +400,47 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		pf.Imports[i] = imp
 
 		if _, found := ctx.Package[imp]; !found {
-			ctx.packageUnknown[imp] = struct{}{}
+			packageUnknown[imp] = struct{}{}
 		}
 	}
 
 	return nil
 }
 
-func (ctx *Context) addImports(importPath ...string) error {
-	for _, imp := range importPath {
-		if _, found := ctx.Package[imp]; found {
-			continue
-		}
-		ctx.packageUnknown[imp] = struct{}{}
+func (ctx *Context) resolveUnknownList(packages ...string) error {
+	packageUnknown := make(map[string]struct{}, len(packages))
+	for _, name := range packages {
+		packageUnknown[name] = struct{}{}
 	}
-	return ctx.resolveUnknown()
+	return ctx.resolveUnknown(packageUnknown)
 }
 
-func (ctx *Context) resolveUnknown() error {
+func (ctx *Context) resolveUnknown(packageUnknown map[string]struct{}) error {
 top:
-	for importPath := range ctx.packageUnknown {
+	for importPath := range packageUnknown {
 		dir, gopath, err := ctx.findImportDir(importPath, "")
 		if err != nil {
 			if _, ok := err.(ErrNotInGOPATH); ok {
 				ctx.Package[importPath] = &Package{
-					Dir:        "",
-					ImportPath: importPath,
-					VendorPath: importPath,
-					Status:     StatusMissing,
+					Dir:           "",
+					CanonicalPath: importPath,
+					LocalPath:     importPath,
+					Status:        StatusMissing,
 				}
-				delete(ctx.packageUnknown, importPath)
+				delete(packageUnknown, importPath)
 				goto top
 			}
 			return err
 		}
 		if pathos.FileStringEquals(gopath, ctx.Goroot) {
 			ctx.Package[importPath] = &Package{
-				Dir:        dir,
-				ImportPath: importPath,
-				VendorPath: importPath,
-				Status:     StatusStd,
-				Gopath:     ctx.Goroot,
+				Dir:           dir,
+				CanonicalPath: importPath,
+				LocalPath:     importPath,
+				Status:        StatusStd,
+				Gopath:        ctx.Goroot,
 			}
-			delete(ctx.packageUnknown, importPath)
+			delete(packageUnknown, importPath)
 			goto top
 		}
 		df, err := os.Open(dir)
@@ -433,7 +460,7 @@ top:
 				continue
 			}
 			path := filepath.Join(dir, fi.Name())
-			err = ctx.addFileImports(path, gopath)
+			err = ctx.addFileImports(path, gopath, packageUnknown)
 			if err != nil {
 				return err
 			}
@@ -446,12 +473,12 @@ top:
 		if pkg.Status != StatusUnknown {
 			continue
 		}
-		if vp, found := ctx.vendorFileLocal[pkg.ImportPath]; found {
+		if vp := ctx.vendorFilePackageLocal(pkg.CanonicalPath); vp != nil {
 			pkg.Status = StatusInternal
-			pkg.VendorPath = vp.Canonical
+			pkg.LocalPath = vp.Canonical
 			continue
 		}
-		if strings.HasPrefix(pkg.ImportPath, ctx.RootImportPath) {
+		if strings.HasPrefix(pkg.CanonicalPath, ctx.RootImportPath) {
 			pkg.Status = StatusLocal
 			continue
 		}
@@ -476,31 +503,16 @@ top:
 			return err
 		}
 		for _, vp := range vf.Package {
-			if vp.Local == pkg.ImportPath {
+			if vp.Local == pkg.CanonicalPath {
 				// Return the vendor path the vendor package used.
-				pkg.VendorPath = vp.Canonical
+				pkg.LocalPath = vp.Canonical
 				break
 			}
 		}
 	}
 
 	// Determine any un-used internal vendor imports.
-	// 1. populate the references.
-	for _, pkg := range ctx.Package {
-		pkg.referenced = make(map[string]*Package, len(pkg.referenced))
-	}
-	for _, pkg := range ctx.Package {
-		for _, f := range pkg.Files {
-			for _, imp := range f.Imports {
-				if other, found := ctx.Package[imp]; found {
-					other.referenced[pkg.ImportPath] = pkg
-				}
-			}
-		}
-	}
-
-	// 2. Mark as unused and remove all. Loop until it stops marking more
-	// as unused.
+	ctx.updatePackageReferences()
 	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for _, pkg := range ctx.Package {
@@ -508,7 +520,7 @@ top:
 				altered = true
 				pkg.Status = StatusUnused
 				for _, other := range ctx.Package {
-					delete(other.referenced, pkg.ImportPath)
+					delete(other.referenced, pkg.CanonicalPath)
 				}
 			}
 		}
@@ -516,21 +528,7 @@ top:
 			break
 		}
 		if i == looplimit {
-			return ErrLoopLimit{"resolveUnknown() Mark Unused"}
-		}
-	}
-
-	// Add files to import map.
-	for _, pkg := range ctx.Package {
-		for _, f := range pkg.Files {
-			for _, imp := range f.Imports {
-				fileList := ctx.fileImports[imp]
-				if fileList == nil {
-					fileList = make(map[string]*File, 1)
-					ctx.fileImports[imp] = fileList
-				}
-				fileList[f.Path] = f
-			}
+			return errLoopLimit{"resolveUnknown() Mark Unused"}
 		}
 	}
 	return nil

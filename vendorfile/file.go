@@ -42,6 +42,7 @@ type Package struct {
 	// See the vendor spec for definitions.
 	Canonical    string
 	Local        string
+	Source       string
 	Revision     string
 	RevisionTime string
 	Comment      string
@@ -51,6 +52,7 @@ var (
 	packageNames      = []string{"package", "Package"}
 	canonicalNames    = []string{"canonical", "Canonical", "vendor", "Vendor"}
 	localNames        = []string{"local", "Local"}
+	sourceNames       = []string{"source"}
 	revisionNames     = []string{"revision", "Revision", "version", "Version"}
 	revisionTimeNames = []string{"revisionTime", "RevisionTime", "versionTime", "VersionTime"}
 	commentNames      = []string{"comment", "Comment"}
@@ -139,6 +141,7 @@ func (vf *File) toFields() {
 		vf.Package[index] = pkg
 		pkg.index = index
 		setField(&pkg.Canonical, object, canonicalNames)
+		setField(&pkg.Source, object, sourceNames)
 		setField(&pkg.Local, object, localNames)
 		setField(&pkg.Revision, object, revisionNames)
 		setField(&pkg.RevisionTime, object, revisionTimeNames)

@@ -7,7 +7,44 @@ package context
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/kardianos/vendor/internal/pathos"
 )
+
+// findImportDir finds the absolute directory. If gopath is not empty, it is used.
+func (ctx *Context) findImportDir(importPath, useGopath string) (dir, gopath string, err error) {
+	paths := ctx.GopathList
+	if len(useGopath) != 0 {
+		paths = []string{useGopath}
+	}
+	if importPath == "builtin" || importPath == "unsafe" || importPath == "C" {
+		return filepath.Join(ctx.Goroot, importPath), ctx.Goroot, nil
+	}
+	for _, gopath = range paths {
+		dir := filepath.Join(gopath, importPath)
+		fi, err := os.Stat(dir)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if fi.IsDir() == false {
+			continue
+		}
+		return dir, gopath, nil
+	}
+	return "", "", ErrNotInGOPATH{importPath}
+}
+
+// findImportPath takes a absolute directory and returns the import path and go path.
+func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err error) {
+	for _, gopath := range ctx.GopathList {
+		if pathos.FileHasPrefix(dir, gopath) {
+			importPath = pathos.FileTrimPrefix(dir, gopath)
+			importPath = pathos.SlashToImportPath(importPath)
+			return importPath, gopath, nil
+		}
+	}
+	return "", "", ErrNotInGOPATH{dir}
+}
 
 func findRoot(folder, vendorPath string) (root string, err error) {
 	for i := 0; i <= looplimit; i++ {
@@ -24,14 +61,13 @@ func findRoot(folder, vendorPath string) (root string, err error) {
 		}
 		folder = nextFolder
 	}
-	return "", ErrLoopLimit{"findRoot()"}
+	return "", errLoopLimit{"findRoot()"}
 }
 
 // findLocalImportPath determines the correct local import path (from GOPATH)
 // and from any nested internal vendor files. It returns a string relative to
 // the root "internal" folder.
 func findLocalImportPath(ctx *Context, importPath string) (string, error) {
-
 	// "crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
 	// "yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg" (IIF yourpkg is a vendor package)
 	// "yours/internal/myinternal" -> "path/to/mypkg/internal/yours/internal/myinternal" (IIF myinternal is not a vendor package)
