@@ -99,20 +99,20 @@ func (ctx *Context) RewriteFiles(checkPaths ...string) error {
 
 	// Fixup import paths.
 	ctx.updatePackageReferences()
-	st := make(map[string]struct{}, len(rules)+len(rules))
+	st := newUnknownSet()
 	for _, rule := range rules {
 		if from := ctx.Package[rule.From]; from != nil {
 			from.Status = StatusUnknown
 			for rpath, ref := range from.referenced {
 				ref.Status = StatusUnknown
-				st[rpath] = struct{}{}
+				st.add("", rpath)
 			}
 		}
 		if to := ctx.Package[rule.To]; to != nil {
 			to.Status = StatusUnknown
 		}
-		st[rule.From] = struct{}{}
-		st[rule.To] = struct{}{}
+		st.add("", rule.From)
+		st.add("", rule.To)
 	}
 	return ctx.resolveUnknown(st)
 }
