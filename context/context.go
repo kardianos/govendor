@@ -258,7 +258,7 @@ func (ctx *Context) AddImport(sourcePath string) error {
 	}
 	sourcePath = pathos.SlashToImportPath(sourcePath)
 
-	canonicalImportPath, err := findLocalImportPath(ctx, sourcePath)
+	canonicalImportPath, err := ctx.findLocalImportPath(sourcePath)
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func (ctx *Context) AddImport(sourcePath string) error {
 	}
 
 	if !ctx.go15VendorExperiment {
-		err = RewriteFiles(ctx, localImportPath)
+		err = ctx.RewriteFiles(localImportPath)
 		if err != nil {
 			return err
 		}

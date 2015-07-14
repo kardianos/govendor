@@ -24,7 +24,10 @@ type rule struct {
 }
 
 // RewriteFiles rewrites files to the local path.
-func RewriteFiles(ctx *Context, checkPaths ...string) error {
+func (ctx *Context) RewriteFiles(checkPaths ...string) error {
+	if !ctx.loaded {
+		ctx.loadPackage()
+	}
 	fileImports := make(map[string]map[string]*File) // map[ImportPath]map[FilePath]File
 	// Add files to import map.
 	for _, pkg := range ctx.Package {
@@ -89,7 +92,7 @@ func RewriteFiles(ctx *Context, checkPaths ...string) error {
 			break
 		}
 	}
-	err := rewriteFilesByRule(ctx, files, rules)
+	err := ctx.rewriteFilesByRule(files, rules)
 	if err != nil {
 		return err
 	}
@@ -116,7 +119,7 @@ func RewriteFiles(ctx *Context, checkPaths ...string) error {
 
 // rewriteFilesByRule modified the imports according to rules and works on the
 // file paths provided by filePaths.
-func rewriteFilesByRule(ctx *Context, filePaths map[string]*File, rules []rule) error {
+func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules []rule) error {
 	goprint := &printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
