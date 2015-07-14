@@ -31,8 +31,6 @@ const (
 
 // Context represents the current project context.
 type Context struct {
-	Rewrite bool
-
 	GopathList []string
 	Goroot     string
 
@@ -48,7 +46,8 @@ type Context struct {
 	// Populated with LoadPackage.
 	Package map[string]*Package
 
-	loaded bool
+	loaded               bool
+	go15VendorExperiment bool
 }
 
 // Package maintains information pertaining to a package.
@@ -82,8 +81,8 @@ func NewContextWD() (*Context, error) {
 	pathToVendorFile := vendorFilename
 	rootIndicator := "vendor"
 	vendorFolder := "vendor"
-	rewrite := os.Getenv("GO15VENDOREXPERIMENT") != "1"
-	if rewrite {
+	go15VendorExperiment := os.Getenv("GO15VENDOREXPERIMENT") == "1"
+	if !go15VendorExperiment {
 		pathToVendorFile = filepath.Join("internal", vendorFilename)
 		rootIndicator = pathToVendorFile
 		vendorFolder = "internal"
@@ -93,12 +92,12 @@ func NewContextWD() (*Context, error) {
 		return nil, err
 	}
 
-	return NewContext(root, pathToVendorFile, vendorFolder, rewrite)
+	return NewContext(root, pathToVendorFile, vendorFolder, go15VendorExperiment)
 }
 
 // NewContext creates new context from a given root folder and vendor file path.
 // The vendorFolder is where vendor packages should be placed.
-func NewContext(root, vendorFilePathRel, vendorFolder string, rewrite bool) (*Context, error) {
+func NewContext(root, vendorFilePathRel, vendorFolder string, go15VendorExperiment ...bool) (*Context, error) {
 	vendorFilePath := filepath.Join(root, vendorFilePathRel)
 	vf, err := readVendorFile(vendorFilePath)
 	if err != nil {
@@ -153,13 +152,13 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewrite bool) (*Co
 		GopathList: gopathGoroot,
 		Goroot:     goroot,
 
-		Rewrite: rewrite,
-
 		VendorFile:     vf,
 		VendorFilePath: vendorFilePath,
 		VendorFolder:   vendorFolder,
 
 		Package: make(map[string]*Package),
+
+		go15VendorExperiment: len(go15VendorExperiment) != 0 && go15VendorExperiment[0] == true,
 	}
 
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
@@ -332,7 +331,7 @@ func (ctx *Context) AddImport(sourcePath string) error {
 		}
 	}
 
-	if ctx.Rewrite {
+	if !ctx.go15VendorExperiment {
 		err = RewriteFiles(ctx, localImportPath)
 		if err != nil {
 			return err
@@ -427,7 +426,7 @@ func (ctx *Context) resolveUnknownList(packages ...string) error {
 func (ctx *Context) resolveUnknown(packageUnknown map[string]struct{}) error {
 top:
 	for importPath := range packageUnknown {
-		dir, gopath, err := ctx.findImportDir(importPath, "")
+		dir, gopath, err := ctx.findImportDir(importPath)
 		if err != nil {
 			if _, ok := err.(ErrNotInGOPATH); ok {
 				ctx.Package[importPath] = &Package{

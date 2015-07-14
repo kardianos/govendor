@@ -14,8 +14,15 @@ import (
 	"github.com/kardianos/vendor/internal/gt"
 )
 
-func ctx(g *gt.GopathTest) *Context {
-	c, err := NewContext(g.Current(), "vendor.json", "internal", true)
+func ctx14(g *gt.GopathTest) *Context {
+	c, err := NewContext(g.Current(), filepath.Join("internal", "vendor.json"), "internal", false)
+	if err != nil {
+		g.Fatal(err)
+	}
+	return c
+}
+func ctx15(g *gt.GopathTest) *Context {
+	c, err := NewContext(g.Current(), "vendor.json", "vendor", true)
 	if err != nil {
 		g.Fatal(err)
 	}
@@ -60,7 +67,7 @@ func TestSimple(t *testing.T) {
 		gt.File("a.go", "strings"),
 	)
 	g.In("co1")
-	c := ctx(g)
+	c := ctx14(g)
 	list(g, c, "initial", `e co2/pk1
 e co2/pk2
 l co1/pk1
@@ -84,7 +91,7 @@ func TestImportSimple(t *testing.T) {
 		gt.File("a.go", "strings"),
 	)
 	g.In("co1")
-	c := ctx(g)
+	c := ctx14(g)
 	g.Check(c.AddImport("co2/pk1"))
 	c.WriteVendorFile()
 	expected := `i co1/internal/co2/pk1 [co2/pk1]
@@ -95,7 +102,7 @@ s strings
 `
 	list(g, c, "same", expected)
 
-	c = ctx(g)
+	c = ctx14(g)
 	list(g, c, "new", expected)
 }
 
@@ -113,7 +120,7 @@ func TestDuplicatePackage(t *testing.T) {
 		gt.File("a.go", "strings"),
 	)
 	g.In("co2")
-	c := ctx(g)
+	c := ctx14(g)
 	statusList, err := c.ListStatus()
 	g.Check(err)
 	for _, item := range statusList {
@@ -129,7 +136,7 @@ s strings
 `)
 
 	g.In("co1")
-	c = ctx(g)
+	c = ctx14(g)
 	list(g, c, "co1 pre list", `e co2/internal/co3/pk1 [co3/pk1]
 e co2/pk1
 e co3/pk1
@@ -152,6 +159,36 @@ l co1/pk1
 s strings
 `
 	list(g, c, "co1 list 1", expected)
-	c = ctx(g)
+	c = ctx14(g)
 	list(g, c, "co1 list 2", expected)
+}
+
+func TestImportSimple15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co2/pk2"),
+		gt.File("b.go", "co2/pk1", "bytes"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk2",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	c := ctx15(g)
+	g.Check(c.AddImport("co2/pk1"))
+	c.WriteVendorFile()
+	expected := `v co1/vendor/co2/pk1 [co2/pk1]
+e co2/pk2
+l co1/pk1
+s bytes
+s strings
+`
+	list(g, c, "same", expected)
+
+	c = ctx14(g)
+	list(g, c, "new", expected)
 }

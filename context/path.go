@@ -12,15 +12,11 @@ import (
 )
 
 // findImportDir finds the absolute directory. If gopath is not empty, it is used.
-func (ctx *Context) findImportDir(importPath, useGopath string) (dir, gopath string, err error) {
-	paths := ctx.GopathList
-	if len(useGopath) != 0 {
-		paths = []string{useGopath}
-	}
+func (ctx *Context) findImportDir(importPath string) (dir, gopath string, err error) {
 	if importPath == "builtin" || importPath == "unsafe" || importPath == "C" {
 		return filepath.Join(ctx.Goroot, importPath), ctx.Goroot, nil
 	}
-	for _, gopath = range paths {
+	for _, gopath = range ctx.GopathList {
 		dir := filepath.Join(gopath, importPath)
 		fi, err := os.Stat(dir)
 		if os.IsNotExist(err) {
@@ -73,7 +69,7 @@ func findLocalImportPath(ctx *Context, importPath string) (string, error) {
 	// "yours/internal/myinternal" -> "path/to/mypkg/internal/yours/internal/myinternal" (IIF myinternal is not a vendor package)
 	// "github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
 
-	dir, _, err := ctx.findImportDir(importPath, "")
+	dir, _, err := ctx.findImportDir(importPath)
 	if err != nil {
 		return "", err
 	}
