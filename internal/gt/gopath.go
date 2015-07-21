@@ -82,6 +82,7 @@ func (g *GopathTest) Check(err error) {
 	if err == nil {
 		return
 	}
+	panic(err)
 	g.Fatal(err)
 }
 

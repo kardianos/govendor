@@ -7,6 +7,7 @@ package context
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 
 	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
 	"github.com/kardianos/vendor/vendorfile"
@@ -22,6 +23,11 @@ func (ctx *Context) WriteVendorFile() (err error) {
 
 	buf := &bytes.Buffer{}
 	err = ctx.VendorFile.Marshal(buf)
+	if err != nil {
+		return
+	}
+	dir, _ := filepath.Split(ctx.VendorFilePath)
+	err = os.MkdirAll(dir, 0777)
 	if err != nil {
 		return
 	}

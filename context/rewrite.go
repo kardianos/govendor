@@ -10,6 +10,7 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -17,121 +18,45 @@ import (
 	"github.com/kardianos/vendor/internal/pathos"
 )
 
-// rule provides the translation from origional import path to new import path.
-type rule struct {
-	From string
-	To   string
-}
+// rules provides the translation from origional import path to new import path.
+type ruleList map[string]string // map[from]to
 
 // RewriteFiles rewrites files to the local path.
-func (ctx *Context) RewriteFiles(checkPaths ...string) error {
-	if !ctx.loaded {
-		ctx.loadPackage()
-	}
-	fileImports := make(map[string]map[string]*File) // map[ImportPath]map[FilePath]File
-	// Add files to import map.
-	for _, pkg := range ctx.Package {
-		for _, f := range pkg.Files {
-			for _, imp := range f.Imports {
-				fileList := fileImports[imp]
-				if fileList == nil {
-					fileList = make(map[string]*File, 1)
-					fileImports[imp] = fileList
-				}
-				fileList[f.Path] = f
-			}
-		}
-	}
-
-	// Determine which files to touch.
-	files := make(map[string]*File, len(ctx.VendorFile.Package)*3)
-
-	// Rules are all lines in the vendor file.
-	rules := make([]rule, 0, len(ctx.VendorFile.Package))
-	for _, vp := range ctx.VendorFile.Package {
-		if vp.Remove == true {
-			continue
-		}
-		for fpath, f := range fileImports[vp.Canonical] {
-			files[fpath] = f
-		}
-		rules = append(rules, rule{From: vp.Canonical, To: vp.Local})
-	}
-	// Add local package files.
-	for _, localImportPath := range checkPaths {
-		if localPkg, found := ctx.Package[localImportPath]; found {
-			for _, f := range localPkg.Files {
-				files[f.Path] = f
-			}
-		}
-	}
-	// Rewrite any external package where the local path is different then the vendor path.
-	for _, pkg := range ctx.Package {
-		if pkg.Status != StatusExternal {
-			continue
-		}
-		if pkg.CanonicalPath == pkg.LocalPath {
-			continue
-		}
-		for _, otherPkg := range ctx.Package {
-			if pkg == otherPkg {
-				continue
-			}
-			if otherPkg.Status != StatusInternal {
-				continue
-			}
-			if otherPkg.LocalPath != pkg.LocalPath {
-				continue
-			}
-
-			for fpath, f := range fileImports[pkg.CanonicalPath] {
-				files[fpath] = f
-
-			}
-			rules = append(rules, rule{From: pkg.CanonicalPath, To: otherPkg.CanonicalPath})
-			break
-		}
-	}
-	err := ctx.rewriteFilesByRule(files, rules)
+func (ctx *Context) rewriteFiles() error {
+	ctx.dirty = true
+	err := ctx.rewriteFilesByRule(ctx.MoveFile, ctx.MoveRule)
 	if err != nil {
 		return err
 	}
 
 	// Fixup import paths.
-	ctx.updatePackageReferences()
-	st := newUnknownSet()
-	for _, rule := range rules {
-		if from := ctx.Package[rule.From]; from != nil {
-			from.Status = StatusUnknown
-			for rpath, ref := range from.referenced {
-				ref.Status = StatusUnknown
-				st.add("", rpath)
-			}
+	for from, to := range ctx.MoveRule {
+		if fromPkg := ctx.Package[from]; fromPkg != nil {
+			fromPkg.Dir = filepath.Join(ctx.RootGopath, to)
+			fromPkg.Status = StatusInternal
+			fromPkg.Local = to
+			delete(ctx.Package, from)
+			ctx.Package[to] = fromPkg
 		}
-		if to := ctx.Package[rule.To]; to != nil {
-			to.Status = StatusUnknown
-		}
-		st.add("", rule.From)
-		st.add("", rule.To)
 	}
-	return ctx.resolveUnknown(st)
+	return ctx.determinePackageStatus()
 }
 
 // rewriteFilesByRule modified the imports according to rules and works on the
 // file paths provided by filePaths.
-func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules []rule) error {
+func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules ruleList) error {
 	goprint := &printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
 	}
-	for pathname, fileInfo := range filePaths {
-		if pathos.FileHasPrefix(pathname, ctx.RootDir) == false {
+	for _, fileInfo := range filePaths {
+		if pathos.FileHasPrefix(fileInfo.Path, ctx.RootDir) == false {
 			continue
 		}
 
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
-		f, err := parser.ParseFile(fileset, pathname, nil, parser.ParseComments)
+		f, err := parser.ParseFile(fileset, fileInfo.Path, nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}
@@ -141,14 +66,14 @@ func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules []rule)
 			if err != nil {
 				return err
 			}
-			for _, rule := range rules {
-				if imp != rule.From {
+			for from, to := range rules {
+				if imp != from {
 					continue
 				}
-				impNode.Path.Value = strconv.Quote(rule.To)
+				impNode.Path.Value = strconv.Quote(to)
 				for i, metaImport := range fileInfo.Imports {
-					if rule.From == metaImport {
-						fileInfo.Imports[i] = rule.To
+					if from == metaImport {
+						fileInfo.Imports[i] = to
 					}
 				}
 				break
@@ -183,11 +108,11 @@ func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules []rule)
 		// Don't sort or modify the imports to minimize diffs.
 
 		// Write the AST back to disk.
-		fi, err := os.Stat(pathname)
+		fi, err := os.Stat(fileInfo.Path)
 		if err != nil {
 			return err
 		}
-		w, err := safefile.Create(pathname, fi.Mode())
+		w, err := safefile.Create(fileInfo.Path, fi.Mode())
 		if err != nil {
 			return err
 		}

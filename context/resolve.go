@@ -37,14 +37,37 @@ func (s unknownSet) del(rel, pkg string) {
 	delete(s, unknown{rel: rel, pkg: pkg})
 }
 
-func (ctx *Context) addFileImports(pathname, gopath string, packageUnknown unknownSet) error {
+// loadPackage sets up the context with package information and
+// is called before any initial operation is performed.
+func (ctx *Context) loadPackage() error {
+	ctx.loaded = true
+	ctx.Package = make(map[string]*Package, len(ctx.Package))
+	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return err
+		}
+		name := info.Name()
+		if info.IsDir() && (name[0] == '.' || name[0] == '_' || name == "testdata") {
+			return filepath.SkipDir
+		}
+		if info.IsDir() {
+			return nil
+		}
+		return ctx.addFileImports(path, ctx.RootGopath)
+	})
+	if err != nil {
+		return err
+	}
+	return ctx.determinePackageStatus()
+}
+
+// addFileImports is called from loadPackage and resolveUnknown.
+func (ctx *Context) addFileImports(pathname, gopath string) error {
 	dir, _ := filepath.Split(pathname)
 	importPath := pathos.FileTrimPrefix(dir, gopath)
 	importPath = pathos.SlashToImportPath(importPath)
 	importPath = strings.TrimPrefix(importPath, "/")
 	importPath = strings.TrimSuffix(importPath, "/")
-
-	packageUnknown.del("", importPath)
 
 	if strings.HasSuffix(pathname, ".go") == false {
 		return nil
@@ -57,10 +80,10 @@ func (ctx *Context) addFileImports(pathname, gopath string, packageUnknown unkno
 	pkg, found := ctx.Package[importPath]
 	if !found {
 		pkg = &Package{
-			Dir:           dir,
-			CanonicalPath: importPath,
-			LocalPath:     importPath,
-			Gopath:        gopath,
+			Dir:       dir,
+			Canonical: importPath,
+			Local:     importPath,
+			Gopath:    gopath,
 		}
 		ctx.Package[importPath] = pkg
 	}
@@ -80,50 +103,39 @@ func (ctx *Context) addFileImports(pathname, gopath string, packageUnknown unkno
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-
-		if _, found := ctx.Package[imp]; !found {
-			packageUnknown.add("", imp)
+		err = ctx.addSingleImport(pkg.Dir, imp)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (ctx *Context) resolveUnknownList(relativeTo string, packages ...string) error {
-	packageUnknown := newUnknownSet()
-	for _, name := range packages {
-		packageUnknown.add("", name)
-	}
-	return ctx.resolveUnknown(packageUnknown)
-}
-
-func (ctx *Context) resolveUnknown(packageUnknown unknownSet) error {
-top:
-	for importPath := range packageUnknown {
-		dir, gopath, err := ctx.findImportDir(importPath.rel, importPath.pkg)
+func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
+	if _, found := ctx.Package[imp]; !found {
+		dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
 		if err != nil {
-			if _, ok := err.(ErrNotInGOPATH); ok {
-				ctx.Package[importPath.pkg] = &Package{
-					Dir:           "",
-					CanonicalPath: importPath.pkg,
-					LocalPath:     importPath.pkg,
-					Status:        StatusMissing,
+			if _, is := err.(ErrNotInGOPATH); is {
+				ctx.Package[imp] = &Package{
+					Dir:       "",
+					Canonical: imp,
+					Local:     imp,
+					Status:    StatusMissing,
 				}
-				delete(packageUnknown, importPath)
-				goto top
+				return nil
 			}
 			return err
 		}
 		if pathos.FileStringEquals(gopath, ctx.Goroot) {
-			ctx.Package[importPath.pkg] = &Package{
-				Dir:           dir,
-				CanonicalPath: importPath.pkg,
-				LocalPath:     importPath.pkg,
-				Status:        StatusStd,
-				Gopath:        ctx.Goroot,
+			ctx.Package[imp] = &Package{
+				Dir:       dir,
+				Canonical: imp,
+				Local:     imp,
+				Status:    StatusStd,
+				Gopath:    ctx.Goroot,
 			}
-			delete(packageUnknown, importPath)
-			goto top
+			return nil
 		}
 		df, err := os.Open(dir)
 		if err != nil {
@@ -138,29 +150,32 @@ top:
 			if fi.IsDir() {
 				continue
 			}
-			if fi.Name()[0] == '.' {
+			switch fi.Name()[0] {
+			case '.', '_':
 				continue
 			}
 			path := filepath.Join(dir, fi.Name())
-			err = ctx.addFileImports(path, gopath, packageUnknown)
+			err = ctx.addFileImports(path, gopath)
 			if err != nil {
 				return err
 			}
 		}
-		goto top
 	}
+	return nil
+}
 
+func (ctx *Context) determinePackageStatus() error {
 	// Determine the status of remaining imports.
 	for _, pkg := range ctx.Package {
 		if pkg.Status != StatusUnknown {
 			continue
 		}
-		if vp := ctx.vendorFilePackageLocal(pkg.CanonicalPath); vp != nil {
+		if vp := ctx.vendorFilePackageLocal(pkg.Local); vp != nil {
 			pkg.Status = StatusInternal
-			pkg.LocalPath = vp.Canonical
+			pkg.Canonical = vp.Canonical
 			continue
 		}
-		if strings.HasPrefix(pkg.CanonicalPath, ctx.RootImportPath) {
+		if strings.HasPrefix(pkg.Canonical, ctx.RootImportPath) {
 			pkg.Status = StatusLocal
 			continue
 		}
@@ -185,9 +200,9 @@ top:
 			return err
 		}
 		for _, vp := range vf.Package {
-			if vp.Local == pkg.CanonicalPath {
+			if vp.Local == pkg.Local {
 				// Return the vendor path the vendor package used.
-				pkg.LocalPath = vp.Canonical
+				pkg.Canonical = vp.Canonical
 				break
 			}
 		}
@@ -197,12 +212,12 @@ top:
 	ctx.updatePackageReferences()
 	for i := 0; i <= looplimit; i++ {
 		altered := false
-		for _, pkg := range ctx.Package {
+		for path, pkg := range ctx.Package {
 			if len(pkg.referenced) == 0 && pkg.Status == StatusInternal {
 				altered = true
 				pkg.Status = StatusUnused
 				for _, other := range ctx.Package {
-					delete(other.referenced, pkg.CanonicalPath)
+					delete(other.referenced, path)
 				}
 			}
 		}

@@ -9,6 +9,12 @@ import (
 	"sort"
 )
 
+/*
+	TODO: change status to two separate flags:
+	status: missing | unused | program
+	location: std | local | vendor | external
+*/
+
 // ListStatus indicates the status of the import.
 type ListStatus byte
 
@@ -59,16 +65,16 @@ const (
 
 // ListItem represents a package in the current project.
 type ListItem struct {
-	Status     ListStatus
-	Path       string
-	VendorPath string
+	Status    ListStatus
+	Canonical string
+	Local     string
 }
 
 func (li ListItem) String() string {
-	if len(li.VendorPath) == 0 || li.VendorPath == li.Path {
-		return fmt.Sprintf("%s %s", li.Status, li.Path)
+	if li.Local == li.Canonical {
+		return fmt.Sprintf("%s %s", li.Status, li.Canonical)
 	}
-	return fmt.Sprintf("%s %s [%s]", li.Status, li.Path, li.VendorPath)
+	return fmt.Sprintf("%s %s [%s]", li.Status, li.Local, li.Canonical)
 }
 
 type listItemSort []ListItem
@@ -76,16 +82,16 @@ type listItemSort []ListItem
 func (li listItemSort) Len() int      { return len(li) }
 func (li listItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
 func (li listItemSort) Less(i, j int) bool {
-	if li[i].Status == li[j].Status {
-		return li[i].Path < li[j].Path
+	if li[i].Status != li[j].Status {
+		return li[i].Status > li[j].Status
 	}
-	return li[i].Status > li[j].Status
+	return li[i].Local < li[j].Local
 }
 
 // ListStatus obtains the current package status list.
 func (ctx *Context) ListStatus() ([]ListItem, error) {
 	var err error
-	if !ctx.loaded {
+	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
 		if err != nil {
 			return nil, err
@@ -94,9 +100,9 @@ func (ctx *Context) ListStatus() ([]ListItem, error) {
 	list := make([]ListItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
 		li := ListItem{
-			Status:     pkg.Status,
-			Path:       pkg.CanonicalPath,
-			VendorPath: pkg.LocalPath,
+			Status:    pkg.Status,
+			Canonical: pkg.Canonical,
+			Local:     pkg.Local,
 		}
 		list = append(list, li)
 	}

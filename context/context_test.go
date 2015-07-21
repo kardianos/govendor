@@ -44,12 +44,33 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 	}
 }
 
-func showVendorFile(g *gt.GopathTest) {
-	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), "vendor.json"))
+func showVendorFile14(g *gt.GopathTest) {
+	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), "internal", "vendor.json"))
 	if err != nil {
 		g.Fatal(err)
 	}
 	g.Logf("%s", buf)
+}
+func vendorFile14(g *gt.GopathTest, expected string) {
+	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), "internal", "vendor.json"))
+	if err != nil {
+		g.Fatal(err)
+	}
+	if string(buf) != expected {
+		g.Fatal("Got: ", string(buf))
+	}
+}
+
+func showRewriteRule(c *Context, t *testing.T) {
+	for from, to := range c.MoveRule {
+		t.Logf("R: %s to %s\n", from, to)
+	}
+	for _, f := range c.MoveFile {
+		t.Logf("F: %s\n", f.Path)
+		for _, imp := range f.Imports {
+			t.Logf("\t%q\n", imp)
+		}
+	}
 }
 
 func TestSimple(t *testing.T) {
@@ -93,13 +114,30 @@ func TestImportSimple(t *testing.T) {
 	g.In("co1")
 	c := ctx14(g)
 	g.Check(c.AddImport("co2/pk1"))
-	c.WriteVendorFile()
+
+	g.Check(c.MoveAndRewrite())
+	g.Check(c.WriteVendorFile())
+
+	vendorFile14(g, `{
+	"comment": "",
+	"package": [
+		{
+			"canonical": "co2/pk1",
+			"comment": "",
+			"local": "co1/internal/co2/pk1",
+			"revision": "",
+			"revisionTime": ""
+		}
+	]
+}`)
+
 	expected := `i co1/internal/co2/pk1 [co2/pk1]
 e co2/pk2
 l co1/pk1
 s bytes
 s strings
 `
+
 	list(g, c, "same", expected)
 
 	c = ctx14(g)
@@ -127,9 +165,11 @@ func TestDuplicatePackage(t *testing.T) {
 		if item.Status != StatusExternal {
 			continue
 		}
-		g.Check(c.AddImport(item.Path))
+		g.Check(c.AddImport(item.Local))
 	}
+	g.Check(c.MoveAndRewrite())
 	g.Check(c.WriteVendorFile())
+
 	list(g, c, "co2 list", `i co2/internal/co3/pk1 [co3/pk1]
 l co2/pk1
 s strings
@@ -150,9 +190,11 @@ s strings
 		if item.Status != StatusExternal {
 			continue
 		}
-		g.Check(c.AddImport(item.Path))
+		g.Check(c.AddImport(item.Canonical))
 	}
+	g.Check(c.MoveAndRewrite())
 	g.Check(c.WriteVendorFile())
+
 	expected := `i co1/internal/co2/pk1 [co2/pk1]
 i co1/internal/co3/pk1 [co3/pk1]
 l co1/pk1
@@ -163,7 +205,19 @@ s strings
 	list(g, c, "co1 list 2", expected)
 }
 
+/*
+i co1/internal/co3/pk1 [co3/pk1]
+l co1/pk1
+s strings
+
+i co1/internal/co2/pk1 [co2/pk1]
+e co2/internal/co3/pk1 [co3/pk1]
+l co1/pk1
+s strings
+*/
+
 func TestImportSimple15(t *testing.T) {
+	t.Skip("go15 vendor exp not ready yet.")
 	g := gt.New(t)
 	defer g.Clean()
 

@@ -18,8 +18,6 @@ var (
 	ErrMissingGOROOT = errors.New("Unable to determine GOROOT.")
 	// ErrMissingGOPATH returns if no GOPATH was found.
 	ErrMissingGOPATH = errors.New("Missing GOPATH. Check your environment variable GOPATH.")
-	// ErrVendorExists returns if package already a local vendor package.
-	ErrVendorExists = errors.New("Package already exists as a vendor package.")
 	// ErrLocalPackage returns if this is a local package.
 	ErrLocalPackage = errors.New("Cannot vendor a local package.")
 	// ErrImportExists import already exists.
@@ -29,6 +27,13 @@ var (
 	// ErrFilesExists returns if file exists at destination path.
 	ErrFilesExists = errors.New("Files exists at destination of internal vendor path.")
 )
+
+// ErrVendorExists returns if package already a local vendor package.
+type ErrVendorExists string
+
+func (err ErrVendorExists) Error() string {
+	return fmt.Sprintf("Package %q already exists as a vendor package.", string(err))
+}
 
 // ErrNotInGOPATH returns if not currently in the GOPATH.
 type ErrNotInGOPATH struct {

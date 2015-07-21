@@ -60,10 +60,10 @@ func findRoot(folder, vendorPath string) (root string, err error) {
 	return "", errLoopLimit{"findRoot()"}
 }
 
-// findLocalImportPath determines the correct local import path (from GOPATH)
+// findCanonicalPath determines the correct local import path (from GOPATH)
 // and from any nested internal vendor files. It returns a string relative to
 // the root "internal" folder.
-func (ctx *Context) findLocalImportPath(importPath string) (string, error) {
+func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	// "crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
 	// "yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg" (IIF yourpkg is a vendor package)
 	// "yours/internal/myinternal" -> "path/to/mypkg/internal/yours/internal/myinternal" (IIF myinternal is not a vendor package)
