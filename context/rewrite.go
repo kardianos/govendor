@@ -10,7 +10,6 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -21,30 +20,69 @@ import (
 // rules provides the translation from origional import path to new import path.
 type ruleList map[string]string // map[from]to
 
-// RewriteFiles rewrites files to the local path.
-func (ctx *Context) rewriteFiles() error {
-	ctx.dirty = true
-	err := ctx.rewriteFilesByRule(ctx.MoveFile, ctx.MoveRule)
-	if err != nil {
-		return err
+// Rewrite rewrites files to the local path.
+func (ctx *Context) Rewrite() error {
+	if ctx.go15VendorExperiment {
+		return nil
 	}
+	if ctx.dirty {
+		ctx.loadPackage()
+	}
+	ctx.dirty = true
 
-	// Fixup import paths.
-	for from, to := range ctx.MoveRule {
-		if fromPkg := ctx.Package[from]; fromPkg != nil {
-			fromPkg.Dir = filepath.Join(ctx.RootGopath, to)
-			fromPkg.Status = StatusInternal
-			fromPkg.Local = to
-			delete(ctx.Package, from)
-			ctx.Package[to] = fromPkg
+	fileImports := make(map[string]map[string]*File) // map[ImportPath]map[FilePath]File
+	for _, pkg := range ctx.Package {
+		for _, f := range pkg.Files {
+			for _, imp := range f.Imports {
+				fileList := fileImports[imp]
+				if fileList == nil {
+					fileList = make(map[string]*File, 1)
+					fileImports[imp] = fileList
+				}
+				fileList[f.Path] = f
+			}
 		}
 	}
-	return ctx.determinePackageStatus()
+	moveFile := make(map[string]*File, len(ctx.MoveRule))
+	for from := range ctx.MoveRule {
+		for _, f := range fileImports[from] {
+			moveFile[f.Path] = f
+		}
+	}
+
+	/*
+		RULE: co2/internal/co3/pk3 -> co1/internal/co3/pk3
+
+		i co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
+		i co1/internal/co3/pk3 [co3/pk3] < ["co1/pk1"]
+		e co2/internal/co3/pk3 [co3/pk3] < ["co1/internal/co2/pk2"]
+		l co1/pk1 < []
+		s strings < ["co1/internal/co3/pk3" "co2/internal/co3/pk3"]
+
+		Rewrite the package "co1/internal/co2/pk2" because it references a package with a rewrite.from package.
+	*/
+	ctx.updatePackageReferences()
+	for from := range ctx.MoveRule {
+		pkg := ctx.Package[from]
+		for _, ref := range pkg.referenced {
+			for _, f := range ref.Files {
+				dprintf("REF RW %s\n", f.Path)
+				moveFile[f.Path] = f
+			}
+		}
+	}
+
+	moveRule := ctx.MoveRule
+	ctx.MoveRule = make(map[string]string, 3)
+	return ctx.rewriteFilesByRule(moveFile, moveRule)
 }
 
 // rewriteFilesByRule modified the imports according to rules and works on the
 // file paths provided by filePaths.
 func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules ruleList) error {
+	if len(rules) == 0 {
+		return nil
+	}
 	goprint := &printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
@@ -61,6 +99,8 @@ func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules ruleLis
 			return err
 		}
 
+		dprintf("RW:: File: %s\n", fileInfo.Path)
+
 		for _, impNode := range f.Imports {
 			imp, err := strconv.Unquote(impNode.Path.Value)
 			if err != nil {
@@ -73,6 +113,7 @@ func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules ruleLis
 				impNode.Path.Value = strconv.Quote(to)
 				for i, metaImport := range fileInfo.Imports {
 					if from == metaImport {
+						dprintf("\tImport: %s -> %s\n", from, to)
 						fileInfo.Imports[i] = to
 					}
 				}

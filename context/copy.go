@@ -69,6 +69,10 @@ func CopyPackage(destPath, srcPath string) error {
 }
 
 func copyFile(destPath, srcPath string) error {
+	ss, err := os.Stat(srcPath)
+	if err != nil {
+		return err
+	}
 	src, err := os.Open(srcPath)
 	if err != nil {
 		return err
@@ -83,10 +87,6 @@ func copyFile(destPath, srcPath string) error {
 	_, err = io.Copy(dest, src)
 	// Close before setting mod and time.
 	dest.Close()
-	if err != nil {
-		return err
-	}
-	ss, err := os.Stat(srcPath)
 	if err != nil {
 		return err
 	}

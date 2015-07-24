@@ -65,16 +65,17 @@ const (
 
 // ListItem represents a package in the current project.
 type ListItem struct {
-	Status    ListStatus
-	Canonical string
-	Local     string
+	Status     ListStatus
+	Canonical  string
+	Local      string
+	ImportedBy []string
 }
 
 func (li ListItem) String() string {
 	if li.Local == li.Canonical {
-		return fmt.Sprintf("%s %s", li.Status, li.Canonical)
+		return fmt.Sprintf("%s %s < %q", li.Status, li.Canonical, li.ImportedBy)
 	}
-	return fmt.Sprintf("%s %s [%s]", li.Status, li.Local, li.Canonical)
+	return fmt.Sprintf("%s %s [%s] < %q", li.Status, li.Local, li.Canonical, li.ImportedBy)
 }
 
 type listItemSort []ListItem
@@ -97,13 +98,19 @@ func (ctx *Context) ListStatus() ([]ListItem, error) {
 			return nil, err
 		}
 	}
+	ctx.updatePackageReferences()
 	list := make([]ListItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
 		li := ListItem{
-			Status:    pkg.Status,
-			Canonical: pkg.Canonical,
-			Local:     pkg.Local,
+			Status:     pkg.Status,
+			Canonical:  pkg.Canonical,
+			Local:      pkg.Local,
+			ImportedBy: make([]string, 0, len(pkg.referenced)),
 		}
+		for _, ref := range pkg.referenced {
+			li.ImportedBy = append(li.ImportedBy, ref.Local)
+		}
+		sort.Strings(li.ImportedBy)
 		list = append(list, li)
 	}
 	// Sort li by Status, then Path.
