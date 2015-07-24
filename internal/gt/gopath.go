@@ -100,8 +100,8 @@ var fileSpecFile = template.Must(template.New("").Funcs(map[string]interface{}{
 }).Parse(`
 package {{.Pkg|pkg}}
 
-import ({{range .Imports}}
-	"{{.}}"
+import (
+{{range .Imports}}	"{{.}}"
 {{end}})
 `))
 
