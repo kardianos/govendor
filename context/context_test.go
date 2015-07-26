@@ -211,7 +211,6 @@ s strings < ["co1/internal/co3/pk3"]
 }
 
 func TestImportSimple15(t *testing.T) {
-	t.Skip("go15 vendor exp not ready yet.")
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -228,15 +227,16 @@ func TestImportSimple15(t *testing.T) {
 	g.In("co1")
 	c := ctx15(g)
 	g.Check(c.AddImport("co2/pk1"))
-	c.WriteVendorFile()
-	expected := `v co1/vendor/co2/pk1 [co2/pk1]
-e co2/pk2
-l co1/pk1
-s bytes
-s strings
+	g.Check(c.CopyAndRewrite())
+	g.Check(c.WriteVendorFile())
+	expected := `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+e co2/pk2 < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 `
 	list(g, c, "same", expected)
 
-	c = ctx14(g)
+	c = ctx15(g)
 	list(g, c, "new", expected)
 }

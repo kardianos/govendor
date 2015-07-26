@@ -242,14 +242,37 @@ func (ctx *Context) vendorFilePackageCanonical(canonical string) *vendorfile.Pac
 
 // updatePackageReferences populates the referenced field in each Package.
 func (ctx *Context) updatePackageReferences() {
+	findCanonicalUnderDir := func(dir, canonical string) *Package {
+		for _, pkg := range ctx.Package {
+			if pkg.Status != StatusVendor {
+				continue
+			}
+
+			removeFromEnd := len(pkg.Canonical) + len("vendor/") + 1
+			checkDir := pkg.Dir[:len(pkg.Dir)-removeFromEnd]
+			if !pathos.FileHasPrefix(dir, checkDir) {
+				continue
+			}
+			if pkg.Canonical != canonical {
+				continue
+			}
+			return pkg
+		}
+		return nil
+	}
 	for _, pkg := range ctx.Package {
 		pkg.referenced = make(map[string]*Package, len(pkg.referenced))
 	}
 	for _, pkg := range ctx.Package {
 		for _, f := range pkg.Files {
 			for _, imp := range f.Imports {
+				if vpkg := findCanonicalUnderDir(pkg.Dir, imp); vpkg != nil {
+					vpkg.referenced[pkg.Local] = pkg
+					continue
+				}
 				if other, found := ctx.Package[imp]; found {
 					other.referenced[pkg.Local] = pkg
+					continue
 				}
 			}
 		}

@@ -79,12 +79,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 
 	pkg, found := ctx.Package[importPath]
 	if !found {
-		pkg = &Package{
-			Dir:       dir,
-			Canonical: importPath,
-			Local:     importPath,
-			Gopath:    gopath,
-		}
+		pkg = ctx.setPackage(dir, importPath, importPath, gopath, StatusUnknown)
 		ctx.Package[importPath] = pkg
 	}
 	pf := &File{
@@ -112,29 +107,43 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	return nil
 }
 
+func (ctx *Context) setPackage(dir, canonical, local, gopath string, status ListStatus) *Package {
+	at := 0
+	switch {
+	case strings.Contains(canonical, "/vendor/"):
+		at = strings.LastIndex(canonical, "/vendor/") + len("/vendor/")
+	case strings.HasPrefix(canonical, "vendor/"):
+		at = strings.LastIndex(canonical, "vendor/") + len("vendor/")
+	}
+	if at > 0 {
+		canonical = canonical[at:]
+		if status == StatusUnknown {
+			status = StatusVendor
+		}
+	}
+	pkg := &Package{
+		Dir:       dir,
+		Canonical: canonical,
+		Local:     local,
+		Gopath:    gopath,
+		Status:    status,
+	}
+	ctx.Package[local] = pkg
+	return pkg
+}
+
 func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 	if _, found := ctx.Package[imp]; !found {
 		dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
 		if err != nil {
 			if _, is := err.(ErrNotInGOPATH); is {
-				ctx.Package[imp] = &Package{
-					Dir:       "",
-					Canonical: imp,
-					Local:     imp,
-					Status:    StatusMissing,
-				}
+				ctx.setPackage("", imp, imp, "", StatusMissing)
 				return nil
 			}
 			return err
 		}
 		if pathos.FileStringEquals(gopath, ctx.Goroot) {
-			ctx.Package[imp] = &Package{
-				Dir:       dir,
-				Canonical: imp,
-				Local:     imp,
-				Status:    StatusStd,
-				Gopath:    ctx.Goroot,
-			}
+			ctx.setPackage(dir, imp, imp, ctx.Goroot, StatusStd)
 			return nil
 		}
 		df, err := os.Open(dir)

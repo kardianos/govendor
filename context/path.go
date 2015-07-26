@@ -5,16 +5,43 @@
 package context
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/kardianos/vendor/internal/pathos"
 )
 
-// findImportDir finds the absolute directory. If gopath is not empty, it is used.
-func (ctx *Context) findImportDir(rel, importPath string) (dir, gopath string, err error) {
+// findImportDir finds the absolute directory. If rel is empty vendor folders
+// are not looked in.
+func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath string, err error) {
 	if importPath == "builtin" || importPath == "unsafe" || importPath == "C" {
 		return filepath.Join(ctx.Goroot, importPath), ctx.Goroot, nil
+	}
+	if len(relative) != 0 {
+		rel := relative
+		for {
+			look := filepath.Join(rel, "vendor", importPath)
+			nextRel := filepath.Join(rel, "..")
+			if rel == nextRel {
+				break
+			}
+			rel = nextRel
+			fi, err := os.Stat(look)
+			if os.IsNotExist(err) {
+				continue
+			}
+			if fi.IsDir() == false {
+				continue
+			}
+			for _, gopath = range ctx.GopathList {
+				if pathos.FileHasPrefix(look, gopath) {
+					return look, gopath, nil
+				}
+			}
+			return "", "", ErrNotInGOPATH{fmt.Sprintf("Import: %q relative: %q", importPath, relative)}
+		}
+
 	}
 	for _, gopath = range ctx.GopathList {
 		dir := filepath.Join(gopath, importPath)
