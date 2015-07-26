@@ -21,7 +21,7 @@ import (
 type ruleList map[string]string // map[from]to
 
 // Rewrite rewrites files to the local path.
-func (ctx *Context) Rewrite() error {
+func (ctx *Context) rewrite() error {
 	if ctx.go15VendorExperiment {
 		return nil
 	}

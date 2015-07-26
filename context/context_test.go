@@ -118,7 +118,7 @@ func TestImportSimple(t *testing.T) {
 	c := ctx14(g)
 	g.Check(c.AddImport("co2/pk1"))
 
-	g.Check(c.CopyAndRewrite())
+	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	vendorFile14(g, `{
@@ -170,7 +170,7 @@ func TestDuplicatePackage(t *testing.T) {
 		}
 		g.Check(c.AddImport(item.Local))
 	}
-	g.Check(c.CopyAndRewrite())
+	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co2 list", `i co2/internal/co3/pk3 [co3/pk3] < ["co2/pk2"]
@@ -196,7 +196,7 @@ s strings < ["co2/internal/co3/pk3" "co3/pk3"]
 		g.Check(c.AddImport(item.Local))
 	}
 
-	g.Check(c.CopyAndRewrite())
+	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	expected := `i co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
@@ -227,7 +227,7 @@ func TestImportSimple15(t *testing.T) {
 	g.In("co1")
 	c := ctx15(g)
 	g.Check(c.AddImport("co2/pk1"))
-	g.Check(c.CopyAndRewrite())
+	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	expected := `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
 e co2/pk2 < ["co1/pk1"]

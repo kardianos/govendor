@@ -394,7 +394,7 @@ func (ctx *Context) AddImport(sourcePath string) error {
 	return nil
 }
 
-func (ctx *Context) Copy() error {
+func (ctx *Context) copy() error {
 	// Find duplicate packages that have been marked for moving.
 	findDups := make(map[string][]string, 3) // map[canonical][]local
 	for _, pkg := range ctx.Package {
@@ -453,10 +453,11 @@ func (ctx *Context) Copy() error {
 	return nil
 }
 
-func (ctx *Context) CopyAndRewrite() error {
-	err := ctx.Copy()
+// Alter runs any requested package alterations.
+func (ctx *Context) Alter() error {
+	err := ctx.copy()
 	if err != nil {
 		return err
 	}
-	return ctx.Rewrite()
+	return ctx.rewrite()
 }
