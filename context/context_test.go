@@ -15,14 +15,14 @@ import (
 )
 
 func ctx14(g *gt.GopathTest) *Context {
-	c, err := NewContext(g.Current(), filepath.Join("internal", "vendor.json"), "internal", false)
+	c, err := NewContext(g.Current(), filepath.Join("internal", "vendor.json"), "internal", true)
 	if err != nil {
 		g.Fatal(err)
 	}
 	return c
 }
 func ctx15(g *gt.GopathTest) *Context {
-	c, err := NewContext(g.Current(), "vendor.json", "vendor", true)
+	c, err := NewContext(g.Current(), "vendor.json", "vendor", false)
 	if err != nil {
 		g.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func ctx15(g *gt.GopathTest) *Context {
 }
 
 func list(g *gt.GopathTest, c *Context, name, expected string) {
-	list, err := c.ListStatus()
+	list, err := c.Status()
 	if err != nil {
 		g.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestImportSimple(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx14(g)
-	g.Check(c.AddImport("co2/pk1"))
+	g.Check(c.ModifyImport("co2/pk1"))
 
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -162,13 +162,13 @@ func TestDuplicatePackage(t *testing.T) {
 	)
 	g.In("co2")
 	c := ctx14(g)
-	statusList, err := c.ListStatus()
+	statusList, err := c.Status()
 	g.Check(err)
 	for _, item := range statusList {
 		if item.Status != StatusExternal {
 			continue
 		}
-		g.Check(c.AddImport(item.Local))
+		g.Check(c.ModifyImport(item.Local))
 	}
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -187,13 +187,13 @@ l co1/pk1 < []
 s strings < ["co2/internal/co3/pk3" "co3/pk3"]
 `)
 
-	statusList, err = c.ListStatus()
+	statusList, err = c.Status()
 	g.Check(err)
 	for _, item := range statusList {
 		if item.Status != StatusExternal {
 			continue
 		}
-		g.Check(c.AddImport(item.Local))
+		g.Check(c.ModifyImport(item.Local))
 	}
 
 	g.Check(c.Alter())
@@ -226,7 +226,7 @@ func TestImportSimple15(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx15(g)
-	g.Check(c.AddImport("co2/pk1"))
+	g.Check(c.ModifyImport("co2/pk1"))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	expected := `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]

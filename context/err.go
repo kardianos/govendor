@@ -10,30 +10,13 @@ import (
 )
 
 var (
-	// ErrVendorFileExists returns if the vendor file exists when it is not expected.
-	ErrVendorFileExists = errors.New(vendorFilename + " file already exists.")
 	// ErrMissingVendorFile returns if unable to find vendor file.
 	ErrMissingVendorFile = errors.New("Unable to find vendor file.")
 	// ErrMissingGOROOT returns if the GOROOT was not found.
 	ErrMissingGOROOT = errors.New("Unable to determine GOROOT.")
 	// ErrMissingGOPATH returns if no GOPATH was found.
 	ErrMissingGOPATH = errors.New("Missing GOPATH. Check your environment variable GOPATH.")
-	// ErrLocalPackage returns if this is a local package.
-	ErrLocalPackage = errors.New("Cannot vendor a local package.")
-	// ErrImportExists import already exists.
-	ErrImportExists = errors.New("Import exists. To update use update command.")
-	// ErrImportNotExists import does not exists.
-	ErrImportNotExists = errors.New("Import does not exist.")
-	// ErrFilesExists returns if file exists at destination path.
-	ErrFilesExists = errors.New("Files exists at destination of internal vendor path.")
 )
-
-// ErrVendorExists returns if package already a local vendor package.
-type ErrVendorExists string
-
-func (err ErrVendorExists) Error() string {
-	return fmt.Sprintf("Package %q already exists as a vendor package.", string(err))
-}
 
 // ErrNotInGOPATH returns if not currently in the GOPATH.
 type ErrNotInGOPATH struct {
@@ -51,12 +34,4 @@ type ErrDirtyPackage struct {
 
 func (err ErrDirtyPackage) Error() string {
 	return fmt.Sprintf("Package %q has uncommited changes in the vcs.", err.ImportPath)
-}
-
-type errLoopLimit struct {
-	Loop string
-}
-
-func (err errLoopLimit) Error() string {
-	return fmt.Sprintf("BUG: Loop limit of %d was reached for loop %s. Please report this bug.", looplimit, err.Loop)
 }

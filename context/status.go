@@ -64,25 +64,25 @@ const (
 )
 
 // ListItem represents a package in the current project.
-type ListItem struct {
+type StatusItem struct {
 	Status     ListStatus
 	Canonical  string
 	Local      string
 	ImportedBy []string
 }
 
-func (li ListItem) String() string {
+func (li StatusItem) String() string {
 	if li.Local == li.Canonical {
 		return fmt.Sprintf("%s %s < %q", li.Status, li.Canonical, li.ImportedBy)
 	}
 	return fmt.Sprintf("%s %s [%s] < %q", li.Status, li.Local, li.Canonical, li.ImportedBy)
 }
 
-type listItemSort []ListItem
+type statusItemSort []StatusItem
 
-func (li listItemSort) Len() int      { return len(li) }
-func (li listItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
-func (li listItemSort) Less(i, j int) bool {
+func (li statusItemSort) Len() int      { return len(li) }
+func (li statusItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
+func (li statusItemSort) Less(i, j int) bool {
 	if li[i].Status != li[j].Status {
 		return li[i].Status > li[j].Status
 	}
@@ -90,7 +90,7 @@ func (li listItemSort) Less(i, j int) bool {
 }
 
 // ListStatus obtains the current package status list.
-func (ctx *Context) ListStatus() ([]ListItem, error) {
+func (ctx *Context) Status() ([]StatusItem, error) {
 	var err error
 	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
@@ -99,9 +99,9 @@ func (ctx *Context) ListStatus() ([]ListItem, error) {
 		}
 	}
 	ctx.updatePackageReferences()
-	list := make([]ListItem, 0, len(ctx.Package))
+	list := make([]StatusItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
-		li := ListItem{
+		li := StatusItem{
 			Status:     pkg.Status,
 			Canonical:  pkg.Canonical,
 			Local:      pkg.Local,
@@ -114,7 +114,7 @@ func (ctx *Context) ListStatus() ([]ListItem, error) {
 		list = append(list, li)
 	}
 	// Sort li by Status, then Path.
-	sort.Sort(listItemSort(list))
+	sort.Sort(statusItemSort(list))
 
 	return list, nil
 }

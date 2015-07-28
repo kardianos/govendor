@@ -16,27 +16,6 @@ import (
 	"github.com/kardianos/vendor/internal/pathos"
 )
 
-// unknown represents resolving a package dependency. Due to the "/vendor/"
-// folder discovery, each package must be done relative to a perticular path.
-type unknown struct {
-	rel string
-	pkg string
-}
-
-func newUnknownSet() unknownSet {
-	return make(map[unknown]struct{}, 3)
-}
-
-type unknownSet map[unknown]struct{}
-
-func (s unknownSet) add(rel, pkg string) {
-	s[unknown{rel: rel, pkg: pkg}] = struct{}{}
-}
-
-func (s unknownSet) del(rel, pkg string) {
-	delete(s, unknown{rel: rel, pkg: pkg})
-}
-
 // loadPackage sets up the context with package information and
 // is called before any initial operation is performed.
 func (ctx *Context) loadPackage() error {
@@ -234,7 +213,7 @@ func (ctx *Context) determinePackageStatus() error {
 			break
 		}
 		if i == looplimit {
-			return errLoopLimit{"resolveUnknown() Mark Unused"}
+			panic("determinePackageStatus loop limit")
 		}
 	}
 	return nil

@@ -17,12 +17,9 @@ import (
 	"github.com/kardianos/vendor/internal/pathos"
 )
 
-// rules provides the translation from origional import path to new import path.
-type ruleList map[string]string // map[from]to
-
 // Rewrite rewrites files to the local path.
 func (ctx *Context) rewrite() error {
-	if ctx.go15VendorExperiment {
+	if !ctx.rewriteImports {
 		return nil
 	}
 	if ctx.dirty {
@@ -43,10 +40,10 @@ func (ctx *Context) rewrite() error {
 			}
 		}
 	}
-	moveFile := make(map[string]*File, len(ctx.MoveRule))
+	filePaths := make(map[string]*File, len(ctx.MoveRule))
 	for from := range ctx.MoveRule {
 		for _, f := range fileImports[from] {
-			moveFile[f.Path] = f
+			filePaths[f.Path] = f
 		}
 	}
 
@@ -67,20 +64,16 @@ func (ctx *Context) rewrite() error {
 		for _, ref := range pkg.referenced {
 			for _, f := range ref.Files {
 				dprintf("REF RW %s\n", f.Path)
-				moveFile[f.Path] = f
+				filePaths[f.Path] = f
 			}
 		}
 	}
 
-	moveRule := ctx.MoveRule
-	ctx.MoveRule = make(map[string]string, 3)
-	return ctx.rewriteFilesByRule(moveFile, moveRule)
-}
+	defer func() {
+		ctx.MoveRule = make(map[string]string, 3)
+	}()
 
-// rewriteFilesByRule modified the imports according to rules and works on the
-// file paths provided by filePaths.
-func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules ruleList) error {
-	if len(rules) == 0 {
+	if len(ctx.MoveRule) == 0 {
 		return nil
 	}
 	goprint := &printer.Config{
@@ -106,7 +99,7 @@ func (ctx *Context) rewriteFilesByRule(filePaths map[string]*File, rules ruleLis
 			if err != nil {
 				return err
 			}
-			for from, to := range rules {
+			for from, to := range ctx.MoveRule {
 				if imp != from {
 					continue
 				}

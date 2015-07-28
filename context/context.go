@@ -25,11 +25,10 @@ import (
 )
 
 const (
-	debug = false
+	debug     = false
+	looplimit = 10000
 
 	vendorFilename = "vendor.json"
-
-	looplimit = 10000
 )
 
 func dprintf(f string, v ...interface{}) {
@@ -40,28 +39,29 @@ func dprintf(f string, v ...interface{}) {
 
 // Context represents the current project context.
 type Context struct {
-	GopathList []string
-	Goroot     string
+	GopathList []string // List of GOPATHs in environment.
+	Goroot     string   // The path to the standard library.
 
-	RootDir        string
-	RootGopath     string
-	RootImportPath string
+	RootDir        string // Full path to the project root.
+	RootGopath     string // The GOPATH the project is in.
+	RootImportPath string // The import path to the project.
 
 	VendorFile         *vendorfile.File
-	VendorFilePath     string
+	VendorFilePath     string // File path to vendor file.
 	VendorFolder       string // Store vendor packages in this folder.
-	VendorFileToFolder string
-	RootToVendorFile   string
+	VendorFileToFolder string // The relative path from the vendor file to the vendor folder.
+	RootToVendorFile   string // The relative path from the project root to the vendor file directory.
 
 	// Package is a map where the import path is the key.
 	// Populated with LoadPackage.
 	Package map[string]*Package
 	// Change to unkown structure (rename). Maybe...
 
-	MoveRule map[string]string
+	// MoveRule provides the translation from origional import path to new import path.
+	MoveRule map[string]string // map[from]to
 
-	loaded, dirty        bool
-	go15VendorExperiment bool
+	loaded, dirty  bool
+	rewriteImports bool
 }
 
 // Package maintains information pertaining to a package.
@@ -86,21 +86,6 @@ type File struct {
 	Imports []string
 }
 
-func (p1 *Package) Clone() *Package {
-	p2 := *p1
-	p2.referenced = nil
-	p2.Files = make([]*File, len(p1.Files))
-	for i, f := range p1.Files {
-		fv := *f
-		fv.Imports = make([]string, len(f.Imports))
-		for j, imp := range f.Imports {
-			fv.Imports[j] = imp
-		}
-		p2.Files[i] = &fv
-	}
-	return &p2
-}
-
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
 func NewContextWD() (*Context, error) {
@@ -122,12 +107,12 @@ func NewContextWD() (*Context, error) {
 		return nil, err
 	}
 
-	return NewContext(root, pathToVendorFile, vendorFolder, go15VendorExperiment)
+	return NewContext(root, pathToVendorFile, vendorFolder, !go15VendorExperiment)
 }
 
 // NewContext creates new context from a given root folder and vendor file path.
 // The vendorFolder is where vendor packages should be placed.
-func NewContext(root, vendorFilePathRel, vendorFolder string, go15VendorExperiment ...bool) (*Context, error) {
+func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports bool) (*Context, error) {
 	dprintf("CTX: %s\n", root)
 	vendorFilePath := filepath.Join(root, vendorFilePathRel)
 	vf, err := readVendorFile(vendorFilePath)
@@ -202,7 +187,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, go15VendorExperime
 
 		MoveRule: make(map[string]string, 3),
 
-		go15VendorExperiment: len(go15VendorExperiment) != 0 && go15VendorExperiment[0] == true,
+		rewriteImports: rewriteImports,
 	}
 
 	ctx.RootImportPath, ctx.RootGopath, err = ctx.findImportPath(root)
@@ -281,7 +266,8 @@ func (ctx *Context) updatePackageReferences() {
 
 // AddImport adds the package to the context. The vendorFolder is where the
 // package should be added to relative to the project root.
-func (ctx *Context) AddImport(sourcePath string) error {
+// TODO: Add parameter that specifies (Add, Update, AddUpdate, Remove, Restore).
+func (ctx *Context) ModifyImport(sourcePath string) error {
 	var err error
 	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
@@ -327,8 +313,6 @@ func (ctx *Context) AddImport(sourcePath string) error {
 			Add:       true,
 			Canonical: pkg.Canonical,
 			Local:     path.Join(ctx.RootImportPath, ctx.VendorFolder, pkg.Canonical),
-			// Local:     pkg.Local,
-			// Local:     path.Join(ctx.VendorFileToFolder, pkg.Canonical),
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
@@ -404,6 +388,9 @@ func (ctx *Context) copy() error {
 		ll := findDups[pkg.Canonical]
 		findDups[pkg.Canonical] = append(ll, pkg.Local)
 	}
+	// TODO: Add a new Check function that returns duplicates, possibly a Resolve function as well.
+	// Make the option to "auto" resolve it explicit.
+	// TODO: auto-resolve based on VCS time.
 	if false {
 		buf := &bytes.Buffer{}
 		for canonical, ll := range findDups {

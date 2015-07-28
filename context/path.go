@@ -84,7 +84,7 @@ func findRoot(folder, vendorPath string) (root string, err error) {
 		}
 		folder = nextFolder
 	}
-	return "", errLoopLimit{"findRoot()"}
+	panic("findRoot loop limit")
 }
 
 // findCanonicalPath determines the correct local import path (from GOPATH)
