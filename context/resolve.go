@@ -159,7 +159,7 @@ func (ctx *Context) determinePackageStatus() error {
 			continue
 		}
 		if vp := ctx.vendorFilePackageLocal(pkg.Local); vp != nil {
-			pkg.Status = StatusInternal
+			pkg.Status = StatusVendor
 			pkg.Canonical = vp.Canonical
 			continue
 		}
@@ -201,7 +201,7 @@ func (ctx *Context) determinePackageStatus() error {
 	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for path, pkg := range ctx.Package {
-			if len(pkg.referenced) == 0 && pkg.Status == StatusInternal {
+			if len(pkg.referenced) == 0 && pkg.Status == StatusVendor {
 				altered = true
 				pkg.Status = StatusUnused
 				for _, other := range ctx.Package {

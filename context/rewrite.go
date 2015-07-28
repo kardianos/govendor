@@ -116,7 +116,7 @@ func (ctx *Context) rewrite() error {
 
 		// Remove import comment.
 		st := fileInfo.Package.Status
-		if st == StatusInternal || st == StatusUnused {
+		if st == StatusVendor || st == StatusUnused {
 			var ic *ast.Comment
 			if f.Name != nil {
 				pos := f.Name.Pos()

@@ -378,44 +378,65 @@ func (ctx *Context) ModifyImport(sourcePath string) error {
 	return nil
 }
 
-func (ctx *Context) copy() error {
+// Conflict reports packages that are scheduled to
+type Conflict struct {
+	Canonical string
+	Local     string
+	Src       []string
+	SrcIndex  int
+}
+
+// Check returns any conflicts when more then one package can be moved into
+// the same path.
+func (ctx *Context) Check() []Conflict {
 	// Find duplicate packages that have been marked for moving.
 	findDups := make(map[string][]string, 3) // map[canonical][]local
 	for _, pkg := range ctx.Package {
 		if !pkg.MovePending {
 			continue
 		}
-		ll := findDups[pkg.Canonical]
-		findDups[pkg.Canonical] = append(ll, pkg.Local)
+		findDups[pkg.Canonical] = append(findDups[pkg.Canonical], pkg.Local)
 	}
-	// TODO: Add a new Check function that returns duplicates, possibly a Resolve function as well.
-	// Make the option to "auto" resolve it explicit.
-	// TODO: auto-resolve based on VCS time.
-	if false {
-		buf := &bytes.Buffer{}
-		for canonical, ll := range findDups {
-			if len(ll) == 1 {
-				continue
-			}
-			buf.WriteString(fmt.Sprintf("Different Canonical Packages for %s\n", canonical))
-			for _, l := range ll {
-				buf.WriteString(fmt.Sprintf("\t%s\n", l))
-			}
-		}
-		if buf.Len() != 0 {
-			return errors.New(buf.String())
-		}
-	}
-	for _, ll := range findDups {
+
+	var ret []Conflict
+	for canonical, ll := range findDups {
 		if len(ll) == 1 {
 			continue
 		}
-		for i, l := range ll {
-			if i == 0 {
+		destDir := path.Join(ctx.RootImportPath, ctx.VendorFolder, canonical)
+		ret = append(ret, Conflict{
+			Canonical: canonical,
+			Local:     destDir,
+			Src:       ll,
+		})
+	}
+	return ret
+}
+
+// Resolve resolves conflicts obtained from Check. It chooses the
+// Src package listed in the SrcIndex field.
+func (ctx *Context) Reslove(cc []Conflict) {
+	for _, c := range cc {
+		for i, l := range c.Src {
+			if i == c.SrcIndex {
 				continue
 			}
 			ctx.Package[l].MovePending = false
 		}
+	}
+}
+
+func (ctx *Context) copy() error {
+	// Ensure there are no conflicts at this time.
+	buf := &bytes.Buffer{}
+	for _, conflict := range ctx.Check() {
+		buf.WriteString(fmt.Sprintf("Different Canonical Packages for %s\n", conflict.Canonical))
+		for _, src := range conflict.Src {
+			buf.WriteString(fmt.Sprintf("\t%s\n", src))
+		}
+	}
+	if buf.Len() != 0 {
+		return errors.New(buf.String())
 	}
 
 	// Move and possibly rewrite packages.

@@ -30,8 +30,6 @@ func (ls ListStatus) String() string {
 		return "l"
 	case StatusExternal:
 		return "e"
-	case StatusInternal:
-		return "i"
 	case StatusUnused:
 		return "u"
 	case StatusProgram:
@@ -53,8 +51,6 @@ const (
 	StatusLocal
 	// StatusExternal indicates import is found in GOPATH and not copied.
 	StatusExternal
-	// StatusInternal indicates import has been copied locally under internal.
-	StatusInternal
 	// StatusUnused indicates import has been copied, but is no longer used.
 	StatusUnused
 	// StatusProgram indicates the import is a main package but internal or vendor.

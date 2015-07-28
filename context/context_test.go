@@ -134,7 +134,7 @@ func TestImportSimple(t *testing.T) {
 	]
 }`)
 
-	expected := `i co1/internal/co2/pk1 [co2/pk1] < ["co1/pk1"]
+	expected := `v co1/internal/co2/pk1 [co2/pk1] < ["co1/pk1"]
 e co2/pk2 < ["co1/pk1"]
 l co1/pk1 < []
 s bytes < ["co1/pk1"]
@@ -173,7 +173,7 @@ func TestDuplicatePackage(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co2 list", `i co2/internal/co3/pk3 [co3/pk3] < ["co2/pk2"]
+	list(g, c, "co2 list", `v co2/internal/co3/pk3 [co3/pk3] < ["co2/pk2"]
 l co2/pk2 < []
 s strings < ["co2/internal/co3/pk3"]
 `)
@@ -196,11 +196,12 @@ s strings < ["co2/internal/co3/pk3" "co3/pk3"]
 		g.Check(c.ModifyImport(item.Local))
 	}
 
+	c.Reslove(c.Check()) // Automaically resolve conflicts.
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	expected := `i co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
-i co1/internal/co3/pk3 [co3/pk3] < ["co1/internal/co2/pk2" "co1/pk1"]
+	expected := `v co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
+v co1/internal/co3/pk3 [co3/pk3] < ["co1/internal/co2/pk2" "co1/pk1"]
 l co1/pk1 < []
 s strings < ["co1/internal/co3/pk3"]
 `
