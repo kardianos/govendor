@@ -85,6 +85,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 	if len(appArgs) == 1 {
 		return true, nil
 	}
+
+	// TODO: Add a "migrate" command {godep, internal, vendor?} to {internal?, vendor}.
+
 	cmd := appArgs[1]
 	switch cmd {
 	case "init":
@@ -97,6 +100,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return false, err
 		}
 	case "list":
+		// TODO: Determine a better way to query list.
 		var err error
 		status := []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal}
 		// Parse status.

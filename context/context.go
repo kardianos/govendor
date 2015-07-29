@@ -115,6 +115,9 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 		return nil, err
 	}
 	// TODO: Detect old vendor file format and location and require upgrade.
+	// from "internal/vendor.json" to "vendor.json".
+	// The local field should also match the spec to be relative to the
+	// vendor file.
 	pathToVendorFile := vendorFilename
 	rootIndicator := "vendor"
 	vendorFolder := "vendor"
