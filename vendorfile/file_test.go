@@ -12,11 +12,11 @@ import (
 
 func TestUpdate(t *testing.T) {
 	var from = `{
-	"Tool": "github.com/kardianos/vendor",
+	"Tool": "github.com/kardianos/govendor",
 	"Package": [
 		{
 			"Vendor": "github.com/dchest/safefile",
-			"Local": "github.com/kardianos/vendor/internal/github.com/dchest/safefile",
+			"Local": "github.com/kardianos/govendor/internal/github.com/dchest/safefile",
 			"Version": "74b1ec0619e722c9f674d1a21e1a703fe90c4371",
 			"VersionTime": "2015-04-10T19:48:00+02:00"
 		}
@@ -28,7 +28,7 @@ func TestUpdate(t *testing.T) {
 		{
 			"canonical": "github.com/dchest/safefile",
 			"comment": "",
-			"local": "github.com/kardianos/vendor/internal/github.com/dchest/safefile",
+			"local": "github.com/kardianos/govendor/internal/github.com/dchest/safefile",
 			"revision": "74b1ec0619e722c9f674d1a21e1a703fe90c4371",
 			"revisionTime": "2015-04-10T19:48:00+02:00"
 		}
