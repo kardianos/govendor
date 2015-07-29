@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kardianos/vendor/internal/pathos"
+	"github.com/kardianos/govendor/internal/pathos"
 )
 
 // findImportDir finds the absolute directory. If rel is empty vendor folders
@@ -84,7 +84,7 @@ func findRoot(folder, vendorPath string) (root string, err error) {
 
 		// Check for root folder.
 		if nextFolder == folder {
-			return "", ErrMissingVendorFile
+			return "", ErrMissingVendorFile{vendorPath}
 		}
 		folder = nextFolder
 	}
@@ -107,7 +107,7 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	root, err := findRoot(dir, vendorFilename)
 	if err != nil {
 		// No vendor file found. Return origional.
-		if err == ErrMissingVendorFile {
+		if _, is := err.(ErrMissingVendorFile); is {
 			return importPath, nil
 		}
 		return "", err

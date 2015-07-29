@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kardianos/vendor/internal/github.com/dchest/safefile"
-	"github.com/kardianos/vendor/vendorfile"
+	"github.com/kardianos/govendor/internal/github.com/dchest/safefile"
+	"github.com/kardianos/govendor/vendorfile"
 )
 
 // WriteVendorFile writes the current vendor file to the context location.

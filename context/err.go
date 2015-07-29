@@ -10,8 +10,6 @@ import (
 )
 
 var (
-	// ErrMissingVendorFile returns if unable to find vendor file.
-	ErrMissingVendorFile = errors.New("Unable to find vendor file.")
 	// ErrMissingGOROOT returns if the GOROOT was not found.
 	ErrMissingGOROOT = errors.New("Unable to determine GOROOT.")
 	// ErrMissingGOPATH returns if no GOPATH was found.
@@ -43,4 +41,13 @@ type ErrPackageExists struct {
 
 func (err ErrPackageExists) Error() string {
 	return fmt.Sprintf("Package %q already in vendor.", err.Package)
+}
+
+// ErrMissingVendorFile returns if package already exists.
+type ErrMissingVendorFile struct {
+	Path string
+}
+
+func (err ErrMissingVendorFile) Error() string {
+	return fmt.Sprintf("Vendor file at %q not found.", err.Path)
 }

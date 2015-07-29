@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/kardianos/vendor/context"
-	"github.com/kardianos/vendor/internal/gt"
+	. "github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/internal/gt"
 )
 
 func ctx14(g *gt.GopathTest) *Context {

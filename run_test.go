@@ -6,13 +6,15 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 
-	"github.com/kardianos/vendor/internal/gt"
+	"github.com/kardianos/govendor/internal/gt"
 )
 
 func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
+	os.Setenv("GO15VENDOREXPERIMENT", "0")
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
 	printHelp, err := run(output, args)

@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kardianos/vendor/internal/pathos"
-	"github.com/kardianos/vendor/vcs"
-	"github.com/kardianos/vendor/vendorfile"
+	"github.com/kardianos/govendor/internal/pathos"
+	"github.com/kardianos/govendor/vcs"
+	"github.com/kardianos/govendor/vendorfile"
 )
 
 const (

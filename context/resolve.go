@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kardianos/vendor/internal/pathos"
+	"github.com/kardianos/govendor/internal/pathos"
 )
 
 // loadPackage sets up the context with package information and
@@ -178,7 +178,7 @@ func (ctx *Context) determinePackageStatus() error {
 		root, err := findRoot(pkg.Dir, vendorFilename)
 		if err != nil {
 			// No vendor file found.
-			if err == ErrMissingVendorFile {
+			if _, is := err.(ErrMissingVendorFile); is {
 				continue
 			}
 			return err

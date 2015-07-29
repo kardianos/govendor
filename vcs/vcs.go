@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kardianos/vendor/internal/pathos"
+	"github.com/kardianos/govendor/internal/pathos"
 )
 
 type VcsInfo struct {

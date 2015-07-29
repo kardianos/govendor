@@ -12,7 +12,7 @@ import (
 	"io"
 	"strings"
 
-	. "github.com/kardianos/vendor/context"
+	. "github.com/kardianos/govendor/context"
 )
 
 var help = `vendor: copy go packages locally and re-write imports.
