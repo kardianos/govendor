@@ -37,6 +37,26 @@ func dprintf(f string, v ...interface{}) {
 	}
 }
 
+// OperationState is the state of the given package move operation.
+type OperationState byte
+
+const (
+	OpReady  OperationState = iota // Operation is ready to go.
+	OpIgnore                       // Operation should be ignored.
+	OpDone                         // Operation has been completed.
+)
+
+// Operation defines how packages should be moved.
+type Operation struct {
+	Pkg *Package
+
+	// Destination file path to move package to.
+	// If Dest if empty the package is removed.
+	Dest string
+
+	State OperationState
+}
+
 // Context represents the current project context.
 type Context struct {
 	GopathList []string // List of GOPATHs in environment.
@@ -60,20 +80,21 @@ type Context struct {
 	// MoveRule provides the translation from origional import path to new import path.
 	MoveRule map[string]string // map[from]to
 
+	Operation []*Operation
+
 	loaded, dirty  bool
 	rewriteImports bool
 }
 
 // Package maintains information pertaining to a package.
 type Package struct {
-	Dir         string
-	Canonical   string
-	Local       string
-	SourcePath  string
-	Gopath      string
-	Files       []*File
-	Status      ListStatus
-	MovePending bool
+	Dir        string
+	Canonical  string
+	Local      string
+	SourcePath string
+	Gopath     string
+	Files      []*File
+	Status     ListStatus
 
 	// used in resolveUnknown function. Not persisted.
 	referenced map[string]*Package
@@ -264,10 +285,20 @@ func (ctx *Context) updatePackageReferences() {
 	}
 }
 
+// Modify is the type of modifcation to do.
+type Modify byte
+
+const (
+	AddUpdate Modify = iota // Add or update the import.
+	Add                     // Only add, error if it already exists.
+	Update                  // Only update, error if it doesn't currently exist.
+	Remove                  // Remove from vendor path.
+	Restore                 // Copy from vendor path to GOPATH.
+)
+
 // AddImport adds the package to the context. The vendorFolder is where the
 // package should be added to relative to the project root.
-// TODO: Add parameter that specifies (Add, Update, AddUpdate, Remove, Restore).
-func (ctx *Context) ModifyImport(sourcePath string) error {
+func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	var err error
 	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
@@ -304,7 +335,34 @@ func (ctx *Context) ModifyImport(sourcePath string) error {
 			panic(fmt.Sprintf("Package %q should be listed internally but is not.", canonicalImportPath))
 		}
 	}
-	pkg.MovePending = true
+
+	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(canonicalImportPath)))
+	if err != nil {
+		return err
+	}
+	if mod == Add && localExists {
+		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, canonicalImportPath)}
+	}
+	switch mod {
+	case Add:
+		return ctx.modifyAdd(pkg)
+	case AddUpdate:
+		return ctx.modifyAdd(pkg)
+	case Update:
+		return ctx.modifyAdd(pkg)
+	case Remove:
+		return ctx.modifyRemove(pkg)
+	case Restore:
+		return ctx.modifyRestore(pkg)
+	default:
+		panic("mod switch: case not handled")
+	}
+}
+func (ctx *Context) modifyAdd(pkg *Package) error {
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Pkg:  pkg,
+		Dest: filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical)),
+	})
 
 	// Update vendor file with correct Local field.
 	vp := ctx.vendorFilePackageCanonical(pkg.Canonical)
@@ -332,42 +390,8 @@ func (ctx *Context) ModifyImport(sourcePath string) error {
 		}
 	}
 
-	// Add files to import map.
-	fileImports := make(map[string]map[string]*File) // map[ImportPath]map[FilePath]File
-	for _, pkg := range ctx.Package {
-		for _, f := range pkg.Files {
-			for _, imp := range f.Imports {
-				fileList := fileImports[imp]
-				if fileList == nil {
-					fileList = make(map[string]*File, 1)
-					fileImports[imp] = fileList
-				}
-				fileList[f.Path] = f
-			}
-		}
-	}
-
 	mvSet := make(map[*Package]struct{}, 3)
-	var makeSet func(pkg *Package)
-	makeSet = func(pkg *Package) {
-		mvSet[pkg] = struct{}{}
-		for _, f := range pkg.Files {
-			for _, imp := range f.Imports {
-				next := ctx.Package[imp]
-				switch {
-				default:
-					if _, has := mvSet[next]; !has {
-						makeSet(next)
-					}
-				case next == nil:
-				case next.Canonical == next.Local:
-				case next.Status != StatusExternal:
-					continue
-				}
-			}
-		}
-	}
-	makeSet(pkg)
+	ctx.makeSet(pkg, mvSet)
 
 	for r := range mvSet {
 		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
@@ -378,36 +402,81 @@ func (ctx *Context) ModifyImport(sourcePath string) error {
 	return nil
 }
 
+func (ctx *Context) modifyRemove(pkg *Package) error {
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Pkg:  pkg,
+		Dest: "",
+	})
+
+	// Update vendor file with correct Local field.
+	vp := ctx.vendorFilePackageCanonical(pkg.Canonical)
+	if vp != nil {
+		vp.Remove = true
+	}
+	mvSet := make(map[*Package]struct{}, 3)
+	ctx.makeSet(pkg, mvSet)
+
+	for r := range mvSet {
+		dprintf("RULE: %s -> %s\n", r.Local, r.Canonical)
+		ctx.MoveRule[r.Local] = r.Canonical
+	}
+
+	return nil
+}
+
+func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
+	mvSet[pkg] = struct{}{}
+	for _, f := range pkg.Files {
+		for _, imp := range f.Imports {
+			next := ctx.Package[imp]
+			switch {
+			default:
+				if _, has := mvSet[next]; !has {
+					ctx.makeSet(next, mvSet)
+				}
+			case next == nil:
+			case next.Canonical == next.Local:
+			case next.Status != StatusExternal:
+			}
+		}
+	}
+}
+
+// TODO: Complete modifyRestore.
+func (ctx *Context) modifyRestore(pkg *Package) error {
+	return nil
+}
+
 // Conflict reports packages that are scheduled to
 type Conflict struct {
 	Canonical string
 	Local     string
-	Src       []string
-	SrcIndex  int
+	Operation []*Operation
+	OpIndex   int
 }
 
 // Check returns any conflicts when more then one package can be moved into
 // the same path.
 func (ctx *Context) Check() []Conflict {
 	// Find duplicate packages that have been marked for moving.
-	findDups := make(map[string][]string, 3) // map[canonical][]local
-	for _, pkg := range ctx.Package {
-		if !pkg.MovePending {
+	findDups := make(map[string][]*Operation, 3) // map[canonical][]local
+	for _, op := range ctx.Operation {
+		if op.State != OpReady {
 			continue
 		}
-		findDups[pkg.Canonical] = append(findDups[pkg.Canonical], pkg.Local)
+		findDups[op.Pkg.Canonical] = append(findDups[op.Pkg.Canonical], op)
 	}
 
 	var ret []Conflict
-	for canonical, ll := range findDups {
-		if len(ll) == 1 {
+	for canonical, lop := range findDups {
+		if len(lop) == 1 {
 			continue
 		}
 		destDir := path.Join(ctx.RootImportPath, ctx.VendorFolder, canonical)
 		ret = append(ret, Conflict{
 			Canonical: canonical,
 			Local:     destDir,
-			Src:       ll,
+			Operation: lop,
 		})
 	}
 	return ret
@@ -417,11 +486,14 @@ func (ctx *Context) Check() []Conflict {
 // Src package listed in the SrcIndex field.
 func (ctx *Context) Reslove(cc []Conflict) {
 	for _, c := range cc {
-		for i, l := range c.Src {
-			if i == c.SrcIndex {
+		for i, op := range c.Operation {
+			if op.State != OpReady {
 				continue
 			}
-			ctx.Package[l].MovePending = false
+			if i == c.OpIndex {
+				continue
+			}
+			op.State = OpIgnore
 		}
 	}
 }
@@ -431,8 +503,8 @@ func (ctx *Context) copy() error {
 	buf := &bytes.Buffer{}
 	for _, conflict := range ctx.Check() {
 		buf.WriteString(fmt.Sprintf("Different Canonical Packages for %s\n", conflict.Canonical))
-		for _, src := range conflict.Src {
-			buf.WriteString(fmt.Sprintf("\t%s\n", src))
+		for _, op := range conflict.Operation {
+			buf.WriteString(fmt.Sprintf("\t%s\n", op.Pkg.Local))
 		}
 	}
 	if buf.Len() != 0 {
@@ -440,22 +512,27 @@ func (ctx *Context) copy() error {
 	}
 
 	// Move and possibly rewrite packages.
-	for _, pkg := range ctx.Package {
-		if !pkg.MovePending {
+	var err error
+	for _, op := range ctx.Operation {
+		if op.State != OpReady {
 			continue
 		}
+		pkg := op.Pkg
 
-		// Copy the package locally.
-		destDir := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
-		srcDir := pkg.Dir
-		if destDir == srcDir {
+		if op.Dest == pkg.Dir {
 			panic("For package " + pkg.Local + " attempt to copy to same location")
 		}
-		dprintf("MV: %s (%q -> %q)\n", pkg.Local, srcDir, destDir)
-		err := CopyPackage(destDir, srcDir)
+		dprintf("MV: %s (%q -> %q)\n", pkg.Local, pkg.Dir, op.Dest)
+		// Copy the package or remove.
+		if len(op.Dest) == 0 {
+			err = removePackage(pkg.Dir)
+		} else {
+			err = CopyPackage(op.Dest, pkg.Dir)
+		}
 		if err != nil {
 			return err
 		}
+		op.State = OpDone
 		ctx.dirty = true
 	}
 	return nil

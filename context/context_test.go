@@ -116,7 +116,7 @@ func TestImportSimple(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx14(g)
-	g.Check(c.ModifyImport("co2/pk1"))
+	g.Check(c.ModifyImport("co2/pk1", AddUpdate))
 
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -168,7 +168,7 @@ func TestDuplicatePackage(t *testing.T) {
 		if item.Status != StatusExternal {
 			continue
 		}
-		g.Check(c.ModifyImport(item.Local))
+		g.Check(c.ModifyImport(item.Local, AddUpdate))
 	}
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -193,7 +193,7 @@ s strings < ["co2/internal/co3/pk3" "co3/pk3"]
 		if item.Status != StatusExternal {
 			continue
 		}
-		g.Check(c.ModifyImport(item.Local))
+		g.Check(c.ModifyImport(item.Local, AddUpdate))
 	}
 
 	c.Reslove(c.Check()) // Automaically resolve conflicts.
@@ -209,6 +209,16 @@ s strings < ["co1/internal/co3/pk3"]
 	list(g, c, "co1 list 1", expected)
 	c = ctx14(g)
 	list(g, c, "co1 list 2", expected)
+
+	// Now remove one import.
+	g.Check(c.ModifyImport("co3/pk3", Remove))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+	list(g, c, "co1 remove", `v co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
+e co3/pk3 < ["co1/internal/co2/pk2" "co1/pk1"]
+l co1/pk1 < []
+s strings < ["co3/pk3"]
+`)
 }
 
 func TestImportSimple15(t *testing.T) {
@@ -227,7 +237,7 @@ func TestImportSimple15(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx15(g)
-	g.Check(c.ModifyImport("co2/pk1"))
+	g.Check(c.ModifyImport("co2/pk1", AddUpdate))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	expected := `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
@@ -240,4 +250,15 @@ s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 
 	c = ctx15(g)
 	list(g, c, "new", expected)
+
+	// Now remove an import.
+	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+	list(g, c, "co1 remove", `e co2/pk1 < ["co1/pk1"]
+e co2/pk2 < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co2/pk1" "co2/pk2"]
+`)
 }

@@ -6,6 +6,7 @@ package context
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -120,4 +121,82 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	}
 	// Vendor file exists, but the package is not a vendor package.
 	return importPath, nil
+}
+
+func hasGoFileInFolder(folder string) (bool, error) {
+	dir, err := os.Open(folder)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// No folder present, no need to check for files.
+			return false, nil
+		}
+		return false, err
+	}
+	fl, err := dir.Readdir(-1)
+	dir.Close()
+	if err != nil {
+		return false, err
+	}
+	for _, fi := range fl {
+		if fi.IsDir() == false && filepath.Ext(fi.Name()) == ".go" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// removePackage removes the specified folder files. If folder is empty when
+// done (no nested folders, remove the folder and any empty parent folders.
+func removePackage(path string) error {
+	// Ensure the path is empty of files.
+	dir, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	fl, err := dir.Readdir(-1)
+	dir.Close()
+	if err != nil {
+		return err
+	}
+	for _, fi := range fl {
+		if fi.IsDir() {
+			continue
+		}
+		err = os.Remove(filepath.Join(path, fi.Name()))
+		if err != nil {
+			return err
+		}
+	}
+
+	// Ignore errors here.
+	for i := 0; i <= looplimit; i++ {
+		dir, err := os.Open(path)
+		if err != nil {
+			// fmt.Fprintf(os.Stderr, "Failedd to open directory %q: %v\n", path, err)
+			return nil
+		}
+
+		fl, err := dir.Readdir(1)
+		dir.Close()
+		if err != nil && err != io.EOF {
+			// fmt.Fprintf(os.Stderr, "Failedd to list directory %q: %v\n", path, err)
+			return nil
+		}
+		if len(fl) > 0 {
+			return nil
+		}
+		err = os.Remove(path)
+		if err != nil {
+			// fmt.Fprintf(os.Stderr, "Failedd to remove empty directory %q: %v\n", path, err)
+			return nil
+		}
+		nextPath := filepath.Clean(filepath.Join(path, ".."))
+		// Check for root.
+		if nextPath == path {
+			return nil
+		}
+		path = nextPath
+	}
+	panic("removePackage() remove parent folders")
 }

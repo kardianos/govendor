@@ -35,3 +35,12 @@ type ErrDirtyPackage struct {
 func (err ErrDirtyPackage) Error() string {
 	return fmt.Sprintf("Package %q has uncommited changes in the vcs.", err.ImportPath)
 }
+
+// ErrPackageExists returns if package already exists.
+type ErrPackageExists struct {
+	Package string
+}
+
+func (err ErrPackageExists) Error() string {
+	return fmt.Sprintf("Package %q already in vendor.", err.Package)
+}
