@@ -32,6 +32,9 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 			if os.IsNotExist(err) {
 				continue
 			}
+			if err != nil {
+				continue
+			}
 			if fi.IsDir() == false {
 				continue
 			}
