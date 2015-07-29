@@ -6,6 +6,7 @@ package context_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -36,12 +37,18 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 	}
 	output := &bytes.Buffer{}
 	for _, item := range list {
-		output.WriteString(item.String())
+		output.WriteString(statusItemString(item))
 		output.WriteRune('\n')
 	}
 	if output.String() != expected {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
 	}
+}
+func statusItemString(li StatusItem) string {
+	if li.Local == li.Canonical {
+		return fmt.Sprintf("%s %s < %q", li.Status, li.Canonical, li.ImportedBy)
+	}
+	return fmt.Sprintf("%s %s [%s] < %q", li.Status, li.Local, li.Canonical, li.ImportedBy)
 }
 
 func showVendorFile14(g *gt.GopathTest) {
