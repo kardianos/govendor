@@ -114,6 +114,7 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: Detect old vendor file format and location and require upgrade.
 	pathToVendorFile := vendorFilename
 	rootIndicator := "vendor"
 	vendorFolder := "vendor"
@@ -296,7 +297,6 @@ const (
 	Add                     // Only add, error if it already exists.
 	Update                  // Only update, error if it doesn't currently exist.
 	Remove                  // Remove from vendor path.
-	Restore                 // Copy from vendor path to GOPATH.
 )
 
 // AddImport adds the package to the context. The vendorFolder is where the
@@ -355,12 +355,11 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 		return ctx.modifyAdd(pkg)
 	case Remove:
 		return ctx.modifyRemove(pkg)
-	case Restore:
-		return ctx.modifyRestore(pkg)
 	default:
 		panic("mod switch: case not handled")
 	}
 }
+
 func (ctx *Context) modifyAdd(pkg *Package) error {
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
@@ -443,11 +442,6 @@ func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
 			}
 		}
 	}
-}
-
-// TODO: Complete modifyRestore.
-func (ctx *Context) modifyRestore(pkg *Package) error {
-	return nil
 }
 
 // Conflict reports packages that are scheduled to
