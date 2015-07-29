@@ -14,7 +14,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/kardianos/vendor/vendorfile"
+	"github.com/kardianos/govendor/vendorfile"
 )
 
 // ListStatus indicates the status of the import.

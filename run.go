@@ -12,7 +12,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/kardianos/vendor/rewrite"
+	"github.com/kardianos/govendor/rewrite"
 )
 
 var help = `vendor: copy go packages locally and re-write imports.

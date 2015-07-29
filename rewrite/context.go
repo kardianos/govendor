@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kardianos/vendor/vendorfile"
+	"github.com/kardianos/govendor/vendorfile"
 )
 
 type Context struct {
