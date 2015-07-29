@@ -12,7 +12,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/kardianos/vendor/rewrite"
+	. "github.com/kardianos/vendor/context"
 )
 
 var help = `vendor: copy go packages locally and re-write imports.
@@ -57,20 +57,22 @@ Example:
 	vendor remove -status internal
 `
 
-func parseStatus(s string) (status []rewrite.ListStatus, err error) {
+func parseStatus(s string) (status []ListStatus, err error) {
 	switch {
 	case strings.HasPrefix("external", s):
-		status = []rewrite.ListStatus{rewrite.StatusExternal}
-	case strings.HasPrefix("internal", s):
-		status = []rewrite.ListStatus{rewrite.StatusInternal}
+		status = []ListStatus{StatusExternal}
+	case strings.HasPrefix("vendor", s):
+		status = []ListStatus{StatusVendor}
 	case strings.HasPrefix("unused", s):
-		status = []rewrite.ListStatus{rewrite.StatusUnused}
+		status = []ListStatus{StatusUnused}
 	case strings.HasPrefix("missing", s):
-		status = []rewrite.ListStatus{rewrite.StatusMissing}
+		status = []ListStatus{StatusMissing}
 	case strings.HasPrefix("local", s):
-		status = []rewrite.ListStatus{rewrite.StatusLocal}
+		status = []ListStatus{StatusLocal}
 	case strings.HasPrefix("std", s):
-		status = []rewrite.ListStatus{rewrite.StatusStd}
+		status = []ListStatus{StatusStd}
+	case strings.HasPrefix("program", s):
+		status = []ListStatus{StatusProgram}
 	default:
 		err = fmt.Errorf("unknown status %q", s)
 	}
@@ -79,16 +81,24 @@ func parseStatus(s string) (status []rewrite.ListStatus, err error) {
 
 // run is isoloated from main and os.Args to help with testing.
 // Shouldn't directly print to console, just write through w.
-func run(w io.Writer, appArgs []string) (help bool, err error) {
+func run(w io.Writer, appArgs []string) (bool, error) {
 	if len(appArgs) == 1 {
 		return true, nil
 	}
 	cmd := appArgs[1]
 	switch cmd {
 	case "init":
-		err = rewrite.CmdInit()
+		ctx, err := NewContextWD(true)
+		if err != nil {
+			return false, err
+		}
+		err = ctx.WriteVendorFile()
+		if err != nil {
+			return false, err
+		}
 	case "list":
-		status := []rewrite.ListStatus{rewrite.StatusExternal, rewrite.StatusInternal, rewrite.StatusUnused, rewrite.StatusMissing, rewrite.StatusLocal}
+		var err error
+		status := []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal}
 		// Parse status.
 		if len(appArgs) >= 3 {
 			status, err = parseStatus(appArgs[2])
@@ -97,8 +107,14 @@ func run(w io.Writer, appArgs []string) (help bool, err error) {
 			}
 		}
 		// Print all listed status.
-		var list []rewrite.ListItem
-		list, err = rewrite.CmdList()
+		ctx, err := NewContextWD(false)
+		if err != nil {
+			return false, err
+		}
+		list, err := ctx.Status()
+		if err != nil {
+			return false, err
+		}
 		for _, item := range list {
 			print := false
 			for _, s := range status {
@@ -114,7 +130,7 @@ func run(w io.Writer, appArgs []string) (help bool, err error) {
 	case "add", "update", "remove":
 		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
 		useStatus := listFlags.Bool("status", false, "")
-		err = listFlags.Parse(appArgs[2:])
+		err := listFlags.Parse(appArgs[2:])
 		if err != nil {
 			return true, err
 		}
@@ -122,17 +138,21 @@ func run(w io.Writer, appArgs []string) (help bool, err error) {
 		if len(args) == 0 {
 			return true, errors.New("missing status")
 		}
+		ctx, err := NewContextWD(false)
+		if err != nil {
+			return false, err
+		}
+		list, err := ctx.Status()
+		if err != nil {
+			return true, err
+		}
+
 		if *useStatus {
 			statusList, err := parseStatus(args[0])
 			if err != nil {
 				return true, err
 			}
 			status := statusList[0]
-
-			list, err := rewrite.CmdList()
-			if err != nil {
-				return true, err
-			}
 			for _, item := range list {
 				if item.Status != status {
 					continue
@@ -140,51 +160,67 @@ func run(w io.Writer, appArgs []string) (help bool, err error) {
 
 				switch cmd {
 				case "add":
-					err = rewrite.CmdAdd(item.Path)
+					err = ctx.ModifyImport(item.Local, Add)
 				case "update":
-					err = rewrite.CmdUpdate(item.Path)
+					err = ctx.ModifyImport(item.Local, Update)
 				case "remove":
-					err = rewrite.CmdRemove(item.Path)
+					err = ctx.ModifyImport(item.Local, Remove)
+				}
+				if err != nil {
+					return false, err
 				}
 			}
 		} else {
 			for _, arg := range args {
 				// Expand the list based on the analysis of the import tree.
 				if strings.HasSuffix(arg, "...") {
-					list, err := rewrite.CmdList()
-					if err != nil {
-						return true, err
-					}
 					base := strings.TrimSuffix(arg, "...")
-
 					for _, item := range list {
-						if strings.HasPrefix(item.Path, base) == false && strings.HasPrefix(item.VendorPath, base) == false {
+						if strings.HasPrefix(item.Local, base) == false && strings.HasPrefix(item.Canonical, base) == false {
 							continue
 						}
 
 						switch cmd {
 						case "add":
-							err = rewrite.CmdAdd(item.Path)
+							err = ctx.ModifyImport(item.Local, Add)
 						case "update":
-							err = rewrite.CmdUpdate(item.Path)
+							err = ctx.ModifyImport(item.Local, Update)
 						case "remove":
-							err = rewrite.CmdRemove(item.Path)
+							err = ctx.ModifyImport(item.Local, Remove)
+						}
+						if err != nil {
+							return false, err
 						}
 					}
 				} else {
 					switch cmd {
 					case "add":
-						err = rewrite.CmdAdd(arg)
+						err = ctx.ModifyImport(arg, Add)
 					case "update":
-						err = rewrite.CmdUpdate(arg)
+						err = ctx.ModifyImport(arg, Update)
 					case "remove":
-						err = rewrite.CmdRemove(arg)
+						err = ctx.ModifyImport(arg, Remove)
+					}
+					if err != nil {
+						return false, err
 					}
 				}
 			}
 		}
+		// Auto-resolve package conflicts.
+		ctx.Reslove(ctx.Check())
+
+		// Write out vendor file and do change.
+		err = ctx.WriteVendorFile()
+		if err != nil {
+			return false, err
+		}
+		err = ctx.Alter()
+		if err != nil {
+			return false, err
+		}
 	default:
 		return true, fmt.Errorf("Unknown command %q", cmd)
 	}
-	return false, err
+	return false, nil
 }

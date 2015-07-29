@@ -109,7 +109,7 @@ type File struct {
 
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
-func NewContextWD() (*Context, error) {
+func NewContextWD(wdIsRoot bool) (*Context, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -123,9 +123,12 @@ func NewContextWD() (*Context, error) {
 		rootIndicator = pathToVendorFile
 		vendorFolder = "internal"
 	}
-	root, err := findRoot(wd, rootIndicator)
-	if err != nil {
-		return nil, err
+	root := wd
+	if !wdIsRoot {
+		root, err = findRoot(wd, rootIndicator)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return NewContext(root, pathToVendorFile, vendorFolder, !go15VendorExperiment)

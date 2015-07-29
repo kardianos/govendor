@@ -42,15 +42,15 @@ func TestSimple(t *testing.T) {
 		gt.File("a.go", "strings"),
 	)
 	g.In("co1")
-	Vendor(g, "", "init", "")
-	Vendor(g, "", "list", `e co2/pk1
-e co2/pk2
-l co1/pk1
+	Vendor(g, "co1 init", "init", "")
+	Vendor(g, "", "list", `e co2/pk1 < ["co1/pk1"]
+e co2/pk2 < ["co1/pk1"]
+l co1/pk1 < []
 `)
-	Vendor(g, "", "add -status ext", "")
-	Vendor(g, "", "list", `i co1/internal/co2/pk1
-i co1/internal/co2/pk2
-l co1/pk1
+	Vendor(g, "co1 add ext", "add -status ext", "")
+	Vendor(g, "co1 list", "list", `v co1/internal/co2/pk1 [co2/pk1] < ["co1/pk1"]
+v co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
+l co1/pk1 < []
 `)
 }
 
@@ -73,14 +73,14 @@ func TestDuplicatePackage(t *testing.T) {
 
 	g.In("co1")
 	Vendor(g, "co1 init", "init", "")
-	Vendor(g, "co1 pre list", "list", `e co2/internal/co3/pk1
-e co2/pk1
-e co3/pk1
-l co1/pk1
+	Vendor(g, "co1 pre list", "list", `e co2/internal/co3/pk1 [co3/pk1] < ["co2/pk1"]
+e co2/pk1 < ["co1/pk1"]
+e co3/pk1 < ["co1/pk1"]
+l co1/pk1 < []
 `)
 	Vendor(g, "co1 add", "add -status ext", "")
-	Vendor(g, "co1 list", "list", `i co1/internal/co2/pk1
-i co1/internal/co3/pk1
-l co1/pk1
+	Vendor(g, "co1 list", "list", `v co1/internal/co2/pk1 [co2/pk1] < ["co1/pk1"]
+v co1/internal/co3/pk1 [co3/pk1] < ["co1/internal/co2/pk1" "co1/pk1"]
+l co1/pk1 < []
 `)
 }
