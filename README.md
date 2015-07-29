@@ -39,7 +39,7 @@ Expanding "..."
 
 Status list:
 	external - package does not share root path
-	internal - in vendor file; copied locally
+	vendor - in vendor file; copied locally
 	unused - the package has been copied locally, but isn't used
 	local - shares the root path and is not a vendor package
 	missing - referenced but not found in GOROOT or GOPATH
@@ -54,7 +54,7 @@ Example:
 	vendor update github.com/kardianos/...
 	vendor add -status external
 	vendor update -status ext
-	vendor remove -status internal
+	vendor remove -status vendor
 ```
 
 For example "vendor list external" will tell you if there are any packages which
@@ -73,6 +73,10 @@ file, but it also searches each external dependency for a vendor file.
 This is why the go team wanted to establish a standard location, name, structure,
 and semantics for such a vendor file.
 
+The GO15VENDOREXPERIMENT=1 flag will be honored. If present the vendor file will
+be placed into the project root and vendor package will be placed into "vendor"
+folder. Import paths will not be rewriten in this case.
+
 When copying packages locally, vendored dependencies of dependencies are always
 copied to the "top" level in the internal package, so it also gets rid of the
 extra package layers. For an example of what a I mean here look at
@@ -90,10 +94,10 @@ vendor add -status external
 vendor add github.com/kardianos/osext
 
 # Update vendor packages.
-vendor update -status internal
+vendor update -status vendor
 
 # Revert back to normal GOPATH packages.
-vendor remove -status internal
+vendor remove -status vendor
 
 # List package.
 vendor list
