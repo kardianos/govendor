@@ -58,7 +58,11 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 
 	pkg, found := ctx.Package[importPath]
 	if !found {
-		pkg = ctx.setPackage(dir, importPath, importPath, gopath, StatusUnknown)
+		status := StatusUnknown
+		if f.Name.Name == "main" {
+			status = StatusProgram
+		}
+		pkg = ctx.setPackage(dir, importPath, importPath, gopath, status)
 		ctx.Package[importPath] = pkg
 	}
 	pf := &File{

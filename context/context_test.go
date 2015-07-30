@@ -228,6 +228,31 @@ s strings < ["co3/pk3"]
 `)
 }
 
+func TestVendorProgram(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/main",
+		gt.File("b.go", "bytes"),
+	)
+	g.In("co1")
+	c := ctx14(g)
+
+	g.Check(c.ModifyImport("co2/main", AddUpdate))
+
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 list", `p co1/internal/co2/main < []
+l co1/pk1 < []
+s bytes < ["co1/internal/co2/main"]
+s strings < ["co1/pk1"]
+`)
+}
+
 func TestImportSimple15(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()

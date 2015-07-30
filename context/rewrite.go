@@ -61,6 +61,9 @@ func (ctx *Context) rewrite() error {
 	ctx.updatePackageReferences()
 	for from := range ctx.MoveRule {
 		pkg := ctx.Package[from]
+		if pkg == nil {
+			continue
+		}
 		for _, ref := range pkg.referenced {
 			for _, f := range ref.Files {
 				dprintf("REF RW %s\n", f.Path)

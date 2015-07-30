@@ -44,6 +44,7 @@ Status list:
 	local - shares the root path and is not a vendor package
 	missing - referenced but not found in GOROOT or GOPATH
 	std - standard library package
+	program - package is a main package
 
 Status can be referenced by their initial letters.
 	"st" == "std"
