@@ -36,6 +36,8 @@ func (ctx *Context) WriteVendorFile() (err error) {
 }
 
 func readVendorFile(vendorFilePath string) (*vendorfile.File, error) {
+	// TODO: Determine if local field is relative to GOPATH or vendor file.
+	// Change to relative to vendor file as needed.
 	vf := &vendorfile.File{}
 	f, err := os.Open(vendorFilePath)
 	if err != nil {

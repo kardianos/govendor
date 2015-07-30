@@ -86,7 +86,8 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		return true, nil
 	}
 
-	// TODO: Add a "migrate" command {godep, internal, vendor?} to {internal?, vendor}.
+	// TODO: (?) Allow specifying status mixed in with paths like "+local" or "!program" or "+all".
+	// TODO: Add a "migrate" command {godep, gb, internal} to {vendor}.
 
 	cmd := appArgs[1]
 	switch cmd {
@@ -100,12 +101,17 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return false, err
 		}
 	case "list":
-		// TODO: Determine a better way to query list.
-		var err error
+		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
+		verbose := listFlags.Bool("v", false, "verbose")
+		err := listFlags.Parse(appArgs[2:])
+		if err != nil {
+			return true, err
+		}
+		args := listFlags.Args()
 		status := []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal}
 		// Parse status.
-		if len(appArgs) >= 3 {
-			status, err = parseStatus(appArgs[2])
+		if len(args) > 0 {
+			status, err = parseStatus(args[0])
 			if err != nil {
 				return true, err
 			}
@@ -113,7 +119,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		// Print all listed status.
 		ctx, err := NewContextWD(false)
 		if err != nil {
-			return false, err
+			return checkNewContextError(err)
 		}
 		list, err := ctx.Status()
 		if err != nil {
@@ -128,7 +134,20 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 				}
 			}
 			if print {
-				fmt.Fprintln(w, item)
+				if item.Local == item.Canonical {
+					fmt.Fprintf(w, "%v %s\n", item.Status, item.Local)
+				} else {
+					fmt.Fprintf(w, "%v %s [%s]\n", item.Status, item.Local, item.Canonical)
+				}
+				if *verbose {
+					for i, imp := range item.ImportedBy {
+						if i != len(item.ImportedBy)-1 {
+							fmt.Fprintf(w, "  ├── %s\n", imp)
+						} else {
+							fmt.Fprintf(w, "  └── %s\n", imp)
+						}
+					}
+				}
 			}
 		}
 	case "add", "update", "remove":
@@ -144,7 +163,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		}
 		ctx, err := NewContextWD(false)
 		if err != nil {
-			return false, err
+			return checkNewContextError(err)
 		}
 		list, err := ctx.Status()
 		if err != nil {
@@ -227,4 +246,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		return true, fmt.Errorf("Unknown command %q", cmd)
 	}
 	return false, nil
+}
+
+func checkNewContextError(err error) (bool, error) {
+	// TODO: Diagnose error, show current value of 1.5vendor, suggest alter.
+	return false, err
 }

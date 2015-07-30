@@ -17,7 +17,7 @@ specification and be a useful tool.
 ### Usage
 ```
 vendor init
-vendor list [status]
+vendor list [-v] [status]
 vendor {add, update, remove} [-status] <import-path or status>
 
 	init
