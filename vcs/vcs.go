@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// package vcs gets version control information from the file system.
 package vcs
 
 import (
@@ -12,38 +13,42 @@ import (
 	"github.com/kardianos/govendor/internal/pathos"
 )
 
+// VcsInfo returns information about a given repo.
 type VcsInfo struct {
 	Dirty        bool
 	Revision     string
 	RevisionTime *time.Time
 }
 
+// Vcs represents a version control system.
 type Vcs interface {
 	// Return nil VcsInfo if unable to determine VCS from directory.
 	Find(dir string) (*VcsInfo, error)
 }
 
-var VcsRegistry = []Vcs{
+var vcsRegistry = []Vcs{
 	VcsGit{},
 	VcsHg{},
 	VcsBzr{},
 }
 var registerSync = sync.Mutex{}
 
+// RegisterVCS adds a new VCS to use.
 func RegisterVCS(vcs Vcs) {
 	registerSync.Lock()
 	registerSync.Unlock()
 
-	// TODO: Ensure unique. Panic on duplicate. Maybe make into a map.
-	VcsRegistry = append(VcsRegistry, vcs)
+	vcsRegistry = append(vcsRegistry, vcs)
 }
 
 const looplimit = 10000
 
+// FindVcs determines the version control information given a package dir and
+// lowest root dir.
 func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
 	path := packageDir
 	for i := 0; i <= looplimit; i++ {
-		for _, vcs := range VcsRegistry {
+		for _, vcs := range vcsRegistry {
 			info, err = vcs.Find(path)
 			if err != nil {
 				return nil, err
