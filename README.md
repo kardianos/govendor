@@ -1,8 +1,8 @@
 ## Vendor tool for Go
 Follows the recommendation to use import path re-writes and avoid GOPATH
 changes and go tool changes. Uses the following vendor file specification:
-https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the establishment a final vendor file
-specification and be a useful tool.
+https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the
+establishment a final vendor file specification and be a useful tool.
 
 ### What this vendor tool features:
  * Tested cross platform support
@@ -16,9 +16,10 @@ specification and be a useful tool.
 
 ### Usage
 ```
-vendor init
-vendor list [-v] [status]
-vendor {add, update, remove} [-status] <import-path or status>
+govendor: copy go packages locally and optionally re-write imports.
+govendor init
+govendor list -v [+status] [import-path-filter]
+govendor {add, update, remove} [+status] [import-path-filter]
 
 	init
 		create a vendor file if it does not exist.
@@ -34,45 +35,46 @@ vendor {add, update, remove} [-status] <import-path or status>
 
 Expanding "..."
 	A package import path may be expanded to other paths that
-	show up in "vendor list" be ending the "import-path" with "...".
+	show up in "govendor list" be ending the "import-path" with "...".
 	NOTE: this uses the import tree from "vendor list" and NOT the file system.
 
 Status list:
 	external - package does not share root path
-	vendor - in vendor file; copied locally
+	internal - in vendor file; copied locally
 	unused - the package has been copied locally, but isn't used
 	local - shares the root path and is not a vendor package
 	missing - referenced but not found in GOROOT or GOPATH
 	std - standard library package
 	program - package is a main package
+	---
+	all - all of the above status
+	normal - all but std status
 
 Status can be referenced by their initial letters.
 	"st" == "std"
 	"e" == "external"
 	
 Example:
-	vendor add github.com/kardianos/osext
-	vendor update github.com/kardianos/...
-	vendor add -status external
-	vendor update -status ext
-	vendor remove -status vendor
+	govendor add github.com/kardianos/osext
+	govendor update github.com/kardianos/...
+	govendor add +external
+	govendor update +ven github.com/company/project/... bitbucket.org/user/pkg
+	govendor remove +vendor
+	govendor list +ext +std
+
+To opt use the standard vendor directory:
+set GO15VENDOREXPERIMENT=1
+
+When GO15VENDOREXPERIMENT=1 imports are copied to the vendor directory without
+rewriting their import paths.
 ```
 
-For example "vendor list external" will tell you if there are any packages which
-live outside the project. The stats "duplicate" is also planned as well, in case
-someone references a package in GOPATH that is already vendored. A pre-commit
-hook "vendor list ext dup" and only allow commit if it returns empty.
+For example "govendor list +external" will tell you if there are any packages which
+live outside the project.
 
 Before doing the commands add, update, or remove, all package dependencies are
 discovered. The commands will only act on discovered dependencies. Commands will
 never alter packages outside the project directory.
-
-When doing this analysis it also records the both the current location (relative
-to the GOPATH env) and also any noted original vendor path found in the
-"internal/vendor.json" file. Not only does it use the current projects vendor
-file, but it also searches each external dependency for a vendor file.
-This is why the go team wanted to establish a standard location, name, structure,
-and semantics for such a vendor file.
 
 The GO15VENDOREXPERIMENT=1 flag will be honored. If present the vendor file will
 be placed into the project root and vendor package will be placed into "vendor"
@@ -80,58 +82,24 @@ folder. Import paths will not be rewriten in this case.
 
 When copying packages locally, vendored dependencies of dependencies are always
 copied to the "top" level in the internal package, so it also gets rid of the
-extra package layers. For an example of what a I mean here look at
-https://github.com/kardianos/vendor-spec#example how the context package is
-venored.
+extra package layers.
 
 The project must be within a GOPATH.
 
 ### Examples
 ```
 # Add external packages.
-vendor add -status external
+govendor add +external
 
 # Add a specific package.
-vendor add github.com/kardianos/osext
+govendor add github.com/kardianos/osext
 
 # Update vendor packages.
-vendor update -status vendor
+govendor update +vendor
 
 # Revert back to normal GOPATH packages.
-vendor remove -status vendor
+govendor remove +vendor
 
 # List package.
-vendor list
+govendor list
 ```
-
-### Status
-Tasks that are planned.
- * Add a duplicate status in cases where a person adds the wrong path.
- * Add flag "-short" to the init command and "Short" field in the vendor file.
-    Keeps paths unique, but removes extra folders.
- * Speed up working with multiple packages at once by altering the rewrite API.
-
-Tasks that are not planned at this time, but could be done in the future.
- * "Transactional" re-writes (rename temp files all at once).
- * Command to check for newer versions, either in GOPATH or remote repo.
- * A -v verbose flag to print what it is doing.
-
-### FAQ
-Q: Why not use an existing tool?
-
-A: I do not know of an existing tool that works on all platforms and
-is designed from the ground up to support vendoring and import re-writes.
-I also wanted a test bed to test the proposed vendor-spec.
-
-------------
-
-Q: Why this design and not X?
-
-A: See https://github.com/kardianos/vendor-spec#faq .
-
-------------
-
-Q: Why do we need a standard vendor file format?
-
-A: So many different tools, such as godoc.org and vendoring tools, can correctly
-identify vendor packages.

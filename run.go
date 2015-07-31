@@ -16,10 +16,10 @@ import (
 	. "github.com/kardianos/govendor/context"
 )
 
-var help = `vendor: copy go packages locally and re-write imports.
-vendor init
-vendor list [status]
-vendor {add, update, remove} [-status] <import-path or status>
+var help = `govendor: copy go packages locally and optionally re-write imports.
+govendor init
+govendor list -v [+status] [import-path-filter]
+govendor {add, update, remove} [+status] [import-path-filter]
 
 	init
 		create a vendor file if it does not exist.
@@ -35,7 +35,7 @@ vendor {add, update, remove} [-status] <import-path or status>
 
 Expanding "..."
 	A package import path may be expanded to other paths that
-	show up in "vendor list" be ending the "import-path" with "...".
+	show up in "govendor list" be ending the "import-path" with "...".
 	NOTE: this uses the import tree from "vendor list" and NOT the file system.
 
 Status list:
@@ -45,18 +45,34 @@ Status list:
 	local - shares the root path and is not a vendor package
 	missing - referenced but not found in GOROOT or GOPATH
 	std - standard library package
+	program - package is a main package
+	---
+	all - all of the above status
+	normal - all but std status
 
 Status can be referenced by their initial letters.
 	"st" == "std"
 	"e" == "external"
 	
 Example:
-	vendor add github.com/kardianos/osext
-	vendor update github.com/kardianos/...
-	vendor add -status external
-	vendor update -status ext
-	vendor remove -status internal
+	govendor add github.com/kardianos/osext
+	govendor update github.com/kardianos/...
+	govendor add +external
+	govendor update +ven github.com/company/project/... bitbucket.org/user/pkg
+	govendor remove +vendor
+	govendor list +ext +std
+
+To opt use the standard vendor directory:
+set GO15VENDOREXPERIMENT=1
+
+When GO15VENDOREXPERIMENT=1 imports are copied to the vendor directory without
+rewriting their import paths.
 `
+
+var (
+	normal = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
+	all    = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStd}
+)
 
 func parseStatus(s string) (status []ListStatus, err error) {
 	switch {
@@ -70,14 +86,69 @@ func parseStatus(s string) (status []ListStatus, err error) {
 		status = []ListStatus{StatusMissing}
 	case strings.HasPrefix("local", s):
 		status = []ListStatus{StatusLocal}
-	case strings.HasPrefix("std", s):
-		status = []ListStatus{StatusStd}
 	case strings.HasPrefix("program", s):
 		status = []ListStatus{StatusProgram}
+	case strings.HasPrefix("std", s):
+		status = []ListStatus{StatusStd}
+	case strings.HasPrefix("all", s):
+		status = normal
+	case strings.HasPrefix("normal", s):
+		status = all
 	default:
 		err = fmt.Errorf("unknown status %q", s)
 	}
 	return
+}
+
+type filter struct {
+	Status []ListStatus
+	Import []string
+}
+
+func (f filter) HasStatus(item StatusItem) bool {
+	for _, s := range f.Status {
+		if s == item.Status {
+			return true
+		}
+	}
+	return false
+}
+func (f filter) HasImport(item StatusItem) bool {
+	for _, imp := range f.Import {
+		if imp == item.Local || imp == item.Canonical {
+			return true
+		}
+		if strings.HasSuffix(imp, "...") {
+			base := strings.TrimSuffix(imp, "...")
+			if strings.HasPrefix(item.Local, base) || strings.HasPrefix(item.Canonical, base) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func parseFilter(args []string) (filter, error) {
+	f := filter{
+		Status: make([]ListStatus, 0, len(args)),
+		Import: make([]string, 0, len(args)),
+	}
+	for _, a := range args {
+		if len(a) == 0 {
+			continue
+		}
+		// Check if item is a status.
+		if a[0] == '+' {
+			ss, err := parseStatus(a[1:])
+			if err != nil {
+				return f, err
+			}
+			f.Status = append(f.Status, ss...)
+		} else {
+			f.Import = append(f.Import, a)
+		}
+	}
+	return f, nil
 }
 
 // run is isoloated from main and os.Args to help with testing.
@@ -87,7 +158,6 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		return true, nil
 	}
 
-	// TODO: Allow specifying status mixed in with paths like "+local" or "!program" or "+all".
 	// TODO: Add a "migrate" command {godep, gb, internal} to {vendor}.
 
 	cmd := appArgs[1]
@@ -109,13 +179,12 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return true, err
 		}
 		args := listFlags.Args()
-		status := []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal}
-		// Parse status.
-		if len(args) > 0 {
-			status, err = parseStatus(args[0])
-			if err != nil {
-				return true, err
-			}
+		f, err := parseFilter(args)
+		if err != nil {
+			return true, err
+		}
+		if len(f.Status) == 0 {
+			f.Status = append(f.Status, normal...)
 		}
 		// Print all listed status.
 		ctx, err := NewContextWD(false)
@@ -127,40 +196,35 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return false, err
 		}
 		for _, item := range list {
-			print := false
-			for _, s := range status {
-				if item.Status == s {
-					print = true
-					break
-				}
+			if f.HasStatus(item) == false {
+				continue
 			}
-			if print {
-				if item.Local == item.Canonical {
-					fmt.Fprintf(w, "%v %s\n", item.Status, item.Local)
-				} else {
-					fmt.Fprintf(w, "%v %s [%s]\n", item.Status, item.Local, item.Canonical)
-				}
-				if *verbose {
-					for i, imp := range item.ImportedBy {
-						if i != len(item.ImportedBy)-1 {
-							fmt.Fprintf(w, "  ├── %s\n", imp)
-						} else {
-							fmt.Fprintf(w, "  └── %s\n", imp)
-						}
+			if len(f.Import) != 0 && f.HasImport(item) == false {
+				continue
+			}
+			if item.Local == item.Canonical {
+				fmt.Fprintf(w, "%v %s\n", item.Status, item.Local)
+			} else {
+				fmt.Fprintf(w, "%v %s [%s]\n", item.Status, item.Local, item.Canonical)
+			}
+			if *verbose {
+				for i, imp := range item.ImportedBy {
+					if i != len(item.ImportedBy)-1 {
+						fmt.Fprintf(w, "  ├── %s\n", imp)
+					} else {
+						fmt.Fprintf(w, "  └── %s\n", imp)
 					}
 				}
 			}
 		}
 	case "add", "update", "remove":
-		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
-		useStatus := listFlags.Bool("status", false, "")
-		err := listFlags.Parse(appArgs[2:])
+		args := appArgs[2:]
+		if len(args) == 0 {
+			return true, errors.New("missing package or status")
+		}
+		f, err := parseFilter(args)
 		if err != nil {
 			return true, err
-		}
-		args := listFlags.Args()
-		if len(args) == 0 {
-			return true, errors.New("missing status")
 		}
 		ctx, err := NewContextWD(false)
 		if err != nil {
@@ -171,66 +235,37 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return true, err
 		}
 
-		if *useStatus {
-			statusList, err := parseStatus(args[0])
-			if err != nil {
-				return true, err
-			}
-			status := statusList[0]
-			for _, item := range list {
-				if item.Status != status {
-					continue
-				}
+		var mod Modify
+		switch cmd {
+		case "add":
+			mod = Add
+		case "update":
+			mod = Update
+		case "remove":
+			mod = Remove
+		}
 
-				switch cmd {
-				case "add":
-					err = ctx.ModifyImport(item.Local, Add)
-				case "update":
-					err = ctx.ModifyImport(item.Local, Update)
-				case "remove":
-					err = ctx.ModifyImport(item.Local, Remove)
-				}
+		for _, item := range list {
+			if f.HasStatus(item) {
+				err = ctx.ModifyImport(item.Local, mod)
 				if err != nil {
 					return false, err
 				}
 			}
-		} else {
-			for _, arg := range args {
-				// Expand the list based on the analysis of the import tree.
-				if strings.HasSuffix(arg, "...") {
-					base := strings.TrimSuffix(arg, "...")
-					for _, item := range list {
-						if strings.HasPrefix(item.Local, base) == false && strings.HasPrefix(item.Canonical, base) == false {
-							continue
-						}
-
-						switch cmd {
-						case "add":
-							err = ctx.ModifyImport(item.Local, Add)
-						case "update":
-							err = ctx.ModifyImport(item.Local, Update)
-						case "remove":
-							err = ctx.ModifyImport(item.Local, Remove)
-						}
-						if err != nil {
-							return false, err
-						}
-					}
-				} else {
-					switch cmd {
-					case "add":
-						err = ctx.ModifyImport(arg, Add)
-					case "update":
-						err = ctx.ModifyImport(arg, Update)
-					case "remove":
-						err = ctx.ModifyImport(arg, Remove)
-					}
-					if err != nil {
-						return false, err
-					}
+			if f.HasImport(item) {
+				err = ctx.ModifyImport(item.Local, mod)
+				if err != nil {
+					return false, err
 				}
 			}
 		}
+		for _, imp := range f.Import {
+			err = ctx.ModifyImport(imp, mod)
+			if err != nil {
+				return false, err
+			}
+		}
+
 		// Auto-resolve package conflicts.
 		ctx.Reslove(ctx.Check())
 
