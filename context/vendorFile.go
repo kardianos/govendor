@@ -78,10 +78,8 @@ func readVendorFile(vendorFilePath string) (*vendorfile.File, error) {
 	if len(gopath) == 0 {
 		return vf, nil
 	}
-	prefix := pathos.FileTrimPrefix(folder, filepath.Join(gopath, "src"))
-	if len(prefix) > 0 {
-		prefix = prefix[1:]
-	}
+	prefix := pathos.SlashToImportPath(pathos.FileTrimPrefix(folder, filepath.Join(gopath, "src")))
+	prefix = strings.TrimPrefix(prefix, "/")
 	for _, pkg := range vf.Package {
 		pkg.Local = strings.TrimPrefix(pkg.Local, prefix)
 	}
