@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	. "github.com/kardianos/govendor/context"
@@ -86,7 +87,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		return true, nil
 	}
 
-	// TODO: (?) Allow specifying status mixed in with paths like "+local" or "!program" or "+all".
+	// TODO: Allow specifying status mixed in with paths like "+local" or "!program" or "+all".
 	// TODO: Add a "migrate" command {godep, gb, internal} to {vendor}.
 
 	cmd := appArgs[1]
@@ -249,6 +250,19 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 }
 
 func checkNewContextError(err error) (bool, error) {
-	// TODO: Diagnose error, show current value of 1.5vendor, suggest alter.
+	// Diagnose error, show current value of 1.5vendor, suggest alter.
+	if err == nil {
+		return false, nil
+	}
+	if _, is := err.(ErrMissingVendorFile); is {
+		expValue := os.Getenv("GO15VENDOREXPERIMENT")
+		err = fmt.Errorf(`%v
+
+GO15VENDOREXPERIMENT=%q
+It is possible this project requires changing the above env var
+or the project is not initialized.
+`, err, expValue)
+		return false, err
+	}
 	return false, err
 }
