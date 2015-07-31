@@ -27,9 +27,15 @@ func New(t *testing.T) *GopathTest {
 	if err != nil {
 		t.Fatal(err)
 	}
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
 	g := &GopathTest{
 		T:    t,
 		base: base,
+
+		initPath: wd,
 	}
 	g.mkdir("src")
 	os.Setenv("GOPATH", g.base)
@@ -41,6 +47,8 @@ type GopathTest struct {
 
 	base    string
 	current string
+
+	initPath string
 }
 
 func (g *GopathTest) mkdir(s string) {
@@ -73,6 +81,7 @@ func (g *GopathTest) Current() string {
 	return g.current
 }
 func (g *GopathTest) Clean() {
+	os.Chdir(g.initPath)
 	err := os.RemoveAll(g.base)
 	if err != nil {
 		g.Fatal(err)
