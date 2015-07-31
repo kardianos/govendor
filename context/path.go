@@ -9,8 +9,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	"github.com/kardianos/govendor/vendorfile"
 )
 
 // findImportDir finds the absolute directory. If rel is empty vendor folders
@@ -100,7 +102,7 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	// "yours/internal/myinternal" -> "path/to/mypkg/internal/yours/internal/myinternal" (IIF myinternal is not a vendor package)
 	// "github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
 
-	dir, _, err := ctx.findImportDir("", importPath)
+	dir, gopath, err := ctx.findImportDir("", importPath)
 	if err != nil {
 		return "", err
 	}
@@ -116,14 +118,27 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, pkg := range vf.Package {
-		if pkg.Local == importPath {
-			// Return the vendor path the vendor package used.
-			return pkg.Canonical, nil
-		}
+	vpkg := vendorFileFindLocal(vf, root, gopath, importPath)
+	if vpkg != nil {
+		return vpkg.Canonical, nil
 	}
+
 	// Vendor file exists, but the package is not a vendor package.
 	return importPath, nil
+}
+
+func vendorFileFindLocal(vf *vendorfile.File, root, gopath, importPath string) *vendorfile.Package {
+	local := pathos.SlashToImportPath(pathos.FileTrimPrefix(root, gopath)) // "/co1" = /file/src/co1, /file/src
+	local = strings.TrimPrefix(strings.TrimPrefix(importPath, local), "/")
+	for _, pkg := range vf.Package {
+		if pkg.Remove {
+			continue
+		}
+		if pkg.Local == local {
+			return pkg
+		}
+	}
+	return nil
 }
 
 func hasGoFileInFolder(folder string) (bool, error) {

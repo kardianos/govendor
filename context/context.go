@@ -223,18 +223,8 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 }
 
 func (ctx *Context) vendorFilePackageLocal(local string) *vendorfile.Package {
-	// // The vendor local is relative to the vendor file.
-	// rel := path.Join(ctx.RootImportPath, ctx.RootToVendorFile, ctx.VendorFileToFolder)
-	// local = strings.TrimPrefix(strings.TrimPrefix(local, rel), "/")
-	for _, pkg := range ctx.VendorFile.Package {
-		if pkg.Remove {
-			continue
-		}
-		if pkg.Local == local {
-			return pkg
-		}
-	}
-	return nil
+	root, _ := filepath.Split(ctx.VendorFilePath)
+	return vendorFileFindLocal(ctx.VendorFile, root, ctx.RootGopath, local)
 }
 
 func (ctx *Context) vendorFilePackageCanonical(canonical string) *vendorfile.Package {
@@ -318,7 +308,7 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	// the canonical path.
 	localImportPath := sourcePath
 	if vendPkg := ctx.vendorFilePackageCanonical(localImportPath); vendPkg != nil {
-		localImportPath = vendPkg.Local
+		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Local)
 	}
 
 	dprintf("AI: %s, L: %s, C: %s\n", sourcePath, localImportPath, canonicalImportPath)
@@ -371,7 +361,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 		vp = &vendorfile.Package{
 			Add:       true,
 			Canonical: pkg.Canonical,
-			Local:     path.Join(ctx.RootImportPath, ctx.VendorFolder, pkg.Canonical),
+			Local:     path.Join(ctx.VendorFileToFolder, pkg.Canonical),
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}

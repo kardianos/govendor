@@ -191,12 +191,9 @@ func (ctx *Context) determinePackageStatus() error {
 		if err != nil {
 			return err
 		}
-		for _, vp := range vf.Package {
-			if vp.Local == pkg.Local {
-				// Return the vendor path the vendor package used.
-				pkg.Canonical = vp.Canonical
-				break
-			}
+		vpkg := vendorFileFindLocal(vf, root, pkg.Gopath, pkg.Local)
+		if vpkg != nil {
+			pkg.Canonical = vpkg.Canonical
 		}
 	}
 

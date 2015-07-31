@@ -67,6 +67,15 @@ func vendorFile14(g *gt.GopathTest, expected string) {
 		g.Fatal("Got: ", string(buf))
 	}
 }
+func vendorFile15(g *gt.GopathTest, expected string) {
+	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), "vendor.json"))
+	if err != nil {
+		g.Fatal(err)
+	}
+	if string(buf) != expected {
+		g.Fatal("Got: ", string(buf))
+	}
+}
 
 func showRewriteRule(c *Context, t *testing.T) {
 	for from, to := range c.MoveRule {
@@ -134,7 +143,7 @@ func TestImportSimple(t *testing.T) {
 		{
 			"canonical": "co2/pk1",
 			"comment": "",
-			"local": "co1/internal/co2/pk1",
+			"local": "co2/pk1",
 			"revision": "",
 			"revisionTime": ""
 		}
@@ -179,6 +188,19 @@ func TestDuplicatePackage(t *testing.T) {
 	}
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
+
+	vendorFile14(g, `{
+	"comment": "",
+	"package": [
+		{
+			"canonical": "co3/pk3",
+			"comment": "",
+			"local": "co3/pk3",
+			"revision": "",
+			"revisionTime": ""
+		}
+	]
+}`)
 
 	list(g, c, "co2 list", `v co2/internal/co3/pk3 [co3/pk3] < ["co2/pk2"]
 l co2/pk2 < []
@@ -282,6 +304,19 @@ s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 
 	c = ctx15(g)
 	list(g, c, "new", expected)
+
+	vendorFile15(g, `{
+	"comment": "",
+	"package": [
+		{
+			"canonical": "co2/pk1",
+			"comment": "",
+			"local": "vendor/co2/pk1",
+			"revision": "",
+			"revisionTime": ""
+		}
+	]
+}`)
 
 	// Now remove an import.
 	g.Check(c.ModifyImport("co2/pk1", Remove))
