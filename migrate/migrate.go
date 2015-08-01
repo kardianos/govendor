@@ -37,6 +37,9 @@ func Migrate(from From, root string) error {
 	if err != nil {
 		return err
 	}
+	if sys == nil {
+		return errors.New("Root not found.")
+	}
 	return sys.Migrate(root)
 }
 
@@ -87,7 +90,7 @@ func (sysGb) Migrate(root string) error {
 	// Move files from "src" to first GOPATH.
 	// Move vendor files from "vendor/src" to "vendor".
 	// Translate "vendor/manifest" to vendor.json file.
-	return nil
+	return errors.New("Migrate gb not implemented")
 }
 
 type sysGodep struct{}
@@ -102,7 +105,7 @@ func (sysGodep) Migrate(root string) error {
 	// Un-rewrite import paths.
 	// Copy files from Godeps/_workspace/src to "vendor".
 	// Translate Godeps/Godeps.json to vendor.json.
-	return nil
+	return errors.New("Migrate godep not implemented")
 }
 
 type sysInternal struct{}
@@ -117,7 +120,7 @@ func (sysInternal) Migrate(root string) error {
 	// Un-rewrite import paths.
 	// Copy files from internal to vendor.
 	// Update and move vendor file from "internal/vendor.json" to "vendor.json".
-	return nil
+	return errors.New("Migrate internal not implemented")
 }
 
 func hasDirs(root string, dd ...string) bool {

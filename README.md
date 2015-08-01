@@ -20,6 +20,7 @@ govendor: copy go packages locally and optionally re-write imports.
 govendor init
 govendor list -v [+status] [import-path-filter]
 govendor {add, update, remove} [+status] [import-path-filter]
+govendor migrate [auto, gb, godep, internal]
 
 	init
 		create a vendor file if it does not exist.
@@ -32,6 +33,9 @@ govendor {add, update, remove} [+status] [import-path-filter]
 	
 	remove
 		remove one or more packages from the internal folder and re-write packages to vendor paths.
+
+	migrate
+		change from a one schema to use the vendor folder.
 
 Expanding "..."
 	A package import path may be expanded to other paths that

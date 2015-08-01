@@ -14,12 +14,14 @@ import (
 	"strings"
 
 	. "github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/migrate"
 )
 
 var help = `govendor: copy go packages locally and optionally re-write imports.
 govendor init
 govendor list -v [+status] [import-path-filter]
 govendor {add, update, remove} [+status] [import-path-filter]
+govendor migrate [auto, gb, godep, internal]
 
 	init
 		create a vendor file if it does not exist.
@@ -32,6 +34,9 @@ govendor {add, update, remove} [+status] [import-path-filter]
 	
 	remove
 		remove one or more packages from the internal folder and re-write packages to vendor paths.
+
+	migrate
+		change from a one schema to use the vendor folder.
 
 Expanding "..."
 	A package import path may be expanded to other paths that
@@ -158,8 +163,6 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		return true, nil
 	}
 
-	// TODO: Add a "migrate" command {godep, gb, internal} to {vendor}.
-
 	cmd := appArgs[1]
 	switch cmd {
 	case "init":
@@ -278,6 +281,24 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+	case "migrate":
+		args := appArgs[2:]
+		from := migrate.Auto
+		if len(args) > 0 {
+			switch args[0] {
+			case "auto":
+				from = migrate.Auto
+			case "gb":
+				from = migrate.Gb
+			case "godep":
+				from = migrate.Godep
+			case "internal":
+				from = migrate.Internal
+			default:
+				return true, fmt.Errorf("Unknown migrate command %q", args[0])
+			}
+		}
+		return false, migrate.MigrateWD(from)
 	default:
 		return true, fmt.Errorf("Unknown command %q", cmd)
 	}
