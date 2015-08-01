@@ -78,7 +78,7 @@ func vendorFile15(g *gt.GopathTest, expected string) {
 }
 
 func showRewriteRule(c *Context, t *testing.T) {
-	for from, to := range c.MoveRule {
+	for from, to := range c.RewriteRule {
 		t.Logf("R: %s to %s\n", from, to)
 	}
 }

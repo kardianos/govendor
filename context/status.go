@@ -10,9 +10,14 @@ import (
 )
 
 /*
-	TODO: change status to two separate flags:
-	status: missing | unused | program
-	location: std | local | vendor | external
+	status: missing | unused | (cmd,command) | (pkg,package)
+	location: (std,standard) | local | vendor | external
+
+	status: referenced | unused | main | (pkg,package)
+	location: (std,standard) | local | vendor | external
+
+	status: referenced | unused | main | (pkg,package)
+	location: (std,standard) | local | vendor | external
 */
 
 // ListStatus indicates the status of the import.

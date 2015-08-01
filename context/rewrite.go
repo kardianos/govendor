@@ -40,8 +40,8 @@ func (ctx *Context) rewrite() error {
 			}
 		}
 	}
-	filePaths := make(map[string]*File, len(ctx.MoveRule))
-	for from := range ctx.MoveRule {
+	filePaths := make(map[string]*File, len(ctx.RewriteRule))
+	for from := range ctx.RewriteRule {
 		for _, f := range fileImports[from] {
 			filePaths[f.Path] = f
 		}
@@ -59,7 +59,7 @@ func (ctx *Context) rewrite() error {
 		Rewrite the package "co1/internal/co2/pk2" because it references a package with a rewrite.from package.
 	*/
 	ctx.updatePackageReferences()
-	for from := range ctx.MoveRule {
+	for from := range ctx.RewriteRule {
 		pkg := ctx.Package[from]
 		if pkg == nil {
 			continue
@@ -73,10 +73,10 @@ func (ctx *Context) rewrite() error {
 	}
 
 	defer func() {
-		ctx.MoveRule = make(map[string]string, 3)
+		ctx.RewriteRule = make(map[string]string, 3)
 	}()
 
-	if len(ctx.MoveRule) == 0 {
+	if len(ctx.RewriteRule) == 0 {
 		return nil
 	}
 	goprint := &printer.Config{
@@ -102,7 +102,7 @@ func (ctx *Context) rewrite() error {
 			if err != nil {
 				return err
 			}
-			for from, to := range ctx.MoveRule {
+			for from, to := range ctx.RewriteRule {
 				if imp != from {
 					continue
 				}

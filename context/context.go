@@ -78,7 +78,7 @@ type Context struct {
 	// Change to unkown structure (rename). Maybe...
 
 	// MoveRule provides the translation from origional import path to new import path.
-	MoveRule map[string]string // map[from]to
+	RewriteRule map[string]string // map[from]to
 
 	Operation []*Operation
 
@@ -209,7 +209,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 
 		Package: make(map[string]*Package),
 
-		MoveRule: make(map[string]string, 3),
+		RewriteRule: make(map[string]string, 3),
 
 		rewriteImports: rewriteImports,
 	}
@@ -387,7 +387,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	for r := range mvSet {
 		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
 		dprintf("RULE: %s -> %s\n", r.Local, to)
-		ctx.MoveRule[r.Local] = to
+		ctx.RewriteRule[r.Local] = to
 	}
 
 	return nil
@@ -409,7 +409,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 
 	for r := range mvSet {
 		dprintf("RULE: %s -> %s\n", r.Local, r.Canonical)
-		ctx.MoveRule[r.Local] = r.Canonical
+		ctx.RewriteRule[r.Local] = r.Canonical
 	}
 
 	return nil

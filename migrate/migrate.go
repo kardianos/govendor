@@ -10,6 +10,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+
+	"github.com/kardianos/govendor/context"
 )
 
 // From is the current vendor schema.
@@ -90,6 +92,8 @@ func (sysGb) Migrate(root string) error {
 	// Move files from "src" to first GOPATH.
 	// Move vendor files from "vendor/src" to "vendor".
 	// Translate "vendor/manifest" to vendor.json file.
+
+	_ = context.CopyPackage
 	return errors.New("Migrate gb not implemented")
 }
 
@@ -102,6 +106,7 @@ func (sys sysGodep) Check(root string) (system, error) {
 	return nil, nil
 }
 func (sysGodep) Migrate(root string) error {
+	// Determine if import paths are rewriten.
 	// Un-rewrite import paths.
 	// Copy files from Godeps/_workspace/src to "vendor".
 	// Translate Godeps/Godeps.json to vendor.json.
@@ -120,6 +125,19 @@ func (sysInternal) Migrate(root string) error {
 	// Un-rewrite import paths.
 	// Copy files from internal to vendor.
 	// Update and move vendor file from "internal/vendor.json" to "vendor.json".
+	ctx, err := context.NewContext(root, filepath.Join("internal", "vendor.json"), "internal", true)
+	if err != nil {
+		return err
+	}
+	list, err := ctx.Status()
+	if err != nil {
+		return err
+	}
+	for _, item := range list {
+		if item.Status != context.StatusVendor {
+
+		}
+	}
 	return errors.New("Migrate internal not implemented")
 }
 
