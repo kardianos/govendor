@@ -126,7 +126,7 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 			return err
 		}
 		if pathos.FileStringEquals(gopath, ctx.Goroot) {
-			ctx.setPackage(dir, imp, imp, ctx.Goroot, StatusStd)
+			ctx.setPackage(dir, imp, imp, ctx.Goroot, StatusStandard)
 			return nil
 		}
 		df, err := os.Open(dir)

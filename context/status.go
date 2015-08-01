@@ -9,17 +9,6 @@ import (
 	"sort"
 )
 
-/*
-	status: missing | unused | (cmd,command) | (pkg,package)
-	location: (std,standard) | local | vendor | external
-
-	status: referenced | unused | main | (pkg,package)
-	location: (std,standard) | local | vendor | external
-
-	status: referenced | unused | main | (pkg,package)
-	location: (std,standard) | local | vendor | external
-*/
-
 // ListStatus indicates the status of the import.
 type ListStatus byte
 
@@ -29,7 +18,7 @@ func (ls ListStatus) String() string {
 		return "?"
 	case StatusMissing:
 		return "m"
-	case StatusStd:
+	case StatusStandard:
 		return "s"
 	case StatusLocal:
 		return "l"
@@ -51,7 +40,7 @@ const (
 	// StatusMissing indicates import not found in GOROOT or GOPATH.
 	StatusMissing
 	// StatusStd indicates import found in GOROOT.
-	StatusStd
+	StatusStandard
 	// StatusLocal indicates import is part of the local project.
 	StatusLocal
 	// StatusExternal indicates import is found in GOPATH and not copied.

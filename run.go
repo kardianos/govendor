@@ -76,7 +76,7 @@ rewriting their import paths.
 
 var (
 	normal = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
-	all    = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStd}
+	all    = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStandard}
 )
 
 func parseStatus(s string) (status []ListStatus, err error) {
@@ -94,7 +94,9 @@ func parseStatus(s string) (status []ListStatus, err error) {
 	case strings.HasPrefix("program", s):
 		status = []ListStatus{StatusProgram}
 	case strings.HasPrefix("std", s):
-		status = []ListStatus{StatusStd}
+		status = []ListStatus{StatusStandard}
+	case strings.HasPrefix("standard", s):
+		status = []ListStatus{StatusStandard}
 	case strings.HasPrefix("all", s):
 		status = normal
 	case strings.HasPrefix("normal", s):
