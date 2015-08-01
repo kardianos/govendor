@@ -9,6 +9,7 @@ package migrate
 import (
 	"errors"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/kardianos/govendor/context"
@@ -133,12 +134,44 @@ func (sysInternal) Migrate(root string) error {
 	if err != nil {
 		return err
 	}
+	remove := make([]string, 0, len(list))
 	for _, item := range list {
 		if item.Status != context.StatusVendor {
+			continue
+		}
+		ctx.Operation = append(ctx.Operation, &context.Operation{
+			Pkg:  ctx.Package[item.Local],
+			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Canonical)),
+		})
+		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
+		ctx.RewriteRule[item.Local] = item.Canonical
+	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor.json")
+	for _, vf := range ctx.VendorFile.Package {
+		vf.Local = path.Join("vendor", vf.Canonical)
+	}
+	err = ctx.WriteVendorFile()
+	if err != nil {
+		return err
+	}
+	err = ctx.Alter()
+	if err != nil {
+		return err
+	}
 
+	// Remove existing.
+	for _, r := range remove {
+		err = context.RemovePackage(r)
+		if err != nil {
+			return err
 		}
 	}
-	return errors.New("Migrate internal not implemented")
+	err = os.Remove(filepath.Join(ctx.RootDir, "internal", "vendor.json"))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func hasDirs(root string, dd ...string) bool {

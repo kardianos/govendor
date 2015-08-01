@@ -163,9 +163,9 @@ func hasGoFileInFolder(folder string) (bool, error) {
 	return false, nil
 }
 
-// removePackage removes the specified folder files. If folder is empty when
+// RemovePackage removes the specified folder files. If folder is empty when
 // done (no nested folders, remove the folder and any empty parent folders.
-func removePackage(path string) error {
+func RemovePackage(path string) error {
 	// Ensure the path is empty of files.
 	dir, err := os.Open(path)
 	if err != nil {
