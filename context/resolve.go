@@ -116,41 +116,48 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 }
 
 func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
-	if _, found := ctx.Package[imp]; !found {
-		dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
-		if err != nil {
-			if _, is := err.(ErrNotInGOPATH); is {
-				ctx.setPackage("", imp, imp, "", StatusMissing)
-				return nil
-			}
-			return err
-		}
-		if pathos.FileStringEquals(gopath, ctx.Goroot) {
-			ctx.setPackage(dir, imp, imp, ctx.Goroot, StatusStandard)
+	if _, found := ctx.Package[imp]; found {
+		return nil
+	}
+	// Also need to check for vendor paths that won't use the local path in import path.
+	for _, pkg := range ctx.Package {
+		if pkg.Canonical == imp && pkg.Status == StatusVendor {
 			return nil
 		}
-		df, err := os.Open(dir)
+	}
+	dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
+	if err != nil {
+		if _, is := err.(ErrNotInGOPATH); is {
+			ctx.setPackage("", imp, imp, "", StatusMissing)
+			return nil
+		}
+		return err
+	}
+	if pathos.FileStringEquals(gopath, ctx.Goroot) {
+		ctx.setPackage(dir, imp, imp, ctx.Goroot, StatusStandard)
+		return nil
+	}
+	df, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	info, err := df.Readdir(-1)
+	df.Close()
+	if err != nil {
+		return err
+	}
+	for _, fi := range info {
+		if fi.IsDir() {
+			continue
+		}
+		switch fi.Name()[0] {
+		case '.', '_':
+			continue
+		}
+		path := filepath.Join(dir, fi.Name())
+		err = ctx.addFileImports(path, gopath)
 		if err != nil {
 			return err
-		}
-		info, err := df.Readdir(-1)
-		df.Close()
-		if err != nil {
-			return err
-		}
-		for _, fi := range info {
-			if fi.IsDir() {
-				continue
-			}
-			switch fi.Name()[0] {
-			case '.', '_':
-				continue
-			}
-			path := filepath.Join(dir, fi.Name())
-			err = ctx.addFileImports(path, gopath)
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
