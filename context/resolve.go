@@ -90,7 +90,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	return nil
 }
 
-func (ctx *Context) setPackage(dir, canonical, local, gopath string, status ListStatus) *Package {
+func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Status) *Package {
 	at := 0
 	switch {
 	case strings.Contains(canonical, "/vendor/"):

@@ -75,28 +75,28 @@ rewriting their import paths.
 `
 
 var (
-	normal = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
-	all    = []ListStatus{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStandard}
+	normal = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
+	all    = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStandard}
 )
 
-func parseStatus(s string) (status []ListStatus, err error) {
+func parseStatus(s string) (status []Status, err error) {
 	switch {
 	case strings.HasPrefix("external", s):
-		status = []ListStatus{StatusExternal}
+		status = []Status{StatusExternal}
 	case strings.HasPrefix("vendor", s):
-		status = []ListStatus{StatusVendor}
+		status = []Status{StatusVendor}
 	case strings.HasPrefix("unused", s):
-		status = []ListStatus{StatusUnused}
+		status = []Status{StatusUnused}
 	case strings.HasPrefix("missing", s):
-		status = []ListStatus{StatusMissing}
+		status = []Status{StatusMissing}
 	case strings.HasPrefix("local", s):
-		status = []ListStatus{StatusLocal}
+		status = []Status{StatusLocal}
 	case strings.HasPrefix("program", s):
-		status = []ListStatus{StatusProgram}
+		status = []Status{StatusProgram}
 	case strings.HasPrefix("std", s):
-		status = []ListStatus{StatusStandard}
+		status = []Status{StatusStandard}
 	case strings.HasPrefix("standard", s):
-		status = []ListStatus{StatusStandard}
+		status = []Status{StatusStandard}
 	case strings.HasPrefix("all", s):
 		status = normal
 	case strings.HasPrefix("normal", s):
@@ -108,7 +108,7 @@ func parseStatus(s string) (status []ListStatus, err error) {
 }
 
 type filter struct {
-	Status []ListStatus
+	Status []Status
 	Import []string
 }
 
@@ -137,7 +137,7 @@ func (f filter) HasImport(item StatusItem) bool {
 
 func parseFilter(args []string) (filter, error) {
 	f := filter{
-		Status: make([]ListStatus, 0, len(args)),
+		Status: make([]Status, 0, len(args)),
 		Import: make([]string, 0, len(args)),
 	}
 	for _, a := range args {

@@ -9,10 +9,10 @@ import (
 	"sort"
 )
 
-// ListStatus indicates the status of the import.
-type ListStatus byte
+// Status indicates the status of the import.
+type Status byte
 
-func (ls ListStatus) String() string {
+func (ls Status) String() string {
 	switch ls {
 	case StatusUnknown:
 		return "?"
@@ -36,7 +36,7 @@ func (ls ListStatus) String() string {
 
 const (
 	// StatusUnknown indicates the status was unable to be obtained.
-	StatusUnknown ListStatus = iota
+	StatusUnknown Status = iota
 	// StatusMissing indicates import not found in GOROOT or GOPATH.
 	StatusMissing
 	// StatusStd indicates import found in GOROOT.
@@ -55,7 +55,7 @@ const (
 
 // ListItem represents a package in the current project.
 type StatusItem struct {
-	Status     ListStatus
+	Status     Status
 	Canonical  string
 	Local      string
 	ImportedBy []string
@@ -79,7 +79,7 @@ func (li statusItemSort) Less(i, j int) bool {
 	return li[i].Local < li[j].Local
 }
 
-// ListStatus obtains the current package status list.
+// Status obtains the current package status list.
 func (ctx *Context) Status() ([]StatusItem, error) {
 	var err error
 	if !ctx.loaded || ctx.dirty {

@@ -94,7 +94,7 @@ type Package struct {
 	SourcePath string
 	Gopath     string
 	Files      []*File
-	Status     ListStatus
+	Status     Status
 
 	// used in resolveUnknown function. Not persisted.
 	referenced map[string]*Package
