@@ -72,6 +72,8 @@ type Context struct {
 	VendorFileToFolder string // The relative path from the vendor file to the vendor folder.
 	RootToVendorFile   string // The relative path from the project root to the vendor file directory.
 
+	VendorDiscoverFolder string // Normally auto-set to "vendor"
+
 	// Package is a map where the import path is the key.
 	// Populated with LoadPackage.
 	Package map[string]*Package
@@ -207,6 +209,8 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 		VendorFileToFolder: vendorFileToFolder,
 		RootToVendorFile:   pathos.SlashToImportPath(rootToVendorFile),
 
+		VendorDiscoverFolder: "vendor",
+
 		Package: make(map[string]*Package),
 
 		RewriteRule: make(map[string]string, 3),
@@ -222,12 +226,14 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 	return ctx, nil
 }
 
-func (ctx *Context) vendorFilePackageLocal(local string) *vendorfile.Package {
+// VendorFilePackageLocal finds a given vendor file package give the local import path.
+func (ctx *Context) VendorFilePackageLocal(local string) *vendorfile.Package {
 	root, _ := filepath.Split(ctx.VendorFilePath)
 	return vendorFileFindLocal(ctx.VendorFile, root, ctx.RootGopath, local)
 }
 
-func (ctx *Context) vendorFilePackageCanonical(canonical string) *vendorfile.Package {
+// VendorFilePackageCanonical finds a given vendor file package give the canonical import path.
+func (ctx *Context) VendorFilePackageCanonical(canonical string) *vendorfile.Package {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Remove {
 			continue
@@ -247,7 +253,7 @@ func (ctx *Context) updatePackageReferences() {
 				continue
 			}
 
-			removeFromEnd := len(pkg.Canonical) + len("vendor/") + 1
+			removeFromEnd := len(pkg.Canonical) + len(ctx.VendorDiscoverFolder) + 2
 			checkDir := pkg.Dir[:len(pkg.Dir)-removeFromEnd]
 			if !pathos.FileHasPrefix(dir, checkDir) {
 				continue
@@ -307,7 +313,7 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	// If the import is already vendored, ensure we have the local path and not
 	// the canonical path.
 	localImportPath := sourcePath
-	if vendPkg := ctx.vendorFilePackageCanonical(localImportPath); vendPkg != nil {
+	if vendPkg := ctx.VendorFilePackageCanonical(localImportPath); vendPkg != nil {
 		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Local)
 	}
 
@@ -356,7 +362,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	})
 
 	// Update vendor file with correct Local field.
-	vp := ctx.vendorFilePackageCanonical(pkg.Canonical)
+	vp := ctx.VendorFilePackageCanonical(pkg.Canonical)
 	if vp == nil {
 		vp = &vendorfile.Package{
 			Add:       true,
@@ -400,7 +406,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	})
 
 	// Update vendor file with correct Local field.
-	vp := ctx.vendorFilePackageCanonical(pkg.Canonical)
+	vp := ctx.VendorFilePackageCanonical(pkg.Canonical)
 	if vp != nil {
 		vp.Remove = true
 	}

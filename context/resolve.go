@@ -92,11 +92,13 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 
 func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Status) *Package {
 	at := 0
+	vMiddle := "/" + ctx.VendorDiscoverFolder + "/"
+	vStart := ctx.VendorDiscoverFolder + "/"
 	switch {
-	case strings.Contains(canonical, "/vendor/"):
-		at = strings.LastIndex(canonical, "/vendor/") + len("/vendor/")
-	case strings.HasPrefix(canonical, "vendor/"):
-		at = strings.LastIndex(canonical, "vendor/") + len("vendor/")
+	case strings.Contains(canonical, vMiddle):
+		at = strings.LastIndex(canonical, vMiddle) + len(vMiddle)
+	case strings.HasPrefix(canonical, vStart):
+		at = strings.LastIndex(canonical, vStart) + len(vStart)
 	}
 	if at > 0 {
 		canonical = canonical[at:]
@@ -169,7 +171,7 @@ func (ctx *Context) determinePackageStatus() error {
 		if pkg.Status != StatusUnknown {
 			continue
 		}
-		if vp := ctx.vendorFilePackageLocal(pkg.Local); vp != nil {
+		if vp := ctx.VendorFilePackageLocal(pkg.Local); vp != nil {
 			pkg.Status = StatusVendor
 			pkg.Canonical = vp.Canonical
 			continue

@@ -7,12 +7,15 @@
 package migrate
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/vendorfile"
 )
 
 // From is the current vendor schema.
@@ -84,7 +87,7 @@ func (sysAuto) Migrate(root string) error {
 type sysGb struct{}
 
 func (sys sysGb) Check(root string) (system, error) {
-	if hasDirs(root, "src", "vendor") {
+	if hasDirs(root, "src", filepath.Join("vendor", "src")) {
 		return sys, nil
 	}
 	return nil, nil
@@ -111,7 +114,103 @@ func (sysGodep) Migrate(root string) error {
 	// Un-rewrite import paths.
 	// Copy files from Godeps/_workspace/src to "vendor".
 	// Translate Godeps/Godeps.json to vendor.json.
-	return errors.New("Migrate godep not implemented")
+
+	vendorFilePath := filepath.Join("Godeps", "_workspace", "src")
+	vendorPath := path.Join("Godeps", "_workspace", "src")
+	godepFilePath := filepath.Join(root, "Godeps", "Godeps.json")
+
+	ctx, err := context.NewContext(root, "vendor.json", vendorFilePath, true)
+	if err != nil {
+		return err
+	}
+	ctx.VendorDiscoverFolder = vendorPath
+
+	list, err := ctx.Status()
+	if err != nil {
+		return err
+	}
+	remove := make([]string, 0, len(list))
+	for _, item := range list {
+		if item.Status != context.StatusVendor {
+			continue
+		}
+		ctx.Operation = append(ctx.Operation, &context.Operation{
+			Pkg:  ctx.Package[item.Local],
+			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Canonical)),
+		})
+		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
+		ctx.RewriteRule[item.Local] = item.Canonical
+	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor.json")
+	for _, vf := range ctx.VendorFile.Package {
+		vf.Local = path.Join("vendor", vf.Canonical)
+	}
+
+	ctx.VendorDiscoverFolder = "vendor"
+
+	// Translate then remove godeps.json file.
+	type Godeps struct {
+		ImportPath string
+		GoVersion  string   // Abridged output of 'go version'.
+		Packages   []string // Arguments to godep save, if any.
+		Deps       []struct {
+			ImportPath string
+			Comment    string // Description of commit, if present.
+			Rev        string // VCS-specific commit ID.
+		}
+	}
+
+	godeps := Godeps{}
+	f, err := os.Open(godepFilePath)
+	if err != nil {
+		return err
+	}
+	coder := json.NewDecoder(f)
+	err = coder.Decode(&godeps)
+	f.Close()
+	if err != nil {
+		return err
+	}
+
+	for _, d := range godeps.Deps {
+		for _, pkg := range ctx.Package {
+			if pkg.Status != context.StatusVendor {
+				continue
+			}
+			if strings.HasPrefix(pkg.Canonical, d.ImportPath) == false {
+				continue
+			}
+			vf := ctx.VendorFilePackageCanonical(pkg.Canonical)
+			if vf == nil {
+				ctx.VendorFile.Package = append(ctx.VendorFile.Package, &vendorfile.Package{
+					Add:       true,
+					Canonical: pkg.Canonical,
+					Local:     path.Join(ctx.VendorDiscoverFolder, pkg.Canonical),
+					Comment:   d.Comment,
+					Revision:  d.Rev,
+				})
+			}
+		}
+	}
+
+	err = ctx.WriteVendorFile()
+	if err != nil {
+		return err
+	}
+	err = ctx.Alter()
+	if err != nil {
+		return err
+	}
+
+	// Remove existing.
+	for _, r := range remove {
+		err = context.RemovePackage(r)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type sysInternal struct{}
@@ -166,12 +265,7 @@ func (sysInternal) Migrate(root string) error {
 			return err
 		}
 	}
-	err = os.Remove(filepath.Join(ctx.RootDir, "internal", "vendor.json"))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.Remove(filepath.Join(ctx.RootDir, "internal", "vendor.json"))
 }
 
 func hasDirs(root string, dd ...string) bool {
