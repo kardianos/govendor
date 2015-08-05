@@ -42,10 +42,15 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 			}
 			for _, gopath = range ctx.GopathList {
 				if pathos.FileHasPrefix(look, gopath) {
-					return look, gopath, nil
+					hasGo, err := hasGoFileInFolder(look)
+					if err != nil {
+						return "", "", err
+					}
+					if hasGo {
+						return look, gopath, nil
+					}
 				}
 			}
-			return "", "", ErrNotInGOPATH{fmt.Sprintf("Import: %q relative: %q", importPath, relative)}
 		}
 
 	}
@@ -58,7 +63,15 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 		if fi.IsDir() == false {
 			continue
 		}
-		return dir, gopath, nil
+
+		hasGo, err := hasGoFileInFolder(dir)
+		if err != nil {
+			return "", "", err
+		}
+		if hasGo {
+			return dir, gopath, nil
+		}
+		return "", "", ErrNotInGOPATH{fmt.Sprintf("Import: %q relative: %q", importPath, relative)}
 	}
 	return "", "", ErrNotInGOPATH{importPath}
 }

@@ -333,6 +333,16 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 			return err
 		}
 		pkg, foundPkg = ctx.Package[canonicalImportPath]
+		// Find by canonical path if stored by different local path.
+		if !foundPkg {
+			for _, p := range ctx.Package {
+				if canonicalImportPath == p.Canonical {
+					foundPkg = true
+					pkg = p
+					break
+				}
+			}
+		}
 		if !foundPkg {
 			panic(fmt.Sprintf("Package %q should be listed internally but is not.", canonicalImportPath))
 		}
