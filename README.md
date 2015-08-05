@@ -18,8 +18,8 @@ establishment a final vendor file specification and be a useful tool.
 ```
 govendor: copy go packages locally and optionally re-write imports.
 govendor init
-govendor list -v [+status] [import-path-filter]
-govendor {add, update, remove} [+status] [import-path-filter]
+govendor list [-v] [+status] [import-path-filter]
+govendor {add, update, remove} [-n] [+status] [import-path-filter]
 govendor migrate [auto, godep, internal]
 
 	init
@@ -41,6 +41,9 @@ Expanding "..."
 	A package import path may be expanded to other paths that
 	show up in "govendor list" be ending the "import-path" with "...".
 	NOTE: this uses the import tree from "vendor list" and NOT the file system.
+
+Flags
+	-n		print actions but do not run them
 
 Status list:
 	external - package does not share root path

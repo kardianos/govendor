@@ -20,8 +20,8 @@ import (
 
 var help = `govendor: copy go packages locally and optionally re-write imports.
 govendor init
-govendor list -v [+status] [import-path-filter]
-govendor {add, update, remove} [+status] [import-path-filter]
+govendor list [-v] [+status] [import-path-filter]
+govendor {add, update, remove} [-n] [+status] [import-path-filter]
 govendor migrate [auto, godep, internal]
 
 	init
@@ -43,6 +43,9 @@ Expanding "..."
 	A package import path may be expanded to other paths that
 	show up in "govendor list" be ending the "import-path" with "...".
 	NOTE: this uses the import tree from "vendor list" and NOT the file system.
+
+Flags
+	-n		print actions but do not run them
 
 Status list:
 	external - package does not share root path
@@ -228,7 +231,13 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			}
 		}
 	case "add", "update", "remove":
-		args := appArgs[2:]
+		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
+		dryrun := listFlags.Bool("n", false, "dry-run")
+		err := listFlags.Parse(appArgs[2:])
+		if err != nil {
+			return true, err
+		}
+		args := listFlags.Args()
 		if len(args) == 0 {
 			return true, errors.New("missing package or status")
 		}
@@ -278,6 +287,17 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 
 		// Auto-resolve package conflicts.
 		ctx.Reslove(ctx.Check())
+
+		if *dryrun {
+			for _, op := range ctx.Operation {
+				if len(op.Dest) == 0 {
+					fmt.Fprintf(w, "Remove %q\n", op.Pkg.Dir)
+				} else {
+					fmt.Fprintf(w, "Copy %q -> %q\n", op.Pkg.Dir, op.Dest)
+				}
+			}
+			return false, nil
+		}
 
 		// Write out vendor file and do change.
 		err = ctx.WriteVendorFile()
