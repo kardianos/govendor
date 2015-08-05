@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/kardianos/govendor/context"
@@ -173,6 +174,10 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return false, err
 		}
 		err = ctx.WriteVendorFile()
+		if err != nil {
+			return false, err
+		}
+		err = os.MkdirAll(filepath.Join(ctx.RootDir, ctx.VendorFolder), 0777)
 		if err != nil {
 			return false, err
 		}
