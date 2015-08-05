@@ -57,7 +57,6 @@ Status list:
 	program - package is a main package
 	---
 	all - all of the above status
-	normal - all but std status
 
 Status can be referenced by their initial letters.
 	"st" == "std"
@@ -102,8 +101,6 @@ func parseStatus(s string) (status []Status, err error) {
 	case strings.HasPrefix("standard", s):
 		status = []Status{StatusStandard}
 	case strings.HasPrefix("all", s):
-		status = normal
-	case strings.HasPrefix("normal", s):
 		status = all
 	default:
 		err = fmt.Errorf("unknown status %q", s)

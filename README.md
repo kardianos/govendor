@@ -55,7 +55,6 @@ Status list:
 	program - package is a main package
 	---
 	all - all of the above status
-	normal - all but std status
 
 Status can be referenced by their initial letters.
 	"st" == "std"
