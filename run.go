@@ -49,7 +49,7 @@ Flags
 
 Status list:
 	external - package does not share root path
-	internal - in vendor file; copied locally
+	vendor - vendor folder; copied locally
 	unused - the package has been copied locally, but isn't used
 	local - shares the root path and is not a vendor package
 	missing - referenced but not found in GOROOT or GOPATH
