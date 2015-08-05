@@ -36,9 +36,23 @@ func FileTrimPrefix(s, prefix string) string {
 }
 
 func FileStringEquals(s1, s2 string) bool {
+	if len(s1) == 0 {
+		return len(s2) == 0
+	}
+	if len(s2) == 0 {
+		return len(s1) == 0
+	}
 	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		s1 = strings.ToLower(s1)
 		s2 = strings.ToLower(s2)
+	}
+	r1End := s1[len(s1)-1]
+	r2End := s2[len(s2)-1]
+	if r1End == '/' || r1End == '\\' {
+		s1 = s1[:len(s1)-1]
+	}
+	if r2End == '/' || r2End == '\\' {
+		s2 = s2[:len(s2)-1]
 	}
 	return s1 == s2
 }

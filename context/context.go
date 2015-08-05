@@ -50,6 +50,10 @@ const (
 type Operation struct {
 	Pkg *Package
 
+	// Source file path to move packages from.
+	// Must not be empty.
+	Src string
+
 	// Destination file path to move package to.
 	// If Dest if empty the package is removed.
 	Dest string
@@ -356,8 +360,17 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 }
 
 func (ctx *Context) modifyAdd(pkg *Package) error {
+	var err error
+	src := pkg.Dir
+	if pkg.Status == StatusVendor {
+		src, _, err = ctx.findImportDir("", pkg.Canonical)
+		if err != nil {
+			return err
+		}
+	}
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
+		Src:  src,
 		Dest: filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical)),
 	})
 
@@ -402,6 +415,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 func (ctx *Context) modifyRemove(pkg *Package) error {
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
+		Src:  pkg.Dir,
 		Dest: "",
 	})
 
@@ -511,15 +525,15 @@ func (ctx *Context) copy() error {
 		}
 		pkg := op.Pkg
 
-		if op.Dest == pkg.Dir {
+		if pathos.FileStringEquals(op.Dest, op.Src) {
 			panic("For package " + pkg.Local + " attempt to copy to same location")
 		}
-		dprintf("MV: %s (%q -> %q)\n", pkg.Local, pkg.Dir, op.Dest)
+		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
 		// Copy the package or remove.
 		if len(op.Dest) == 0 {
-			err = RemovePackage(pkg.Dir)
+			err = RemovePackage(op.Src)
 		} else {
-			err = CopyPackage(op.Dest, pkg.Dir)
+			err = CopyPackage(op.Dest, op.Src)
 		}
 		if err != nil {
 			return err

@@ -291,9 +291,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		if *dryrun {
 			for _, op := range ctx.Operation {
 				if len(op.Dest) == 0 {
-					fmt.Fprintf(w, "Remove %q\n", op.Pkg.Dir)
+					fmt.Fprintf(w, "Remove %q\n", op.Src)
 				} else {
-					fmt.Fprintf(w, "Copy %q -> %q\n", op.Pkg.Dir, op.Dest)
+					fmt.Fprintf(w, "Copy %q -> %q\n", op.Src, op.Dest)
 				}
 			}
 			return false, nil

@@ -5,14 +5,20 @@
 package context
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/kardianos/govendor/internal/pathos"
 )
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
 func CopyPackage(destPath, srcPath string) error {
+	if pathos.FileStringEquals(destPath, srcPath) {
+		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
+	}
 	err := os.MkdirAll(destPath, 0777)
 	if err != nil {
 		return err
