@@ -276,6 +276,8 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			}
 		}
 		for _, imp := range f.Import {
+			// Match the root too.
+			imp = strings.TrimSuffix(imp, "/...")
 			if strings.HasSuffix(imp, "...") {
 				continue
 			}
