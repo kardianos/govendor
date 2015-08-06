@@ -329,3 +329,81 @@ s bytes < ["co1/pk1"]
 s strings < ["co2/pk1" "co2/pk2"]
 `)
 }
+
+func TestUpdate15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co2/pk1/pk2"),
+		gt.File("b.go", "co2/pk1", "bytes"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1/pk2",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	c := ctx15(g)
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport("co2/pk1/pk2", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after add", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
+`)
+
+	vendorFile15(g, `{
+	"comment": "",
+	"package": [
+		{
+			"canonical": "co2/pk1",
+			"comment": "",
+			"local": "vendor/co2/pk1",
+			"revision": "",
+			"revisionTime": ""
+		},
+		{
+			"canonical": "co2/pk1/pk2",
+			"comment": "",
+			"local": "vendor/co2/pk1/pk2",
+			"revision": "",
+			"revisionTime": ""
+		}
+	]
+}`)
+
+	g.Setup("co2/pk1/pk2",
+		gt.File("a.go", "strings", "encoding/csv"),
+	)
+
+	// Update an import.
+	g.Check(c.ModifyImport("co2/pk1/pk2", Update))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after update", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s encoding/csv < ["co1/vendor/co2/pk1/pk2"]
+s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
+`)
+
+	// Now remove an import.
+	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+	list(g, c, "co1 remove", `v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+e co2/pk1 < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s encoding/csv < ["co1/vendor/co2/pk1/pk2"]
+s strings < ["co1/vendor/co2/pk1/pk2" "co2/pk1"]
+`)
+}
