@@ -378,10 +378,15 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 			return err
 		}
 	}
+	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
+	// TODO: This might cause other issues or might be hiding the underlying issues. Examine in depth later.
+	if pathos.FileStringEquals(src, dest) {
+		return nil
+	}
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
 		Src:  src,
-		Dest: filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical)),
+		Dest: dest,
 	})
 
 	// Update vendor file with correct Local field.
