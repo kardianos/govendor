@@ -276,6 +276,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			}
 		}
 		for _, imp := range f.Import {
+			if strings.HasSuffix(imp, "...") {
+				continue
+			}
 			err = ctx.ModifyImport(imp, mod)
 			if err != nil {
 				return false, err
