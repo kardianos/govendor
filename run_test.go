@@ -86,3 +86,30 @@ v co1/internal/co3/pk1 [co3/pk1]
 l co1/pk1
 `)
 }
+
+func TestEllipsis(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co2/pk1/pk2"),
+		gt.File("b.go", "co2/pk1", "bytes"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1/pk2",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	Vendor(g, "co1 init", "init", "")
+	Vendor(g, "", "list", `e co2/pk1
+e co2/pk1/pk2
+l co1/pk1
+`)
+	Vendor(g, "co1 add ext", "add co2/pk1/...", "")
+	Vendor(g, "co1 list", "list", `v co1/internal/co2/pk1 [co2/pk1]
+v co1/internal/co2/pk1/pk2 [co2/pk1/pk2]
+l co1/pk1
+`)
+}
