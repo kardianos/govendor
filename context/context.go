@@ -396,7 +396,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	}
 
 	// Find the VCS information.
-	system, err := vcs.FindVcs(pkg.Gopath, pkg.Dir)
+	system, err := vcs.FindVcs(pkg.Gopath, src)
 	if err != nil {
 		return err
 	}
