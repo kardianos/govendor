@@ -212,12 +212,15 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			if len(f.Import) != 0 && f.HasImport(item) == false {
 				continue
 			}
-			if item.Local == item.Canonical {
-				fmt.Fprintf(w, "%v %s\n", item.Status, item.Local)
+
+			if !*verbose {
+				fmt.Fprintf(w, "%v %s\n", item.Status, item.Canonical)
 			} else {
-				fmt.Fprintf(w, "%v %s [%s]\n", item.Status, item.Local, item.Canonical)
-			}
-			if *verbose {
+				if item.Local == item.Canonical {
+					fmt.Fprintf(w, "%v %s\n", item.Status, item.Local)
+				} else {
+					fmt.Fprintf(w, "%v %s ::%s\n", item.Status, item.Canonical, strings.TrimPrefix(item.Local, ctx.RootImportPath))
+				}
 				for i, imp := range item.ImportedBy {
 					if i != len(item.ImportedBy)-1 {
 						fmt.Fprintf(w, "  ├── %s\n", imp)
