@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -139,6 +140,7 @@ func TestImportSimple(t *testing.T) {
 
 	vendorFile14(g, `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "co2/pk1",
@@ -191,6 +193,7 @@ func TestDuplicatePackage(t *testing.T) {
 
 	vendorFile14(g, `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "co3/pk3",
@@ -307,6 +310,7 @@ s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 
 	vendorFile15(g, `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "co2/pk1",
@@ -360,6 +364,7 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 
 	vendorFile15(g, `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "co2/pk1",
@@ -406,4 +411,63 @@ s bytes < ["co1/pk1"]
 s encoding/csv < ["co1/vendor/co2/pk1/pk2"]
 s strings < ["co1/vendor/co2/pk1/pk2" "co2/pk1"]
 `)
+}
+
+func TestTagList15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1/pk2"),
+		gt.File("a_test.go", "testing", "co2/pk1", "bytes"),
+		gt.FileBuild("b.go", "appengine", "encoding/binary"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "encoding/csv"),
+	)
+	g.Setup("co2/pk1/pk2",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	c := ctx15(g)
+	c.IgnoreBuild("test appengine")
+
+	list(g, c, "co1 list", `e co2/pk1/pk2 < ["co1/pk1"]
+l co1/pk1 < []
+s strings < ["co2/pk1/pk2"]
+`)
+}
+
+func TestTagAdd15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+		gt.File("a_test.go", "bytes", "testing"),
+		gt.FileBuild("b.go", "appengine", "encoding/csv"),
+	)
+	g.In("co1")
+	c := ctx15(g)
+	c.IgnoreBuild("test appengine")
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after add", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+l co1/pk1 < []
+s strings < ["co1/vendor/co2/pk1"]
+`)
+
+	checkPathBase := filepath.Join(g.Current(), "vendor", "co2", "pk1")
+	if _, err := os.Stat(filepath.Join(checkPathBase, "a_test.go")); err == nil {
+		t.Error("a_test.go should not be copied into vendor folder")
+	}
+	if _, err := os.Stat(filepath.Join(checkPathBase, "b.go")); err == nil {
+		t.Error("b.go should not be copied into vendor folder")
+	}
 }

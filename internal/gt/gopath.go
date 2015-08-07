@@ -98,6 +98,7 @@ type FileSpec struct {
 	Pkg     string
 	Name    string
 	Imports []string
+	Build   string
 }
 
 var fileSpecFile = template.Must(template.New("").Funcs(map[string]interface{}{
@@ -105,7 +106,9 @@ var fileSpecFile = template.Must(template.New("").Funcs(map[string]interface{}{
 		_, pkg := path.Split(s)
 		return pkg
 	},
-}).Parse(`
+}).Parse(` {{if .Build}}
+// +build {{.Build}}
+{{end}}
 package {{.Pkg|pkg}}
 
 import (
@@ -121,6 +124,9 @@ func (fs FileSpec) Bytes() []byte {
 
 func File(name string, imports ...string) FileSpec {
 	return FileSpec{Name: name, Imports: imports}
+}
+func FileBuild(name, build string, imports ...string) FileSpec {
+	return FileSpec{Name: name, Build: build, Imports: imports}
 }
 
 func (g *GopathTest) Setup(at string, files ...FileSpec) {

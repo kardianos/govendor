@@ -42,7 +42,7 @@ func (ctx *Context) loadPackage() error {
 
 // addFileImports is called from loadPackage and resolveUnknown.
 func (ctx *Context) addFileImports(pathname, gopath string) error {
-	dir, _ := filepath.Split(pathname)
+	dir, filenameExt := filepath.Split(pathname)
 	importPath := pathos.FileTrimPrefix(dir, gopath)
 	importPath = pathos.SlashToImportPath(importPath)
 	importPath = strings.TrimPrefix(importPath, "/")
@@ -51,9 +51,32 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	if strings.HasSuffix(pathname, ".go") == false {
 		return nil
 	}
-	f, err := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly)
+	f, err := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 	if err != nil {
 		return err
+	}
+
+	filename := filenameExt[:len(filenameExt)-3]
+
+	filenameParts := strings.Split(filename, "_")
+	tags := make([]string, 0)
+	for i, part := range filenameParts {
+		if i == 0 {
+			continue
+		}
+		tags = append(tags, part)
+	}
+	const buildPrefix = "// +build "
+	for _, cc := range f.Comments {
+		for _, c := range cc.List {
+			if strings.HasPrefix(c.Text, buildPrefix) {
+				text := strings.TrimPrefix(c.Text, buildPrefix)
+				ss := strings.Fields(text)
+				for _, s := range ss {
+					tags = append(tags, strings.Split(s, ",")...)
+				}
+			}
+		}
 	}
 
 	pkg, found := ctx.Package[importPath]
@@ -64,6 +87,14 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		}
 		pkg = ctx.setPackage(dir, importPath, importPath, gopath, status)
 		ctx.Package[importPath] = pkg
+	}
+	for _, tag := range tags {
+		for _, ignore := range ctx.ignoreTag {
+			if tag == ignore {
+				pkg.ignoreFile = append(pkg.ignoreFile, filenameExt)
+				return nil
+			}
+		}
 	}
 	pf := &File{
 		Package: pkg,

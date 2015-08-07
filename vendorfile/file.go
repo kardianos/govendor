@@ -22,6 +22,8 @@ const Name = "vendor.json"
 type File struct {
 	Comment string
 
+	Ignore string
+
 	Package []*Package
 
 	// all preserves unknown values.
@@ -49,6 +51,7 @@ type Package struct {
 
 var (
 	packageNames      = []string{"package", "Package"}
+	ignoreNames       = []string{"ignore"}
 	canonicalNames    = []string{"canonical", "Canonical", "vendor", "Vendor"}
 	localNames        = []string{"local", "Local"}
 	revisionNames     = []string{"revision", "Revision", "version", "Version"}
@@ -125,6 +128,7 @@ func (vf *File) getRawPackageList() []interface{} {
 // toFields moves values from "all" to the field values.
 func (vf *File) toFields() {
 	setField(&vf.Comment, vf.all, commentNames)
+	setField(&vf.Ignore, vf.all, ignoreNames)
 
 	rawPackageList := vf.getRawPackageList()
 
@@ -151,6 +155,7 @@ func (vf *File) toAll() {
 	delete(vf.all, "Tool")
 
 	setObject(vf.Comment, vf.all, commentNames)
+	setObject(vf.Ignore, vf.all, ignoreNames)
 
 	rawPackageList := vf.getRawPackageList()
 

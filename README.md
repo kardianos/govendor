@@ -1,10 +1,15 @@
 ## Vendor tool for Go
+Supports the GO15VENDOREXPERIMENT environement flag. When set imports are not
+rewriten and are copied into the "vendor" folder.
+
 Follows the recommendation to use import path re-writes and avoid GOPATH
 changes and go tool changes. Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the
 establishment a final vendor file specification and be a useful tool.
 
 ### What this vendor tool features:
+ * flattens dependency tree to single level
+ * Can ignore test files and other build tags
  * Tested cross platform support
  * Import path re-writes
  * Package import comment removal
@@ -59,6 +64,12 @@ Status list:
 Status can be referenced by their initial letters.
 	"st" == "std"
 	"e" == "external"
+
+Ignoring files with build tags:
+	The "vendor.json" file contains a string field named "ignore".
+	It may contain a space separated list of build tags to ignore when
+	listing and copying files. By default the init command adds the
+	the "test" tag to the ignore list.
 	
 Example:
 	govendor add github.com/kardianos/osext

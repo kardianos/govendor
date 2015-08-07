@@ -90,6 +90,8 @@ type Context struct {
 
 	loaded, dirty  bool
 	rewriteImports bool
+
+	ignoreTag []string // list of tags to ignore
 }
 
 // Package maintains information pertaining to a package.
@@ -101,6 +103,8 @@ type Package struct {
 	Gopath     string
 	Files      []*File
 	Status     Status
+
+	ignoreFile []string
 
 	// used in resolveUnknown function. Not persisted.
 	referenced map[string]*Package
@@ -227,7 +231,22 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 		return nil, err
 	}
 
+	ctx.IgnoreBuild(vf.Ignore)
+
 	return ctx, nil
+}
+
+// IgnoreBuild takes a space separated list of tags to ignore.
+// "a b c" will ignore "a" OR "b" OR "c".
+func (ctx *Context) IgnoreBuild(ignore string) {
+	ors := strings.Fields(ignore)
+	ctx.ignoreTag = make([]string, 0, len(ors))
+	for _, or := range ors {
+		if len(or) == 0 {
+			continue
+		}
+		ctx.ignoreTag = append(ctx.ignoreTag, or)
+	}
 }
 
 // VendorFilePackageLocal finds a given vendor file package give the local import path.
@@ -548,7 +567,7 @@ func (ctx *Context) copy() error {
 		if len(op.Dest) == 0 {
 			err = RemovePackage(op.Src)
 		} else {
-			err = CopyPackage(op.Dest, op.Src)
+			err = CopyPackage(op.Dest, op.Src, pkg.ignoreFile)
 		}
 		if err != nil {
 			return err

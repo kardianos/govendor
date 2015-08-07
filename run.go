@@ -61,6 +61,12 @@ Status list:
 Status can be referenced by their initial letters.
 	"st" == "std"
 	"e" == "external"
+
+Ignoring files with build tags:
+	The "vendor.json" file contains a string field named "ignore".
+	It may contain a space separated list of build tags to ignore when
+	listing and copying files. By default the init command adds the
+	the "test" tag to the ignore list.
 	
 Example:
 	govendor add github.com/kardianos/osext
@@ -173,6 +179,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+		ctx.VendorFile.Ignore = "test" // Add default ignore rule.
 		err = ctx.WriteVendorFile()
 		if err != nil {
 			return false, err

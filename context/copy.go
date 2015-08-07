@@ -15,7 +15,7 @@ import (
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func CopyPackage(destPath, srcPath string) error {
+func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -56,12 +56,18 @@ func CopyPackage(destPath, srcPath string) error {
 	if err != nil {
 		return err
 	}
+fileLoop:
 	for _, fi := range fl {
 		if fi.IsDir() {
 			continue
 		}
 		if fi.Name()[0] == '.' {
 			continue
+		}
+		for _, ignore := range ignoreFiles {
+			if pathos.FileStringEquals(fi.Name(), ignore) {
+				continue fileLoop
+			}
 		}
 		err = copyFile(
 			filepath.Join(destPath, fi.Name()),
