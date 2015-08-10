@@ -418,23 +418,25 @@ func TestTagList15(t *testing.T) {
 	defer g.Clean()
 
 	g.Setup("co1/pk1",
-		gt.File("a.go", "co2/pk1/pk2"),
-		gt.File("a_test.go", "testing", "co2/pk1", "bytes"),
-		gt.FileBuild("b.go", "appengine", "encoding/binary"),
+		gt.File("a.go", "co2/pk1"),
+		gt.File("a_test.go", "testing", "bytes"),
+		gt.FileBuild("b.go", "appengine", "encoding/hex"),
 	)
 	g.Setup("co2/pk1",
 		gt.File("a.go", "encoding/csv"),
-	)
-	g.Setup("co2/pk1/pk2",
-		gt.File("a.go", "strings"),
+		gt.File("a_test.go", "testing", "encoding/json"),
+		gt.FileBuild("b.go", "appengine", "encoding/binary"),
 	)
 	g.In("co1")
 	c := ctx15(g)
 	c.IgnoreBuild("test appengine")
 
-	list(g, c, "co1 list", `e co2/pk1/pk2 < ["co1/pk1"]
+	list(g, c, "co1 list", `e co2/pk1 < ["co1/pk1"]
 l co1/pk1 < []
-s strings < ["co2/pk1/pk2"]
+s bytes < ["co1/pk1"]
+s encoding/csv < ["co2/pk1"]
+s encoding/hex < ["co1/pk1"]
+s testing < ["co1/pk1"]
 `)
 }
 
@@ -444,6 +446,7 @@ func TestTagAdd15(t *testing.T) {
 
 	g.Setup("co1/pk1",
 		gt.File("a.go", "co2/pk1"),
+		gt.File("a_test.go", "fmt"),
 	)
 	g.Setup("co2/pk1",
 		gt.File("a.go", "strings"),
@@ -460,6 +463,7 @@ func TestTagAdd15(t *testing.T) {
 
 	list(g, c, "co1 after add", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
 l co1/pk1 < []
+s fmt < ["co1/pk1"]
 s strings < ["co1/vendor/co2/pk1"]
 `)
 

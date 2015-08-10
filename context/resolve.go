@@ -88,11 +88,13 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		pkg = ctx.setPackage(dir, importPath, importPath, gopath, status)
 		ctx.Package[importPath] = pkg
 	}
-	for _, tag := range tags {
-		for _, ignore := range ctx.ignoreTag {
-			if tag == ignore {
-				pkg.ignoreFile = append(pkg.ignoreFile, filenameExt)
-				return nil
+	if pkg.Status != StatusLocal && pkg.Status != StatusProgram {
+		for _, tag := range tags {
+			for _, ignore := range ctx.ignoreTag {
+				if tag == ignore {
+					pkg.ignoreFile = append(pkg.ignoreFile, filenameExt)
+					return nil
+				}
 			}
 		}
 	}
@@ -136,6 +138,15 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		if status == StatusUnknown {
 			status = StatusVendor
 		}
+	}
+	if status == StatusUnknown {
+		if vp := ctx.VendorFilePackageLocal(local); vp != nil {
+			status = StatusVendor
+			canonical = vp.Canonical
+		}
+	}
+	if status == StatusUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
+		status = StatusLocal
 	}
 	pkg := &Package{
 		Dir:       dir,
