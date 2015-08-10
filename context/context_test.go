@@ -475,3 +475,29 @@ s strings < ["co1/vendor/co2/pk1"]
 		t.Error("b.go should not be copied into vendor folder")
 	}
 }
+
+func TestRemove15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	c := ctx15(g)
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	g.In("co2/pk1")
+	err := os.RemoveAll(g.Current())
+	if err != nil {
+		g.Fatal(err)
+	}
+
+	g.Check(c.ModifyImport("co2/pk1", Remove))
+}
