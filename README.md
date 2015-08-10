@@ -120,3 +120,18 @@ govendor remove +vendor
 # List package.
 govendor list
 ```
+
+### Ignoring build tags
+Ignoring build tags is opt-out and is designed to be the opposite of the build
+file directives which are opt-in when specified. Typically a developer will
+want to support cross platform builds, but selectively opt out of tags, tests,
+and architectures as desired.
+
+To ignore additional tags edit the "vendor.json" file and add tag to the vendor
+"ignore" file field. The field uses spaces to separate tags to ignore.
+For example the following will ignore both test and appengine files.
+```
+{
+	"ignore": "test appengine",
+}
+```
