@@ -331,6 +331,9 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	sourcePath = pathos.SlashToImportPath(sourcePath)
 	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
 	if err != nil {
+		if mod != Remove {
+			return err
+		}
 		if _, is := err.(ErrNotInGOPATH); !is {
 			return err
 		}

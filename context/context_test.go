@@ -502,12 +502,28 @@ func TestRemove15(t *testing.T) {
 	g.Check(c.ModifyImport("co2/pk1", Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
-	
+
 	vi, err := os.Stat(filepath.Join(c.RootDir, c.VendorFolder))
 	if err != nil {
 		t.Fatal("vendor folder should still be present", err)
 	}
 	if vi.IsDir() == false {
 		t.Fatal("vendor folder is not a dir")
+	}
+}
+
+func TestAddMissing15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.In("co1")
+	c := ctx15(g)
+
+	err := c.ModifyImport("co2/pk1", Add)
+	if _, is := err.(ErrNotInGOPATH); !is {
+		t.Fatalf("Expected not in GOPATH error. Got %v", err)
 	}
 }
