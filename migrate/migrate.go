@@ -204,7 +204,7 @@ func (sysGodep) Migrate(root string) error {
 
 	// Remove existing.
 	for _, r := range remove {
-		err = context.RemovePackage(r)
+		err = context.RemovePackage(r, "")
 		if err != nil {
 			return err
 		}
@@ -260,7 +260,7 @@ func (sysInternal) Migrate(root string) error {
 
 	// Remove existing.
 	for _, r := range remove {
-		err = context.RemovePackage(r)
+		err = context.RemovePackage(r, "")
 		if err != nil {
 			return err
 		}
