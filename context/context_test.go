@@ -494,7 +494,10 @@ func TestRemove15(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	g.In("co2/pk1")
-	err := os.RemoveAll(g.Current())
+	// Change directory to let windows delete directory.
+	current := g.Current()
+	g.In("co1")
+	err := os.RemoveAll(current)
 	if err != nil {
 		g.Fatal(err)
 	}
