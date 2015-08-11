@@ -16,6 +16,18 @@ import (
 	"github.com/kardianos/govendor/internal/pathos"
 )
 
+var knownOS = make(map[string]bool)
+var knownArch = make(map[string]bool)
+
+func init() {
+	for _, v := range strings.Fields(goosList) {
+		knownOS[v] = true
+	}
+	for _, v := range strings.Fields(goarchList) {
+		knownArch[v] = true
+	}
+}
+
 // loadPackage sets up the context with package information and
 // is called before any initial operation is performed.
 func (ctx *Context) loadPackage() error {
@@ -58,14 +70,25 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 
 	filename := filenameExt[:len(filenameExt)-3]
 
-	filenameParts := strings.Split(filename, "_")
+	l := strings.Split(filename, "_")
 	tags := make([]string, 0)
-	for i, part := range filenameParts {
-		if i == 0 {
-			continue
-		}
-		tags = append(tags, part)
+	
+	if n := len(l); n > 0 && l[n-1] == "test" {
+		l = l[:n-1]
+		tags = append(tags, "test")
 	}
+	n := len(l)
+	if n >= 2 && knownOS[l[n-2]] && knownArch[l[n-1]] {
+		tags = append(tags, l[n-2])
+		tags = append(tags, l[n-1])
+	}
+	if n >= 1 && knownOS[l[n-1]] {
+		tags = append(tags, l[n-1])
+	}
+	if n >= 1 && knownArch[l[n-1]] {
+		tags = append(tags, l[n-1])
+	}
+		
 	const buildPrefix = "// +build "
 	for _, cc := range f.Comments {
 		for _, c := range cc.List {

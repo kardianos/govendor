@@ -423,7 +423,7 @@ func TestTagList15(t *testing.T) {
 		gt.FileBuild("b.go", "appengine", "encoding/hex"),
 	)
 	g.Setup("co2/pk1",
-		gt.File("a.go", "encoding/csv"),
+		gt.File("a_not_test_foo.go", "encoding/csv"),
 		gt.File("a_test.go", "testing", "encoding/json"),
 		gt.FileBuild("b.go", "appengine", "encoding/binary"),
 	)
