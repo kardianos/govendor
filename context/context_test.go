@@ -500,4 +500,14 @@ func TestRemove15(t *testing.T) {
 	}
 
 	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+	
+	vi, err := os.Stat(filepath.Join(c.RootDir, c.VendorFolder))
+	if err != nil {
+		t.Fatal("vendor folder should still be present", err)
+	}
+	if vi.IsDir() == false {
+		t.Fatal("vendor folder is not a dir")
+	}
 }

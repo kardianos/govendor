@@ -178,7 +178,7 @@ func hasGoFileInFolder(folder string) (bool, error) {
 
 // RemovePackage removes the specified folder files. If folder is empty when
 // done (no nested folders, remove the folder and any empty parent folders.
-func RemovePackage(path string) error {
+func RemovePackage(path, root string) error {
 	// Ensure the path is empty of files.
 	dir, err := os.Open(path)
 	if err != nil {
@@ -202,6 +202,9 @@ func RemovePackage(path string) error {
 
 	// Ignore errors here.
 	for i := 0; i <= looplimit; i++ {
+		if pathos.FileStringEquals(path, root) {
+			return nil
+		}
 		dir, err := os.Open(path)
 		if err != nil {
 			// fmt.Fprintf(os.Stderr, "Failedd to open directory %q: %v\n", path, err)

@@ -567,7 +567,7 @@ func (ctx *Context) copy() error {
 		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
 		// Copy the package or remove.
 		if len(op.Dest) == 0 {
-			err = RemovePackage(op.Src)
+			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder))
 		} else {
 			err = CopyPackage(op.Dest, op.Src, pkg.ignoreFile)
 		}
