@@ -221,6 +221,9 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 		case '.', '_':
 			continue
 		}
+		if pathos.FileStringEquals(dir, pkgInDir) {
+			continue
+		}
 		path := filepath.Join(dir, fi.Name())
 		err = ctx.addFileImports(path, gopath)
 		if err != nil {
