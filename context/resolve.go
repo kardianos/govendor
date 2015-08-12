@@ -5,6 +5,7 @@
 package context
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -52,6 +53,56 @@ func (ctx *Context) loadPackage() error {
 	return ctx.determinePackageStatus()
 }
 
+func (ctx *Context) getFileTags(pathname string, f *ast.File) ([]string, error) {
+	_, filenameExt := filepath.Split(pathname)
+
+	if strings.HasSuffix(pathname, ".go") == false {
+		return nil, nil
+	}
+	var err error
+	if f == nil {
+		f, err = parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	filename := filenameExt[:len(filenameExt)-3]
+
+	l := strings.Split(filename, "_")
+	tags := make([]string, 0)
+
+	if n := len(l); n > 0 && l[n-1] == "test" {
+		l = l[:n-1]
+		tags = append(tags, "test")
+	}
+	n := len(l)
+	if n >= 2 && knownOS[l[n-2]] && knownArch[l[n-1]] {
+		tags = append(tags, l[n-2])
+		tags = append(tags, l[n-1])
+	}
+	if n >= 1 && knownOS[l[n-1]] {
+		tags = append(tags, l[n-1])
+	}
+	if n >= 1 && knownArch[l[n-1]] {
+		tags = append(tags, l[n-1])
+	}
+
+	const buildPrefix = "// +build "
+	for _, cc := range f.Comments {
+		for _, c := range cc.List {
+			if strings.HasPrefix(c.Text, buildPrefix) {
+				text := strings.TrimPrefix(c.Text, buildPrefix)
+				ss := strings.Fields(text)
+				for _, s := range ss {
+					tags = append(tags, strings.Split(s, ",")...)
+				}
+			}
+		}
+	}
+	return tags, nil
+}
+
 // addFileImports is called from loadPackage and resolveUnknown.
 func (ctx *Context) addFileImports(pathname, gopath string) error {
 	dir, filenameExt := filepath.Split(pathname)
@@ -68,38 +119,9 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		return err
 	}
 
-	filename := filenameExt[:len(filenameExt)-3]
-
-	l := strings.Split(filename, "_")
-	tags := make([]string, 0)
-	
-	if n := len(l); n > 0 && l[n-1] == "test" {
-		l = l[:n-1]
-		tags = append(tags, "test")
-	}
-	n := len(l)
-	if n >= 2 && knownOS[l[n-2]] && knownArch[l[n-1]] {
-		tags = append(tags, l[n-2])
-		tags = append(tags, l[n-1])
-	}
-	if n >= 1 && knownOS[l[n-1]] {
-		tags = append(tags, l[n-1])
-	}
-	if n >= 1 && knownArch[l[n-1]] {
-		tags = append(tags, l[n-1])
-	}
-		
-	const buildPrefix = "// +build "
-	for _, cc := range f.Comments {
-		for _, c := range cc.List {
-			if strings.HasPrefix(c.Text, buildPrefix) {
-				text := strings.TrimPrefix(c.Text, buildPrefix)
-				ss := strings.Fields(text)
-				for _, s := range ss {
-					tags = append(tags, strings.Split(s, ",")...)
-				}
-			}
-		}
+	tags, err := ctx.getFileTags(pathname, f)
+	if err != nil {
+		return err
 	}
 
 	pkg, found := ctx.Package[importPath]

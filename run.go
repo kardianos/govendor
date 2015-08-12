@@ -306,6 +306,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 					fmt.Fprintf(w, "Remove %q\n", op.Src)
 				} else {
 					fmt.Fprintf(w, "Copy %q -> %q\n", op.Src, op.Dest)
+					for _, ignore := range op.IgnoreFile {
+						fmt.Fprintf(w, "\tIgnore %q\n", ignore)
+					}
 				}
 			}
 			return false, nil

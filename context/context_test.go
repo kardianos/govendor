@@ -461,6 +461,11 @@ func TestTagAdd15(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
+	// Test update after add. Update should behave the same.
+	g.Check(c.ModifyImport("co2/pk1", Update))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
 	list(g, c, "co1 after add", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
 l co1/pk1 < []
 s fmt < ["co1/pk1"]

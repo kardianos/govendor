@@ -58,6 +58,9 @@ type Operation struct {
 	// If Dest if empty the package is removed.
 	Dest string
 
+	// Files to ignore for operation.
+	IgnoreFile []string
+
 	State OperationState
 }
 
@@ -402,15 +405,54 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 			return err
 		}
 	}
+	// If the canonical package is also the local package, then the package
+	// isn't copied locally already and has already been checked for tags.
+	// If it has been vendored the source still needs to be examined.
+	// Examine here and add to the operations list.
+	var ignoreFile []string
+	if cpkg, found := ctx.Package[pkg.Canonical]; found {
+		ignoreFile = cpkg.ignoreFile
+	} else {
+		srcDir, err := os.Open(src)
+		if err != nil {
+			return err
+		}
+		fl, err := srcDir.Readdir(-1)
+		srcDir.Close()
+		if err != nil {
+			return err
+		}
+		for _, fi := range fl {
+			if fi.IsDir() {
+				continue
+			}
+			if fi.Name()[0] == '.' {
+				continue
+			}
+			tags, err := ctx.getFileTags(filepath.Join(src, fi.Name()), nil)
+			if err != nil {
+				return err
+			}
+
+			for _, tag := range tags {
+				for _, ignore := range ctx.ignoreTag {
+					if tag == ignore {
+						ignoreFile = append(ignoreFile, fi.Name())
+					}
+				}
+			}
+		}
+	}
 	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
 	// TODO: This might cause other issues or might be hiding the underlying issues. Examine in depth later.
 	if pathos.FileStringEquals(src, dest) {
 		return nil
 	}
 	ctx.Operation = append(ctx.Operation, &Operation{
-		Pkg:  pkg,
-		Src:  src,
-		Dest: dest,
+		Pkg:        pkg,
+		Src:        src,
+		Dest:       dest,
+		IgnoreFile: ignoreFile,
 	})
 
 	// Update vendor file with correct Local field.
@@ -572,7 +614,7 @@ func (ctx *Context) copy() error {
 		if len(op.Dest) == 0 {
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder))
 		} else {
-			err = CopyPackage(op.Dest, op.Src, pkg.ignoreFile)
+			err = CopyPackage(op.Dest, op.Src, op.IgnoreFile)
 		}
 		if err != nil {
 			return err
