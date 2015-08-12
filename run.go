@@ -114,9 +114,14 @@ func parseStatus(s string) (status []Status, err error) {
 	return
 }
 
+type filterImport struct {
+	Import string
+	Added  bool // Used to prevent imports from begin added twice.
+}
+
 type filter struct {
 	Status []Status
-	Import []string
+	Import []*filterImport
 }
 
 func (f filter) HasStatus(item StatusItem) bool {
@@ -129,12 +134,21 @@ func (f filter) HasStatus(item StatusItem) bool {
 }
 func (f filter) HasImport(item StatusItem) bool {
 	for _, imp := range f.Import {
-		if imp == item.Local || imp == item.Canonical {
+		if imp.Import == item.Local || imp.Import == item.Canonical {
+			imp.Added = true
 			return true
 		}
-		if strings.HasSuffix(imp, "...") {
-			base := strings.TrimSuffix(imp, "...")
+		if strings.HasSuffix(imp.Import, "/...") {
+			base := strings.TrimSuffix(imp.Import, "/...")
 			if strings.HasPrefix(item.Local, base) || strings.HasPrefix(item.Canonical, base) {
+				imp.Added = true
+				return true
+			}
+		}
+		if strings.HasSuffix(imp.Import, "...") {
+			base := strings.TrimSuffix(imp.Import, "...")
+			if strings.HasPrefix(item.Local, base) || strings.HasPrefix(item.Canonical, base) {
+				imp.Added = true
 				return true
 			}
 		}
@@ -145,7 +159,7 @@ func (f filter) HasImport(item StatusItem) bool {
 func parseFilter(args []string) (filter, error) {
 	f := filter{
 		Status: make([]Status, 0, len(args)),
-		Import: make([]string, 0, len(args)),
+		Import: make([]*filterImport, 0, len(args)),
 	}
 	for _, a := range args {
 		if len(a) == 0 {
@@ -159,7 +173,7 @@ func parseFilter(args []string) (filter, error) {
 			}
 			f.Status = append(f.Status, ss...)
 		} else {
-			f.Import = append(f.Import, a)
+			f.Import = append(f.Import, &filterImport{Import: a})
 		}
 	}
 	return f, nil
@@ -285,13 +299,14 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 				}
 			}
 		}
+		// If import path was not added from list, then add in here.
 		for _, imp := range f.Import {
-			// Match the root too.
-			imp = strings.TrimSuffix(imp, "/...")
-			if strings.HasSuffix(imp, "...") {
+			if imp.Added {
 				continue
 			}
-			err = ctx.ModifyImport(imp, mod)
+			importPath := strings.TrimSuffix(imp.Import, "...")
+			importPath = strings.TrimSuffix(importPath, "/")
+			err = ctx.ModifyImport(importPath, mod)
 			if err != nil {
 				return false, err
 			}
