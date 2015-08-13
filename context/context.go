@@ -617,7 +617,7 @@ func (ctx *Context) copy() error {
 			err = CopyPackage(op.Dest, op.Src, op.IgnoreFile)
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
 		}
 		op.State = OpDone
 		ctx.dirty = true

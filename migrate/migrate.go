@@ -129,13 +129,16 @@ func (sysGodep) Migrate(root string) error {
 	if err != nil {
 		return err
 	}
+
 	remove := make([]string, 0, len(list))
 	for _, item := range list {
 		if item.Status != context.StatusVendor {
 			continue
 		}
+		pkg := ctx.Package[item.Local]
 		ctx.Operation = append(ctx.Operation, &context.Operation{
-			Pkg:  ctx.Package[item.Local],
+			Pkg:  pkg,
+			Src:  pkg.Dir,
 			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Canonical)),
 		})
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
@@ -210,7 +213,7 @@ func (sysGodep) Migrate(root string) error {
 		}
 	}
 
-	return nil
+	return os.RemoveAll(filepath.Join(root, "Godeps"))
 }
 
 type sysInternal struct{}
@@ -238,8 +241,10 @@ func (sysInternal) Migrate(root string) error {
 		if item.Status != context.StatusVendor {
 			continue
 		}
+		pkg := ctx.Package[item.Local]
 		ctx.Operation = append(ctx.Operation, &context.Operation{
-			Pkg:  ctx.Package[item.Local],
+			Pkg:  pkg,
+			Src:  pkg.Dir,
 			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Canonical)),
 		})
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))

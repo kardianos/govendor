@@ -39,7 +39,8 @@ func (ctx *Context) loadPackage() error {
 			return err
 		}
 		name := info.Name()
-		if info.IsDir() && (name[0] == '.' || name[0] == '_' || name == "testdata") {
+		// Still go into "_workspace" to aid godep migration.
+		if info.IsDir() && (name[0] == '.' || name[0] == '_' || name == "testdata") && name != "_workspace" {
 			return filepath.SkipDir
 		}
 		if info.IsDir() {
@@ -170,8 +171,8 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 
 func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Status) *Package {
 	at := 0
-	vMiddle := "/" + ctx.VendorDiscoverFolder + "/"
-	vStart := ctx.VendorDiscoverFolder + "/"
+	vMiddle := "/" + pathos.SlashToImportPath(ctx.VendorDiscoverFolder) + "/"
+	vStart := pathos.SlashToImportPath(ctx.VendorDiscoverFolder) + "/"
 	switch {
 	case strings.Contains(canonical, vMiddle):
 		at = strings.LastIndex(canonical, vMiddle) + len(vMiddle)
