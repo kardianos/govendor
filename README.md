@@ -1,6 +1,6 @@
 ## Vendor tool for Go
-Supports the GO15VENDOREXPERIMENT environement flag. When set imports are not
-rewriten and are copied into the "vendor" folder.
+Supports the GO15VENDOREXPERIMENT environment flag. When set imports are not
+rewritten and are copied into the "vendor" folder.
 
 Follows the recommendation to use import path re-writes and avoid GOPATH
 changes and go tool changes. Uses the following vendor file specification:
