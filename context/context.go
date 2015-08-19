@@ -280,7 +280,11 @@ func (ctx *Context) updatePackageReferences() {
 			}
 
 			removeFromEnd := len(pkg.Canonical) + len(ctx.VendorDiscoverFolder) + 2
-			checkDir := pkg.Dir[:len(pkg.Dir)-removeFromEnd]
+			nextLen := len(pkg.Dir) - removeFromEnd
+			if nextLen < 0 {
+				continue
+			}
+			checkDir := pkg.Dir[:nextLen]
 			if !pathos.FileHasPrefix(dir, checkDir) {
 				continue
 			}
