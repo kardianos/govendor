@@ -41,9 +41,26 @@ func (ctx *Context) rewrite() error {
 		}
 	}
 	filePaths := make(map[string]*File, len(ctx.RewriteRule))
-	for from := range ctx.RewriteRule {
+	for from, to := range ctx.RewriteRule {
+		// Add files that contain an import path to rewrite.
 		for _, f := range fileImports[from] {
 			filePaths[f.Path] = f
+		}
+
+		// Add files that contain import comments to remove.
+		if pkg := ctx.Package[from]; pkg != nil {
+			for _, f := range pkg.Files {
+				if len(f.ImportComment) != 0 {
+					filePaths[f.Path] = f
+				}
+			}
+		}
+		if pkg := ctx.Package[to]; pkg != nil {
+			for _, f := range pkg.Files {
+				if len(f.ImportComment) != 0 {
+					filePaths[f.Path] = f
+				}
+			}
 		}
 	}
 
@@ -119,7 +136,7 @@ func (ctx *Context) rewrite() error {
 
 		// Remove import comment.
 		st := fileInfo.Package.Status
-		if st == StatusVendor || st == StatusUnused {
+		if st == StatusVendor || st == StatusUnused || st == StatusExternal {
 			var ic *ast.Comment
 			if f.Name != nil {
 				pos := f.Name.Pos()

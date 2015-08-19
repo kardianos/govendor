@@ -118,6 +118,8 @@ type File struct {
 	Package *Package
 	Path    string
 	Imports []string
+
+	ImportComment string
 }
 
 // NewContextWD creates a new context. It looks for a root folder by finding

@@ -166,6 +166,32 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		}
 	}
 
+	// Record any import comment for file.
+	var ic *ast.Comment
+	if f.Name != nil {
+		pos := f.Name.Pos()
+	big:
+		// Find the next comment after the package name.
+		for _, cblock := range f.Comments {
+			for _, c := range cblock.List {
+				if c.Pos() > pos {
+					ic = c
+					break big
+				}
+			}
+		}
+	}
+	if ic != nil {
+		// If it starts with the import text, assume it is the import comment and remove.
+		if index := strings.Index(ic.Text, " import "); index > 0 && index < 5 {
+			q := strings.TrimSpace(ic.Text[index+len(" import "):])
+			pf.ImportComment, err = strconv.Unquote(q)
+			if err != nil {
+				pf.ImportComment = q
+			}
+		}
+	}
+
 	return nil
 }
 
