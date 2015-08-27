@@ -24,6 +24,7 @@ func TestUpdate(t *testing.T) {
 }`
 	var to = `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "github.com/dchest/safefile",
@@ -69,6 +70,7 @@ func TestRemove(t *testing.T) {
 }`
 	var to = `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "pkg1",
@@ -111,6 +113,7 @@ func TestAdd(t *testing.T) {
 }`
 	var to = `{
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
 			"canonical": "pkg1",
