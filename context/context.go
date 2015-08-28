@@ -493,6 +493,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	for r := range mvSet {
 		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
 		dprintf("RULE: %s -> %s\n", r.Local, to)
+		ctx.RewriteRule[r.Canonical] = to
 		ctx.RewriteRule[r.Local] = to
 	}
 

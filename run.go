@@ -26,13 +26,13 @@ govendor migrate [auto, godep, internal]
 
 	init
 		create a vendor file if it does not exist.
-	
+
 	add
 		copy one or more packages into the internal folder and re-write paths.
-	
+
 	update
 		update one or more packages from GOPATH into the internal folder.
-	
+
 	remove
 		remove one or more packages from the internal folder and re-write packages to vendor paths.
 
@@ -67,7 +67,7 @@ Ignoring files with build tags:
 	It may contain a space separated list of build tags to ignore when
 	listing and copying files. By default the init command adds the
 	the "test" tag to the ignore list.
-	
+
 Example:
 	govendor add github.com/kardianos/osext
 	govendor update github.com/kardianos/...
