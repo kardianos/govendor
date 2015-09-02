@@ -261,12 +261,12 @@ func (ctx *Context) VendorFilePackageLocal(local string) *vendorfile.Package {
 }
 
 // VendorFilePackageCanonical finds a given vendor file package give the canonical import path.
-func (ctx *Context) VendorFilePackageCanonical(canonical string) *vendorfile.Package {
+func (ctx *Context) VendorFilePackagePath(canonical string) *vendorfile.Package {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Remove {
 			continue
 		}
-		if pkg.Canonical == canonical {
+		if pkg.Path == canonical {
 			return pkg
 		}
 	}
@@ -350,8 +350,8 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	// If the import is already vendored, ensure we have the local path and not
 	// the canonical path.
 	localImportPath := sourcePath
-	if vendPkg := ctx.VendorFilePackageCanonical(localImportPath); vendPkg != nil {
-		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Local)
+	if vendPkg := ctx.VendorFilePackagePath(localImportPath); vendPkg != nil {
+		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Path)
 	}
 
 	dprintf("AI: %s, L: %s, C: %s\n", sourcePath, localImportPath, canonicalImportPath)
@@ -462,12 +462,11 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	})
 
 	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackageCanonical(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
 	if vp == nil {
 		vp = &vendorfile.Package{
-			Add:       true,
-			Canonical: pkg.Canonical,
-			Local:     path.Join(ctx.VendorFileToFolder, pkg.Canonical),
+			Add:  true,
+			Path: pkg.Canonical,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
@@ -501,6 +500,9 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 }
 
 func (ctx *Context) modifyRemove(pkg *Package) error {
+	if len(pkg.Dir) == 0 {
+		return nil
+	}
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
 		Src:  pkg.Dir,
@@ -508,7 +510,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	})
 
 	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackageCanonical(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
 	if vp != nil {
 		vp.Remove = true
 	}
@@ -614,7 +616,7 @@ func (ctx *Context) copy() error {
 		pkg := op.Pkg
 
 		if pathos.FileStringEquals(op.Dest, op.Src) {
-			panic("For package " + pkg.Local + " attempt to copy to same location")
+			panic("For package " + pkg.Local + " attempt to copy to same location: " + op.Src)
 		}
 		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
 		// Copy the package or remove.

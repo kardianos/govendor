@@ -214,7 +214,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	if status == StatusUnknown {
 		if vp := ctx.VendorFilePackageLocal(local); vp != nil {
 			status = StatusVendor
-			canonical = vp.Canonical
+			canonical = vp.Path
 		}
 	}
 	if status == StatusUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
@@ -290,7 +290,7 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 		if vp := ctx.VendorFilePackageLocal(pkg.Local); vp != nil {
 			pkg.Status = StatusVendor
-			pkg.Canonical = vp.Canonical
+			pkg.Canonical = vp.Path
 			continue
 		}
 		if strings.HasPrefix(pkg.Canonical, ctx.RootImportPath) {
@@ -319,7 +319,7 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 		vpkg := vendorFileFindLocal(vf, root, pkg.Gopath, pkg.Local)
 		if vpkg != nil {
-			pkg.Canonical = vpkg.Canonical
+			pkg.Canonical = vpkg.Path
 		}
 	}
 

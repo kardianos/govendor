@@ -42,8 +42,8 @@ type Package struct {
 	Add bool
 
 	// See the vendor spec for definitions.
-	Canonical    string
-	Local        string
+	Origin       string
+	Path         string
 	Revision     string
 	RevisionTime string
 	Comment      string
@@ -52,8 +52,8 @@ type Package struct {
 var (
 	packageNames      = []string{"package", "Package"}
 	ignoreNames       = []string{"ignore"}
-	canonicalNames    = []string{"canonical", "Canonical", "vendor", "Vendor"}
-	localNames        = []string{"local", "Local"}
+	originNames       = []string{"origin"}
+	pathNames         = []string{"path", "canonical", "Canonical", "vendor", "Vendor"}
 	revisionNames     = []string{"revision", "Revision", "version", "Version"}
 	revisionTimeNames = []string{"revisionTime", "RevisionTime", "versionTime", "VersionTime"}
 	commentNames      = []string{"comment", "Comment"}
@@ -66,15 +66,15 @@ func (vp vendorPackageSort) Swap(i, j int) { vp[i], vp[j] = vp[j], vp[i] }
 func (vp vendorPackageSort) Less(i, j int) bool {
 	a := vp[i].(map[string]interface{})
 	b := vp[j].(map[string]interface{})
-	aLocal, _ := a[localNames[0]].(string)
-	bLocal, _ := b[localNames[0]].(string)
+	aPath, _ := a[pathNames[0]].(string)
+	bPath, _ := b[pathNames[0]].(string)
 
-	if aLocal == bLocal {
-		aCanonical, _ := a[canonicalNames[0]].(string)
-		bCanonical, _ := b[canonicalNames[0]].(string)
-		return aCanonical < bCanonical
+	if aPath == bPath {
+		aOrigin, _ := a[originNames[0]].(string)
+		bOrigin, _ := b[originNames[0]].(string)
+		return len(aOrigin) > len(bOrigin)
 	}
-	return aLocal < bLocal
+	return aPath < bPath
 }
 
 func setField(field *string, object map[string]interface{}, names []string) {
@@ -94,13 +94,13 @@ func setField(field *string, object map[string]interface{}, names []string) {
 	}
 }
 
-func setObject(field string, object map[string]interface{}, names []string) {
+func setObject(field string, object map[string]interface{}, names []string, hideEmpty bool) {
 	for i, name := range names {
-		if i == 0 {
-			object[name] = field
-		} else {
+		if i != 0 || (hideEmpty && len(field) == 0) {
 			delete(object, name)
+			continue
 		}
+		object[name] = field
 	}
 }
 
@@ -142,8 +142,8 @@ func (vf *File) toFields() {
 		pkg := &Package{}
 		vf.Package[index] = pkg
 		pkg.index = index
-		setField(&pkg.Canonical, object, canonicalNames)
-		setField(&pkg.Local, object, localNames)
+		setField(&pkg.Origin, object, originNames)
+		setField(&pkg.Path, object, pathNames)
 		setField(&pkg.Revision, object, revisionNames)
 		setField(&pkg.RevisionTime, object, revisionTimeNames)
 		setField(&pkg.Comment, object, commentNames)
@@ -154,10 +154,18 @@ func (vf *File) toFields() {
 func (vf *File) toAll() {
 	delete(vf.all, "Tool")
 
-	setObject(vf.Comment, vf.all, commentNames)
-	setObject(vf.Ignore, vf.all, ignoreNames)
+	setObject(vf.Comment, vf.all, commentNames, false)
+	setObject(vf.Ignore, vf.all, ignoreNames, false)
 
 	rawPackageList := vf.getRawPackageList()
+
+	setPkgFields := func(pkg *Package, obj map[string]interface{}) {
+		setObject(pkg.Origin, obj, originNames, true)
+		setObject(pkg.Path, obj, pathNames, false)
+		setObject(pkg.Revision, obj, revisionNames, false)
+		setObject(pkg.RevisionTime, obj, revisionTimeNames, true)
+		setObject(pkg.Comment, obj, commentNames, true)
+	}
 
 	deleteCount := 0
 	for _, pkg := range vf.Package {
@@ -169,11 +177,7 @@ func (vf *File) toAll() {
 			obj := make(map[string]interface{}, 5)
 			rawPackageList = append(rawPackageList, obj)
 
-			setObject(pkg.Canonical, obj, canonicalNames)
-			setObject(pkg.Local, obj, localNames)
-			setObject(pkg.Revision, obj, revisionNames)
-			setObject(pkg.RevisionTime, obj, revisionTimeNames)
-			setObject(pkg.Comment, obj, commentNames)
+			setPkgFields(pkg, obj)
 		default:
 			var obj map[string]interface{}
 			rawObj := rawPackageList[pkg.index]
@@ -183,11 +187,9 @@ func (vf *File) toAll() {
 				obj = rawObj.(map[string]interface{})
 			}
 
-			setObject(pkg.Canonical, obj, canonicalNames)
-			setObject(pkg.Local, obj, localNames)
-			setObject(pkg.Revision, obj, revisionNames)
-			setObject(pkg.RevisionTime, obj, revisionTimeNames)
-			setObject(pkg.Comment, obj, commentNames)
+			delete(obj, "local")
+			delete(obj, "Local")
+			setPkgFields(pkg, obj)
 		}
 	}
 

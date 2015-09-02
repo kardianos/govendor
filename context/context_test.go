@@ -89,7 +89,7 @@ func showCurrentVendorFile(c *Context, t *testing.T) {
 		if vp.Remove {
 			continue
 		}
-		t.Logf("\tPKG:: C: %s, L: %s\n", vp.Canonical, vp.Local)
+		t.Logf("\tPKG:: P: %s, O: %s\n", vp.Path, vp.Origin)
 	}
 }
 
@@ -143,11 +143,8 @@ func TestImportSimple(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "co2/pk1",
-			"comment": "",
-			"local": "co2/pk1",
-			"revision": "",
-			"revisionTime": ""
+			"path": "co2/pk1",
+			"revision": ""
 		}
 	]
 }`)
@@ -196,11 +193,8 @@ func TestDuplicatePackage(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "co3/pk3",
-			"comment": "",
-			"local": "co3/pk3",
-			"revision": "",
-			"revisionTime": ""
+			"path": "co3/pk3",
+			"revision": ""
 		}
 	]
 }`)
@@ -313,11 +307,8 @@ s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "co2/pk1",
-			"comment": "",
-			"local": "vendor/co2/pk1",
-			"revision": "",
-			"revisionTime": ""
+			"path": "co2/pk1",
+			"revision": ""
 		}
 	]
 }`)
@@ -367,18 +358,12 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "co2/pk1",
-			"comment": "",
-			"local": "vendor/co2/pk1",
-			"revision": "",
-			"revisionTime": ""
+			"path": "co2/pk1",
+			"revision": ""
 		},
 		{
-			"canonical": "co2/pk1/pk2",
-			"comment": "",
-			"local": "vendor/co2/pk1/pk2",
-			"revision": "",
-			"revisionTime": ""
+			"path": "co2/pk1/pk2",
+			"revision": ""
 		}
 	]
 }`)

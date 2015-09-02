@@ -8,10 +8,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/kardianos/govendor/internal/github.com/dchest/safefile"
-	"github.com/kardianos/govendor/internal/pathos"
 	"github.com/kardianos/govendor/vendorfile"
 )
 
@@ -49,40 +47,5 @@ func readVendorFile(vendorFilePath string) (*vendorfile.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Determine if local field is relative to GOPATH or vendor file.
-	// Change to relative to vendor file as needed.
-	folder, _ := filepath.Split(vendorFilePath)
-	relToFile := 0
-	relToGOPATH := 0
-	for _, pkg := range vf.Package {
-		p := filepath.Join(folder, pathos.SlashToFilepath(pkg.Local))
-		_, err := os.Stat(p)
-		if os.IsNotExist(err) {
-			relToGOPATH++
-			continue
-		}
-		relToFile++
-	}
-	if relToFile > relToGOPATH || len(vf.Package) == 0 {
-		return vf, nil
-	}
-
-	gopathList := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
-	gopath := ""
-	for _, gp := range gopathList {
-		if pathos.FileHasPrefix(folder, gp) {
-			gopath = gp
-			break
-		}
-	}
-	if len(gopath) == 0 {
-		return vf, nil
-	}
-	prefix := pathos.SlashToImportPath(pathos.FileTrimPrefix(folder, filepath.Join(gopath, "src")))
-	prefix = strings.TrimPrefix(prefix, "/")
-	for _, pkg := range vf.Package {
-		pkg.Local = strings.TrimPrefix(pkg.Local, prefix)
-	}
-
 	return vf, nil
 }
