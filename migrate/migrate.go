@@ -144,10 +144,7 @@ func (sysGodep) Migrate(root string) error {
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
 		ctx.RewriteRule[item.Local] = item.Canonical
 	}
-	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor.json")
-	for _, vf := range ctx.VendorFile.Package {
-		vf.Local = path.Join("vendor", vf.Canonical)
-	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 
 	ctx.VendorDiscoverFolder = "vendor"
 
@@ -183,14 +180,13 @@ func (sysGodep) Migrate(root string) error {
 			if strings.HasPrefix(pkg.Canonical, d.ImportPath) == false {
 				continue
 			}
-			vf := ctx.VendorFilePackageCanonical(pkg.Canonical)
+			vf := ctx.VendorFilePackagePath(pkg.Canonical)
 			if vf == nil {
 				ctx.VendorFile.Package = append(ctx.VendorFile.Package, &vendorfile.Package{
-					Add:       true,
-					Canonical: pkg.Canonical,
-					Local:     path.Join(ctx.VendorDiscoverFolder, pkg.Canonical),
-					Comment:   d.Comment,
-					Revision:  d.Rev,
+					Add:      true,
+					Path:     pkg.Canonical,
+					Comment:  d.Comment,
+					Revision: d.Rev,
 				})
 			}
 		}
@@ -250,10 +246,7 @@ func (sysInternal) Migrate(root string) error {
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
 		ctx.RewriteRule[item.Local] = item.Canonical
 	}
-	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor.json")
-	for _, vf := range ctx.VendorFile.Package {
-		vf.Local = path.Join("vendor", vf.Canonical)
-	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 	err = ctx.WriteVendorFile()
 	if err != nil {
 		return err
