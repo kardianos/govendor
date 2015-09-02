@@ -129,7 +129,7 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	pathToVendorFile := vendorFilename
+	pathToVendorFile := filepath.Join("vendor", vendorFilename)
 	rootIndicator := "vendor"
 	vendorFolder := "vendor"
 	go15VendorExperiment := os.Getenv("GO15VENDOREXPERIMENT") == "1"
