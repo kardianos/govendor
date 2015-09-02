@@ -51,3 +51,12 @@ type ErrMissingVendorFile struct {
 func (err ErrMissingVendorFile) Error() string {
 	return fmt.Sprintf("Vendor file at %q not found.", err.Path)
 }
+
+// ErrOldVersion returns if vendor file is not in the vendor folder.
+type ErrOldVersion struct {
+	Message string
+}
+
+func (err ErrOldVersion) Error() string {
+	return fmt.Sprintf("The vendor file or is old. %s", err.Message)
+}

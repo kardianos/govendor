@@ -146,6 +146,12 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 		}
 	}
 
+	// Check for old vendor file location.
+	oldLocation := filepath.Join(root, vendorFilename)
+	if _, err := os.Stat(oldLocation); err == nil {
+		return nil, ErrOldVersion{`Use the "migrate" command to update.`}
+	}
+
 	return NewContext(root, pathToVendorFile, vendorFolder, !go15VendorExperiment)
 }
 
