@@ -8,20 +8,31 @@ Instead of truncating and overwriting the destination file, it creates a
 temporary file in the same directory, writes to it, and then renames the
 temporary file to the original name when calling Commit.
 
-## Installation
+
+Stable version
+--------------
+
+**A stable version of this package with commercial support is available
+through StableLib: <https://stablelib.com/v1/safefile/>**
+
+
+Development version
+-------------------
+
+### Installation
 
 ```
 $ go get github.com/dchest/safefile
 ```
 
-## Documentation
-	
- <http://godoc.org/github.com/dchest/safefile>
+### Documentation
 
-## Example
+ <https://stablelib.com/doc/v1/safefile/>
+
+### Example
 
 ```go
-f, err := safefile.Create("/home/ken/report.txt")
+f, err := safefile.Create("/home/ken/report.txt", 0644)
 if err != nil {
 	// ...
 }

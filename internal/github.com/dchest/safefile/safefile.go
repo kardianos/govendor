@@ -10,7 +10,7 @@
 //
 // Example:
 //
-//  f, err := safefile.Create("/home/ken/report.txt")
+//  f, err := safefile.Create("/home/ken/report.txt", 0644)
 //  if err != nil {
 //  	// ...
 //  }

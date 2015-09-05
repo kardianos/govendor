@@ -1,12 +1,11 @@
 {
 	"comment": "",
+	"ignore": "",
 	"package": [
 		{
-			"canonical": "github.com/dchest/safefile",
-			"comment": "",
-			"local": "github.com/dchest/safefile",
-			"revision": "74b1ec0619e722c9f674d1a21e1a703fe90c4371",
-			"revisionTime": "2015-04-10T19:48:00+02:00"
+			"path": "github.com/dchest/safefile",
+			"revision": "33aeb10e4bb6edb4016c53b6140fc9a603346e04",
+			"revisionTime": "2015-07-03T18:05:53+02:00"
 		}
 	]
 }
