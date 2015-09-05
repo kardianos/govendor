@@ -160,6 +160,9 @@ func (vf *File) toAll() {
 	rawPackageList := vf.getRawPackageList()
 
 	setPkgFields := func(pkg *Package, obj map[string]interface{}) {
+		if pkg.Origin == pkg.Path {
+			pkg.Origin = ""
+		}
 		setObject(pkg.Origin, obj, originNames, true)
 		setObject(pkg.Path, obj, pathNames, false)
 		setObject(pkg.Revision, obj, revisionNames, false)

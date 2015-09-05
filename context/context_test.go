@@ -221,10 +221,24 @@ s strings < ["co2/internal/co3/pk3" "co3/pk3"]
 		}
 		g.Check(c.ModifyImport(item.Local, AddUpdate))
 	}
-
-	c.Reslove(c.Check()) // Automaically resolve conflicts.
+	c.ResloveApply(ResolveAutoLongestPath(c.Check())) // Automaically resolve conflicts.
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
+	vendorFile14(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"path": "co2/pk2",
+			"revision": ""
+		},
+		{
+			"origin": "co1/internal/co3/pk3",
+			"path": "co3/pk3",
+			"revision": ""
+		}
+	]
+}`)
 
 	expected := `v co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
 v co1/internal/co3/pk3 [co3/pk3] < ["co1/internal/co2/pk2" "co1/pk1"]

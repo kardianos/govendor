@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -62,6 +63,15 @@ type Operation struct {
 	IgnoreFile []string
 
 	State OperationState
+}
+
+// Conflict reports packages that are scheduled to conflict.
+type Conflict struct {
+	Canonical string
+	Local     string
+	Operation []*Operation
+	OpIndex   int
+	Resolved  bool
 }
 
 // Context represents the current project context.
@@ -549,17 +559,9 @@ func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
 	}
 }
 
-// Conflict reports packages that are scheduled to
-type Conflict struct {
-	Canonical string
-	Local     string
-	Operation []*Operation
-	OpIndex   int
-}
-
 // Check returns any conflicts when more then one package can be moved into
 // the same path.
-func (ctx *Context) Check() []Conflict {
+func (ctx *Context) Check() []*Conflict {
 	// Find duplicate packages that have been marked for moving.
 	findDups := make(map[string][]*Operation, 3) // map[canonical][]local
 	for _, op := range ctx.Operation {
@@ -569,13 +571,13 @@ func (ctx *Context) Check() []Conflict {
 		findDups[op.Pkg.Canonical] = append(findDups[op.Pkg.Canonical], op)
 	}
 
-	var ret []Conflict
+	var ret []*Conflict
 	for canonical, lop := range findDups {
 		if len(lop) == 1 {
 			continue
 		}
 		destDir := path.Join(ctx.RootImportPath, ctx.VendorFolder, canonical)
-		ret = append(ret, Conflict{
+		ret = append(ret, &Conflict{
 			Canonical: canonical,
 			Local:     destDir,
 			Operation: lop,
@@ -584,20 +586,111 @@ func (ctx *Context) Check() []Conflict {
 	return ret
 }
 
-// Resolve resolves conflicts obtained from Check. It chooses the
-// Src package listed in the SrcIndex field.
-func (ctx *Context) Reslove(cc []Conflict) {
+// ResolveApply applies the conflict resolution selected. It chooses the
+// Operation listed in the OpIndex field.
+func (ctx *Context) ResloveApply(cc []*Conflict) {
 	for _, c := range cc {
+		if c.Resolved == false {
+			continue
+		}
 		for i, op := range c.Operation {
 			if op.State != OpReady {
 				continue
 			}
 			if i == c.OpIndex {
+				if vp := ctx.VendorFilePackagePath(c.Canonical); vp != nil {
+					vp.Origin = c.Local
+				}
 				continue
 			}
 			op.State = OpIgnore
 		}
 	}
+}
+
+// ResolveAutoLongestPath finds the longest local path in each conflict
+// and set it to be used.
+func ResolveAutoLongestPath(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		longestLen := 0
+		longestIndex := 0
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if len(op.Pkg.Local) > longestLen {
+				longestLen = len(op.Pkg.Local)
+				longestIndex = i
+			}
+		}
+		c.OpIndex = longestIndex
+		c.Resolved = true
+	}
+	return cc
+}
+
+// ResolveAutoShortestPath finds the shortest local path in each conflict
+// and set it to be used.
+func ResolveAutoShortestPath(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		shortestLen := math.MaxInt32
+		shortestIndex := 0
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if len(op.Pkg.Local) < shortestLen {
+				shortestLen = len(op.Pkg.Local)
+				shortestIndex = i
+			}
+		}
+		c.OpIndex = shortestIndex
+		c.Resolved = true
+	}
+	return cc
+}
+
+// ResolveAutoVendorFileOrigin resolves conflicts based on the vendor file
+// if possible.
+func (ctx *Context) ResolveAutoVendorFileOrigin(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		vp := ctx.VendorFilePackagePath(c.Canonical)
+		if vp == nil {
+			continue
+		}
+		// If this was just added, we still can't rely on it.
+		// We still need to ask user.
+		if vp.Add {
+			continue
+		}
+		lookFor := vp.Path
+		if len(vp.Origin) != 0 {
+			lookFor = vp.Origin
+		}
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if op.Pkg.Local == lookFor {
+				c.OpIndex = i
+				c.Resolved = true
+				break
+			}
+		}
+	}
+	return cc
 }
 
 func (ctx *Context) copy() error {
