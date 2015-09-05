@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -62,6 +63,15 @@ type Operation struct {
 	IgnoreFile []string
 
 	State OperationState
+}
+
+// Conflict reports packages that are scheduled to conflict.
+type Conflict struct {
+	Canonical string
+	Local     string
+	Operation []*Operation
+	OpIndex   int
+	Resolved  bool
 }
 
 // Context represents the current project context.
@@ -129,7 +139,7 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	pathToVendorFile := vendorFilename
+	pathToVendorFile := filepath.Join("vendor", vendorFilename)
 	rootIndicator := "vendor"
 	vendorFolder := "vendor"
 	go15VendorExperiment := os.Getenv("GO15VENDOREXPERIMENT") == "1"
@@ -144,6 +154,12 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Check for old vendor file location.
+	oldLocation := filepath.Join(root, vendorFilename)
+	if _, err := os.Stat(oldLocation); err == nil {
+		return nil, ErrOldVersion{`Use the "migrate" command to update.`}
 	}
 
 	return NewContext(root, pathToVendorFile, vendorFolder, !go15VendorExperiment)
@@ -261,12 +277,12 @@ func (ctx *Context) VendorFilePackageLocal(local string) *vendorfile.Package {
 }
 
 // VendorFilePackageCanonical finds a given vendor file package give the canonical import path.
-func (ctx *Context) VendorFilePackageCanonical(canonical string) *vendorfile.Package {
+func (ctx *Context) VendorFilePackagePath(canonical string) *vendorfile.Package {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Remove {
 			continue
 		}
-		if pkg.Canonical == canonical {
+		if pkg.Path == canonical {
 			return pkg
 		}
 	}
@@ -350,8 +366,8 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	// If the import is already vendored, ensure we have the local path and not
 	// the canonical path.
 	localImportPath := sourcePath
-	if vendPkg := ctx.VendorFilePackageCanonical(localImportPath); vendPkg != nil {
-		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Local)
+	if vendPkg := ctx.VendorFilePackagePath(localImportPath); vendPkg != nil {
+		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Path)
 	}
 
 	dprintf("AI: %s, L: %s, C: %s\n", sourcePath, localImportPath, canonicalImportPath)
@@ -462,12 +478,11 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	})
 
 	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackageCanonical(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
 	if vp == nil {
 		vp = &vendorfile.Package{
-			Add:       true,
-			Canonical: pkg.Canonical,
-			Local:     path.Join(ctx.VendorFileToFolder, pkg.Canonical),
+			Add:  true,
+			Path: pkg.Canonical,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
@@ -501,6 +516,9 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 }
 
 func (ctx *Context) modifyRemove(pkg *Package) error {
+	if len(pkg.Dir) == 0 {
+		return nil
+	}
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
 		Src:  pkg.Dir,
@@ -508,7 +526,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	})
 
 	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackageCanonical(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
 	if vp != nil {
 		vp.Remove = true
 	}
@@ -541,17 +559,9 @@ func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
 	}
 }
 
-// Conflict reports packages that are scheduled to
-type Conflict struct {
-	Canonical string
-	Local     string
-	Operation []*Operation
-	OpIndex   int
-}
-
 // Check returns any conflicts when more then one package can be moved into
 // the same path.
-func (ctx *Context) Check() []Conflict {
+func (ctx *Context) Check() []*Conflict {
 	// Find duplicate packages that have been marked for moving.
 	findDups := make(map[string][]*Operation, 3) // map[canonical][]local
 	for _, op := range ctx.Operation {
@@ -561,13 +571,13 @@ func (ctx *Context) Check() []Conflict {
 		findDups[op.Pkg.Canonical] = append(findDups[op.Pkg.Canonical], op)
 	}
 
-	var ret []Conflict
+	var ret []*Conflict
 	for canonical, lop := range findDups {
 		if len(lop) == 1 {
 			continue
 		}
 		destDir := path.Join(ctx.RootImportPath, ctx.VendorFolder, canonical)
-		ret = append(ret, Conflict{
+		ret = append(ret, &Conflict{
 			Canonical: canonical,
 			Local:     destDir,
 			Operation: lop,
@@ -576,20 +586,111 @@ func (ctx *Context) Check() []Conflict {
 	return ret
 }
 
-// Resolve resolves conflicts obtained from Check. It chooses the
-// Src package listed in the SrcIndex field.
-func (ctx *Context) Reslove(cc []Conflict) {
+// ResolveApply applies the conflict resolution selected. It chooses the
+// Operation listed in the OpIndex field.
+func (ctx *Context) ResloveApply(cc []*Conflict) {
 	for _, c := range cc {
+		if c.Resolved == false {
+			continue
+		}
 		for i, op := range c.Operation {
 			if op.State != OpReady {
 				continue
 			}
 			if i == c.OpIndex {
+				if vp := ctx.VendorFilePackagePath(c.Canonical); vp != nil {
+					vp.Origin = c.Local
+				}
 				continue
 			}
 			op.State = OpIgnore
 		}
 	}
+}
+
+// ResolveAutoLongestPath finds the longest local path in each conflict
+// and set it to be used.
+func ResolveAutoLongestPath(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		longestLen := 0
+		longestIndex := 0
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if len(op.Pkg.Local) > longestLen {
+				longestLen = len(op.Pkg.Local)
+				longestIndex = i
+			}
+		}
+		c.OpIndex = longestIndex
+		c.Resolved = true
+	}
+	return cc
+}
+
+// ResolveAutoShortestPath finds the shortest local path in each conflict
+// and set it to be used.
+func ResolveAutoShortestPath(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		shortestLen := math.MaxInt32
+		shortestIndex := 0
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if len(op.Pkg.Local) < shortestLen {
+				shortestLen = len(op.Pkg.Local)
+				shortestIndex = i
+			}
+		}
+		c.OpIndex = shortestIndex
+		c.Resolved = true
+	}
+	return cc
+}
+
+// ResolveAutoVendorFileOrigin resolves conflicts based on the vendor file
+// if possible.
+func (ctx *Context) ResolveAutoVendorFileOrigin(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		vp := ctx.VendorFilePackagePath(c.Canonical)
+		if vp == nil {
+			continue
+		}
+		// If this was just added, we still can't rely on it.
+		// We still need to ask user.
+		if vp.Add {
+			continue
+		}
+		lookFor := vp.Path
+		if len(vp.Origin) != 0 {
+			lookFor = vp.Origin
+		}
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if op.Pkg.Local == lookFor {
+				c.OpIndex = i
+				c.Resolved = true
+				break
+			}
+		}
+	}
+	return cc
 }
 
 func (ctx *Context) copy() error {
@@ -614,7 +715,7 @@ func (ctx *Context) copy() error {
 		pkg := op.Pkg
 
 		if pathos.FileStringEquals(op.Dest, op.Src) {
-			panic("For package " + pkg.Local + " attempt to copy to same location")
+			panic("For package " + pkg.Local + " attempt to copy to same location: " + op.Src)
 		}
 		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
 		// Copy the package or remove.

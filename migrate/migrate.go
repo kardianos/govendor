@@ -22,10 +22,11 @@ import (
 type From byte
 
 const (
-	Auto     From = iota // Detect which system it uses.
-	Gb                   // Dave's GB
-	Godep                // tools/godep
-	Internal             // kardianos/govendor
+	Auto      From = iota // Detect which system it uses.
+	Gb                    // Dave's GB
+	Godep                 // tools/godep
+	Internal              // kardianos/govendor
+	OldVendor             // old kardianos/govendor
 )
 
 // Migrate from the given system using the current working directory.
@@ -55,10 +56,11 @@ type system interface {
 }
 
 var register = map[From]system{
-	Auto:     sysAuto{},
-	Gb:       sysGb{},
-	Godep:    sysGodep{},
-	Internal: sysInternal{},
+	Auto:      sysAuto{},
+	Gb:        sysGb{},
+	Godep:     sysGodep{},
+	Internal:  sysInternal{},
+	OldVendor: sysOldVendor{},
 }
 
 var errAutoSystemNotFound = errors.New("Unable to determine vendor system.")
@@ -144,10 +146,7 @@ func (sysGodep) Migrate(root string) error {
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
 		ctx.RewriteRule[item.Local] = item.Canonical
 	}
-	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor.json")
-	for _, vf := range ctx.VendorFile.Package {
-		vf.Local = path.Join("vendor", vf.Canonical)
-	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 
 	ctx.VendorDiscoverFolder = "vendor"
 
@@ -183,14 +182,13 @@ func (sysGodep) Migrate(root string) error {
 			if strings.HasPrefix(pkg.Canonical, d.ImportPath) == false {
 				continue
 			}
-			vf := ctx.VendorFilePackageCanonical(pkg.Canonical)
+			vf := ctx.VendorFilePackagePath(pkg.Canonical)
 			if vf == nil {
 				ctx.VendorFile.Package = append(ctx.VendorFile.Package, &vendorfile.Package{
-					Add:       true,
-					Canonical: pkg.Canonical,
-					Local:     path.Join(ctx.VendorDiscoverFolder, pkg.Canonical),
-					Comment:   d.Comment,
-					Revision:  d.Rev,
+					Add:      true,
+					Path:     pkg.Canonical,
+					Comment:  d.Comment,
+					Revision: d.Rev,
 				})
 			}
 		}
@@ -250,10 +248,7 @@ func (sysInternal) Migrate(root string) error {
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
 		ctx.RewriteRule[item.Local] = item.Canonical
 	}
-	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor.json")
-	for _, vf := range ctx.VendorFile.Package {
-		vf.Local = path.Join("vendor", vf.Canonical)
-	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 	err = ctx.WriteVendorFile()
 	if err != nil {
 		return err
@@ -271,6 +266,27 @@ func (sysInternal) Migrate(root string) error {
 		}
 	}
 	return os.Remove(filepath.Join(ctx.RootDir, "internal", "vendor.json"))
+}
+
+type sysOldVendor struct{}
+
+func (sys sysOldVendor) Check(root string) (system, error) {
+	if hasDirs(root, "vendor") && hasFiles(root, "vendor.json") {
+		return sys, nil
+	}
+	return nil, nil
+}
+func (sysOldVendor) Migrate(root string) error {
+	ctx, err := context.NewContext(root, "vendor.json", "vendor", false)
+	if err != nil {
+		return err
+	}
+	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
+	err = ctx.WriteVendorFile()
+	if err != nil {
+		return err
+	}
+	return os.Remove(filepath.Join(ctx.RootDir, "vendor.json"))
 }
 
 func hasDirs(root string, dd ...string) bool {

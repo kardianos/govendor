@@ -80,7 +80,7 @@ e co2/pk1
 e co3/pk1
 l co1/pk1
 `)
-	Vendor(g, "co1 add", "add +ext", "")
+	Vendor(g, "co1 add", "add -long +ext", "")
 	Vendor(g, "co1 list", "list", `v co2/pk1
 v co3/pk1
 l co1/pk1

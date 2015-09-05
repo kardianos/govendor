@@ -27,9 +27,7 @@ func TestUpdate(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "github.com/dchest/safefile",
-			"comment": "",
-			"local": "github.com/kardianos/govendor/internal/github.com/dchest/safefile",
+			"path": "github.com/dchest/safefile",
 			"revision": "74b1ec0619e722c9f674d1a21e1a703fe90c4371",
 			"revisionTime": "2015-04-10T19:48:00+02:00"
 		}
@@ -73,11 +71,8 @@ func TestRemove(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "pkg1",
-			"comment": "",
-			"local": "",
-			"revision": "",
-			"revisionTime": ""
+			"path": "pkg1",
+			"revision": ""
 		}
 	]
 }`
@@ -116,25 +111,16 @@ func TestAdd(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
-			"canonical": "pkg1",
-			"comment": "",
-			"local": "",
-			"revision": "",
-			"revisionTime": ""
+			"path": "pkg1",
+			"revision": ""
 		},
 		{
-			"canonical": "pkg2",
-			"comment": "",
-			"local": "",
-			"revision": "",
-			"revisionTime": ""
+			"path": "pkg2",
+			"revision": ""
 		},
 		{
-			"canonical": "pkg3",
-			"comment": "",
-			"local": "",
-			"revision": "",
-			"revisionTime": ""
+			"path": "pkg3",
+			"revision": ""
 		}
 	]
 }`
@@ -147,11 +133,11 @@ func TestAdd(t *testing.T) {
 	}
 
 	vf.Package = append(vf.Package, &Package{
-		Add:       true,
-		Canonical: "pkg2",
+		Add:  true,
+		Path: "pkg2",
 	}, &Package{
-		Add:       true,
-		Canonical: "pkg3",
+		Add:  true,
+		Path: "pkg3",
 	})
 
 	buf := &bytes.Buffer{}

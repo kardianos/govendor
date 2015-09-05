@@ -21,7 +21,7 @@ import (
 var help = `govendor: copy go packages locally and optionally re-write imports.
 govendor init
 govendor list [-v] [+status] [import-path-filter]
-govendor {add, update, remove} [-n] [+status] [import-path-filter]
+govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
 govendor migrate [auto, godep, internal]
 
 	init
@@ -46,6 +46,8 @@ Expanding "..."
 
 Flags
 	-n		print actions but do not run them
+	-short	chooses the shorter path in case of conflict
+	-long	chooses the longer path in case of conflict
 
 Status list:
 	external - package does not share root path
@@ -254,9 +256,14 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 	case "add", "update", "remove":
 		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
 		dryrun := listFlags.Bool("n", false, "dry-run")
+		short := listFlags.Bool("short", false, "choose the short path")
+		long := listFlags.Bool("long", false, "choose the long path")
 		err := listFlags.Parse(appArgs[2:])
 		if err != nil {
 			return true, err
+		}
+		if *short && *long {
+			return false, errors.New("cannot select both long and short path")
 		}
 		args := listFlags.Args()
 		if len(args) == 0 {
@@ -313,7 +320,14 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		}
 
 		// Auto-resolve package conflicts.
-		ctx.Reslove(ctx.Check())
+		conflicts := ctx.ResolveAutoVendorFileOrigin(ctx.Check())
+		if *long {
+			conflicts = ResolveAutoLongestPath(conflicts)
+		}
+		if *short {
+			conflicts = ResolveAutoShortestPath(conflicts)
+		}
+		ctx.ResloveApply(conflicts)
 
 		if *dryrun {
 			for _, op := range ctx.Operation {

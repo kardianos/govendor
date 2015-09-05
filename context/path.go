@@ -133,7 +133,7 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	}
 	vpkg := vendorFileFindLocal(vf, root, gopath, importPath)
 	if vpkg != nil {
-		return vpkg.Canonical, nil
+		return vpkg.Path, nil
 	}
 
 	// Vendor file exists, but the package is not a vendor package.
@@ -147,10 +147,11 @@ func vendorFileFindLocal(vf *vendorfile.File, root, gopath, importPath string) *
 		if pkg.Remove {
 			continue
 		}
-		if pkg.Local == local {
+		if pkg.Path == local {
 			return pkg
 		}
 	}
+
 	return nil
 }
 
