@@ -36,7 +36,7 @@ var registerSync = sync.Mutex{}
 // RegisterVCS adds a new VCS to use.
 func RegisterVCS(vcs Vcs) {
 	registerSync.Lock()
-	registerSync.Unlock()
+	defer registerSync.Unlock()
 
 	vcsRegistry = append(vcsRegistry, vcs)
 }
