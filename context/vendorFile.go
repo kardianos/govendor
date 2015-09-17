@@ -26,6 +26,10 @@ func (ctx *Context) WriteVendorFile() (err error) {
 	if err != nil {
 		return
 	}
+	err = buf.WriteByte('\n')
+	if err != nil {
+		return
+	}
 	dir, _ := filepath.Split(ctx.VendorFilePath)
 	err = os.MkdirAll(dir, 0777)
 	if err != nil {
