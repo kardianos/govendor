@@ -147,7 +147,8 @@ func TestImportSimple(t *testing.T) {
 			"revision": ""
 		}
 	]
-}`)
+}
+`)
 
 	expected := `v co1/internal/co2/pk1 [co2/pk1] < ["co1/pk1"]
 e co2/pk2 < ["co1/pk1"]
@@ -197,7 +198,8 @@ func TestDuplicatePackage(t *testing.T) {
 			"revision": ""
 		}
 	]
-}`)
+}
+`)
 
 	list(g, c, "co2 list", `v co2/internal/co3/pk3 [co3/pk3] < ["co2/pk2"]
 l co2/pk2 < []
@@ -238,7 +240,8 @@ s strings < ["co2/internal/co3/pk3" "co3/pk3"]
 			"revision": ""
 		}
 	]
-}`)
+}
+`)
 
 	expected := `v co1/internal/co2/pk2 [co2/pk2] < ["co1/pk1"]
 v co1/internal/co3/pk3 [co3/pk3] < ["co1/internal/co2/pk2" "co1/pk1"]
@@ -325,7 +328,8 @@ s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 			"revision": ""
 		}
 	]
-}`)
+}
+`)
 
 	// Now remove an import.
 	g.Check(c.ModifyImport("co2/pk1", Remove))
@@ -380,7 +384,8 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 			"revision": ""
 		}
 	]
-}`)
+}
+`)
 
 	g.Setup("co2/pk1/pk2",
 		gt.File("a.go", "strings", "encoding/csv"),
