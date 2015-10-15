@@ -83,6 +83,10 @@ set GO15VENDOREXPERIMENT=1
 
 When GO15VENDOREXPERIMENT=1 imports are copied to the vendor directory without
 rewriting their import paths.
+
+If you are NOT using the GO15VENDOREXPERIMENT and still using import path rewrites,
+then you can set the directory vendor packages go into with the GOVENDORFOLDER
+env variable. It defaults to GOVENDORFOLDER="internal".
 `
 
 var (

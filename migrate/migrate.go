@@ -217,7 +217,12 @@ func (sysGodep) Migrate(root string) error {
 type sysInternal struct{}
 
 func (sys sysInternal) Check(root string) (system, error) {
-	if hasDirs(root, "internal") && hasFiles(root, filepath.Join("internal", "vendor.json")) {
+	vendorFolder := "internal"
+	override := os.Getenv("GOVENDORFOLDER")
+	if len(override) != 0 {
+		vendorFolder = override
+	}
+	if hasDirs(root, vendorFolder) && hasFiles(root, filepath.Join(vendorFolder, "vendor.json")) {
 		return sys, nil
 	}
 	return nil, nil

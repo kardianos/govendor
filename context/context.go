@@ -144,9 +144,13 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 	vendorFolder := "vendor"
 	go15VendorExperiment := os.Getenv("GO15VENDOREXPERIMENT") == "1"
 	if !go15VendorExperiment {
-		pathToVendorFile = filepath.Join("internal", vendorFilename)
 		rootIndicator = pathToVendorFile
 		vendorFolder = "internal"
+		override := os.Getenv("GOVENDORFOLDER")
+		if len(override) != 0 {
+			vendorFolder = override
+		}
+		pathToVendorFile = filepath.Join(vendorFolder, vendorFilename)
 	}
 	root := wd
 	if !wdIsRoot {

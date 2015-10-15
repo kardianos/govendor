@@ -23,19 +23,19 @@ establishment a final vendor file specification and be a useful tool.
 ```
 govendor: copy go packages locally and optionally re-write imports.
 govendor init
-govendor list [-v] [+status] [import-path-filter]
-govendor {add, update, remove} [-n] [+status] [import-path-filter]
+govendor list [-v] [-no-status] [+<status>] [import-path-filter]
+govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
 govendor migrate [auto, godep, internal]
 
 	init
 		create a vendor file if it does not exist.
-	
+
 	add
 		copy one or more packages into the internal folder and re-write paths.
-	
+
 	update
 		update one or more packages from GOPATH into the internal folder.
-	
+
 	remove
 		remove one or more packages from the internal folder and re-write packages to vendor paths.
 
@@ -49,6 +49,8 @@ Expanding "..."
 
 Flags
 	-n		print actions but do not run them
+	-short	chooses the shorter path in case of conflict
+	-long	chooses the longer path in case of conflict
 
 Status list:
 	external - package does not share root path
@@ -70,7 +72,7 @@ Ignoring files with build tags:
 	It may contain a space separated list of build tags to ignore when
 	listing and copying files. By default the init command adds the
 	the "test" tag to the ignore list.
-	
+
 Example:
 	govendor add github.com/kardianos/osext
 	govendor update github.com/kardianos/...
@@ -84,6 +86,10 @@ set GO15VENDOREXPERIMENT=1
 
 When GO15VENDOREXPERIMENT=1 imports are copied to the vendor directory without
 rewriting their import paths.
+
+If you are NOT using the GO15VENDOREXPERIMENT and still using import path rewrites,
+then you can set the directory vendor packages go into with the GOVENDORFOLDER
+env variable. It defaults to GOVENDORFOLDER="internal".
 ```
 
 For example "govendor list +external" will tell you if there are any packages which
