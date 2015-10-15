@@ -20,7 +20,7 @@ import (
 
 var help = `govendor: copy go packages locally and optionally re-write imports.
 govendor init
-govendor list [-v] [+status] [import-path-filter]
+govendor list [-v] [-no-status] [+<status>] [import-path-filter]
 govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
 govendor migrate [auto, godep, internal]
 
@@ -207,6 +207,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 	case "list":
 		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
 		verbose := listFlags.Bool("v", false, "verbose")
+		noStatus := listFlags.Bool("no-status", false, "do not show the status")
 		err := listFlags.Parse(appArgs[2:])
 		if err != nil {
 			return true, err
@@ -228,6 +229,19 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+
+		formatSame := "%[1]v %[2]s\n"
+		formatDifferent := "%[1]v %[2]s\n"
+		if *verbose {
+			formatDifferent = "%[1]v %[2]s ::%[3]s\n"
+		}
+		if *noStatus {
+			formatSame = "%[2]s\n"
+			formatDifferent = "%[2]s\n"
+			if *verbose {
+				formatDifferent = "%[2]s ::%[3]s\n"
+			}
+		}
 		for _, item := range list {
 			if f.HasStatus(item) == false {
 				continue
@@ -236,14 +250,12 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 				continue
 			}
 
-			if !*verbose {
-				fmt.Fprintf(w, "%v %s\n", item.Status, item.Canonical)
+			if item.Local == item.Canonical {
+				fmt.Fprintf(w, formatSame, item.Status, item.Canonical)
 			} else {
-				if item.Local == item.Canonical {
-					fmt.Fprintf(w, "%v %s\n", item.Status, item.Local)
-				} else {
-					fmt.Fprintf(w, "%v %s ::%s\n", item.Status, item.Canonical, strings.TrimPrefix(item.Local, ctx.RootImportPath))
-				}
+				fmt.Fprintf(w, formatDifferent, item.Status, item.Canonical, strings.TrimPrefix(item.Local, ctx.RootImportPath))
+			}
+			if *verbose {
 				for i, imp := range item.ImportedBy {
 					if i != len(item.ImportedBy)-1 {
 						fmt.Fprintf(w, "  ├── %s\n", imp)
@@ -320,7 +332,8 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		}
 
 		// Auto-resolve package conflicts.
-		conflicts := ctx.ResolveAutoVendorFileOrigin(ctx.Check())
+		conflicts := ctx.Check()
+		conflicts = ctx.ResolveAutoVendorFileOrigin(conflicts)
 		if *long {
 			conflicts = ResolveAutoLongestPath(conflicts)
 		}
