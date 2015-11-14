@@ -116,6 +116,7 @@ type Package struct {
 	Gopath     string
 	Files      []*File
 	Status     Status
+	inVendor   bool
 
 	ignoreFile []string
 
@@ -297,7 +298,7 @@ func (ctx *Context) VendorFilePackagePath(canonical string) *vendorfile.Package 
 func (ctx *Context) updatePackageReferences() {
 	findCanonicalUnderDir := func(dir, canonical string) *Package {
 		for _, pkg := range ctx.Package {
-			if pkg.Status != StatusVendor {
+			if !pkg.inVendor {
 				continue
 			}
 
@@ -408,6 +409,7 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	if mod == Add && localExists {
 		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, canonicalImportPath)}
 	}
+	dprintf("stage 2: begin!\n")
 	switch mod {
 	case Add:
 		return ctx.modifyAdd(pkg)
@@ -425,12 +427,7 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 func (ctx *Context) modifyAdd(pkg *Package) error {
 	var err error
 	src := pkg.Dir
-	if pkg.Status == StatusVendor {
-		src, _, err = ctx.findImportDir("", pkg.Canonical)
-		if err != nil {
-			return err
-		}
-	}
+	dprintf("found import: %q\n", src)
 	// If the canonical package is also the local package, then the package
 	// isn't copied locally already and has already been checked for tags.
 	// If it has been vendored the source still needs to be examined.
@@ -489,6 +486,10 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 			Path: pkg.Canonical,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+
+		if pkg.Local != pkg.Canonical && pkg.inVendor {
+			vp.Origin = pkg.Local
+		}
 	}
 
 	// Find the VCS information.

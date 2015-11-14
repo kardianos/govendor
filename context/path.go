@@ -24,7 +24,7 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 	if len(relative) != 0 {
 		rel := relative
 		for {
-			look := filepath.Join(rel, "vendor", importPath)
+			look := filepath.Join(rel, ctx.VendorDiscoverFolder, importPath)
 			nextRel := filepath.Join(rel, "..")
 			if rel == nextRel {
 				break

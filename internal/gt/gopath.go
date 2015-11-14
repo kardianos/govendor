@@ -141,3 +141,11 @@ func (g *GopathTest) Setup(at string, files ...FileSpec) {
 		}
 	}
 }
+
+func (g *GopathTest) Remove(at string) {
+	p := g.Path(at)
+	err := os.RemoveAll(p)
+	if err != nil {
+		g.Fatal(err)
+	}
+}

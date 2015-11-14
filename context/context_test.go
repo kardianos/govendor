@@ -387,7 +387,7 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 }
 `)
 
-	g.Setup("co2/pk1/pk2",
+	g.Setup("co1/vendor/co2/pk1/pk2",
 		gt.File("a.go", "strings", "encoding/csv"),
 	)
 
@@ -414,6 +414,125 @@ l co1/pk1 < []
 s bytes < ["co1/pk1"]
 s encoding/csv < ["co1/vendor/co2/pk1/pk2"]
 s strings < ["co1/vendor/co2/pk1/pk2" "co2/pk1"]
+`)
+}
+
+func TestVendor15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+		gt.File("b.go", "bytes"),
+	)
+	g.Setup("co2/vendor/a",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "a"),
+	)
+
+	g.In("co1")
+	c := ctx15(g)
+
+	list(g, c, "co1 list", `e co2/pk1 < ["co1/pk1"]
+e co2/vendor/a [a] < ["co2/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co2/vendor/a"]
+`)
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport("co2/vendor/a", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after add", `v co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
+v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co1/vendor/a"]
+`)
+
+	vendorFile15(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"origin": "co2/vendor/a",
+			"path": "a",
+			"revision": ""
+		},
+		{
+			"path": "co2/pk1",
+			"revision": ""
+		}
+	]
+}
+`)
+}
+
+func TestVendorFile15(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+		gt.File("b.go", "bytes"),
+	)
+	g.Setup("a",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "a"),
+	)
+
+	g.In("co2")
+	c := ctx15(g)
+	g.Check(c.ModifyImport("a", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	// Ensure we import from vendor folder.
+	// TODO: add test with "a" in GOPATH to ensure vendor folder pref.
+	g.Remove("a")
+
+	g.In("co1")
+	c = ctx15(g)
+	list(g, c, "co1 list", `e co2/pk1 < ["co1/pk1"]
+e co2/vendor/a [a] < ["co2/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co2/vendor/a"]
+`)
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport("co2/vendor/a", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after add", `v co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
+v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/pk1"]
+s strings < ["co1/vendor/a"]
+`)
+
+	vendorFile15(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"origin": "co2/vendor/a",
+			"path": "a",
+			"revision": ""
+		},
+		{
+			"path": "co2/pk1",
+			"revision": ""
+		}
+	]
+}
 `)
 }
 

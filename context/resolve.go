@@ -205,15 +205,22 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	case strings.HasPrefix(canonical, vStart):
 		at = strings.LastIndex(canonical, vStart) + len(vStart)
 	}
+
+	inVendor := false
 	if at > 0 {
 		canonical = canonical[at:]
 		if status == StatusUnknown {
-			status = StatusVendor
+			inVendor = true
+			p := path.Join(ctx.RootImportPath, ctx.VendorDiscoverFolder)
+			if strings.HasPrefix(local, p) {
+				status = StatusVendor
+			}
 		}
 	}
-	if status == StatusUnknown {
+	if status == StatusUnknown && inVendor == false {
 		if vp := ctx.VendorFilePackageLocal(local); vp != nil {
 			status = StatusVendor
+			inVendor = true
 			canonical = vp.Path
 		}
 	}
@@ -226,6 +233,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		Local:     local,
 		Gopath:    gopath,
 		Status:    status,
+		inVendor:  inVendor,
 	}
 	ctx.Package[local] = pkg
 	return pkg
@@ -237,7 +245,7 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 	}
 	// Also need to check for vendor paths that won't use the local path in import path.
 	for _, pkg := range ctx.Package {
-		if pkg.Canonical == imp && pkg.Status == StatusVendor {
+		if pkg.Canonical == imp && pkg.inVendor {
 			return nil
 		}
 	}
@@ -290,6 +298,7 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 		if vp := ctx.VendorFilePackageLocal(pkg.Local); vp != nil {
 			pkg.Status = StatusVendor
+			pkg.inVendor = true
 			pkg.Canonical = vp.Path
 			continue
 		}
