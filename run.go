@@ -391,13 +391,11 @@ func checkNewContextError(err error) (bool, error) {
 		return false, nil
 	}
 	if _, is := err.(ErrMissingVendorFile); is {
-		expValue := os.Getenv("GO15VENDOREXPERIMENT")
 		err = fmt.Errorf(`%v
 
-GO15VENDOREXPERIMENT=%q
-It is possible this project requires changing the above env var
-or the project is not initialized.
-`, err, expValue)
+Ensure the current folder or a parent folder contains a folder named "vendor".
+In in doubt, run "govendor init" in the project root.
+`, err)
 		return false, err
 	}
 	return false, err
