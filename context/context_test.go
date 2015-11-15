@@ -99,7 +99,6 @@ s strings < ["co2/pk1" "co2/pk2"]
 }
 
 func TestDuplicatePackage(t *testing.T) {
-	t.Skip("Known error")
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -148,7 +147,7 @@ s strings < ["co2/vendor/co3/pk3"]
 	list(g, c, "co1 pre list", `
 e co2/pk2 < ["co1/pk1"]
 e co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
-e co3/pk3 < ["co1/pk1"] (missing)
+e co3/pk3 < ["co1/pk1"]
 l co1/pk1 < []
 s strings < ["co2/vendor/co3/pk3" "co3/pk3"]
 `)
@@ -181,8 +180,9 @@ s strings < ["co2/vendor/co3/pk3" "co3/pk3"]
 }
 `)
 
-	expected := `v co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
-v co1/vendor/co3/pk3 [co3/pk3] < ["co1/vendor/co2/pk2" "co1/pk1"]
+	expected := `
+v co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
+v co1/vendor/co3/pk3 [co3/pk3] < ["co1/pk1" "co1/vendor/co2/pk2"]
 l co1/pk1 < []
 s strings < ["co1/vendor/co3/pk3"]
 `
@@ -196,7 +196,7 @@ s strings < ["co1/vendor/co3/pk3"]
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `v co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
-e co3/pk3 < ["co1/vendor/co2/pk2" "co1/pk1"]
+e co3/pk3 < ["co1/pk1" "co1/vendor/co2/pk2"]
 l co1/pk1 < []
 s strings < ["co3/pk3"]
 `)

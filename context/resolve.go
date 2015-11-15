@@ -245,7 +245,7 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 	}
 	// Also need to check for vendor paths that won't use the local path in import path.
 	for _, pkg := range ctx.Package {
-		if pkg.Canonical == imp && pkg.inVendor {
+		if pkg.Canonical == imp && pkg.inVendor && pathos.FileHasPrefix(pkg.Dir, pkgInDir) {
 			return nil
 		}
 	}

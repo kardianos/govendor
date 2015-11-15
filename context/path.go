@@ -119,7 +119,8 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	root, err := findRoot(dir, vendorFilename)
+	rel := filepath.Join(ctx.VendorFileToFolder, vendorFilename)
+	root, err := findRoot(dir, rel)
 	if err != nil {
 		// No vendor file found. Return origional.
 		if _, is := err.(ErrMissingVendorFile); is {
@@ -127,7 +128,7 @@ func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
 		}
 		return "", err
 	}
-	vf, err := readVendorFile(filepath.Join(root, vendorFilename))
+	vf, err := readVendorFile(filepath.Join(root, rel))
 	if err != nil {
 		return "", err
 	}
