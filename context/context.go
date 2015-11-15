@@ -524,6 +524,16 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	if len(pkg.Dir) == 0 {
 		return nil
 	}
+	// Protect non-project paths from being removed.
+	if pathos.FileHasPrefix(pkg.Dir, ctx.RootDir) == false {
+		return nil
+	}
+	if pkg.Status == StatusLocal {
+		return nil
+	}
+	if pkg.Status == StatusProgram && pkg.inVendor == false {
+		return nil
+	}
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:  pkg,
 		Src:  pkg.Dir,
