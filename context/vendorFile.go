@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kardianos/govendor/internal/github.com/dchest/safefile"
+	"github.com/dchest/safefile"
 	"github.com/kardianos/govendor/vendorfile"
 )
 
