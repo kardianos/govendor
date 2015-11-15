@@ -18,7 +18,7 @@ import (
 	"github.com/kardianos/govendor/migrate"
 )
 
-var help = `govendor: copy go packages locally and optionally re-write imports.
+var help = `govendor: copy go packages locally. Uses vendor folder.
 govendor init
 govendor list [-v] [-no-status] [+<status>] [import-path-filter]
 govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
@@ -28,13 +28,13 @@ govendor migrate [auto, godep, internal]
 		create a vendor file if it does not exist.
 
 	add
-		copy one or more packages into the internal folder and re-write paths.
+		copy one or more packages into the vendor folder.
 
 	update
-		update one or more packages from GOPATH into the internal folder.
+		update one or more packages from GOPATH into the vendor folder.
 
 	remove
-		remove one or more packages from the internal folder and re-write packages to vendor paths.
+		remove one or more packages from the vendor folder.
 
 	migrate
 		change from a one schema to use the vendor folder.
@@ -78,15 +78,7 @@ Example:
 	govendor remove +vendor
 	govendor list +ext +std
 
-To opt use the standard vendor directory:
-set GO15VENDOREXPERIMENT=1
-
-When GO15VENDOREXPERIMENT=1 imports are copied to the vendor directory without
-rewriting their import paths.
-
-If you are NOT using the GO15VENDOREXPERIMENT and still using import path rewrites,
-then you can set the directory vendor packages go into with the GOVENDORFOLDER
-env variable. It defaults to GOVENDORFOLDER="internal".
+If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 `
 
 var (

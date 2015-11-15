@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"text/template"
 )
@@ -148,4 +149,10 @@ func (g *GopathTest) Remove(at string) {
 	if err != nil {
 		g.Fatal(err)
 	}
+}
+
+func (g *GopathTest) Fatal(args ...interface{}) {
+	_, file, line, _ := runtime.Caller(2)
+	g.T.Logf("%s:%d", file, line)
+	g.T.Fatal(args...)
 }

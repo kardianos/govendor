@@ -1,9 +1,8 @@
 ## Vendor tool for Go
-Supports the GO15VENDOREXPERIMENT environment flag. When set imports are not
-rewritten and are copied into the "vendor" folder.
+Supports the GO15VENDOREXPERIMENT environment flag. Imports are copied into the 
+"vendor" folder.
 
-Follows the recommendation to use import path re-writes and avoid GOPATH
-changes and go tool changes. Uses the following vendor file specification:
+Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the
 establishment a final vendor file specification and be a useful tool.
 
@@ -11,7 +10,6 @@ establishment a final vendor file specification and be a useful tool.
  * flattens dependency tree to single level
  * Can ignore test files and other build tags
  * Tested cross platform support
- * Import path re-writes
  * Package import comment removal
  * Inspection of the current state package locations
  * Handles packages, not directory trees
@@ -21,7 +19,7 @@ establishment a final vendor file specification and be a useful tool.
 
 ### Usage
 ```
-govendor: copy go packages locally and optionally re-write imports.
+govendor: copy go packages locally. Uses vendor folder.
 govendor init
 govendor list [-v] [-no-status] [+<status>] [import-path-filter]
 govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
@@ -31,13 +29,13 @@ govendor migrate [auto, godep, internal]
 		create a vendor file if it does not exist.
 
 	add
-		copy one or more packages into the internal folder and re-write paths.
+		copy one or more packages into the vendor folder.
 
 	update
-		update one or more packages from GOPATH into the internal folder.
+		update one or more packages from GOPATH into the vendor folder.
 
 	remove
-		remove one or more packages from the internal folder and re-write packages to vendor paths.
+		remove one or more packages from the vendor folder.
 
 	migrate
 		change from a one schema to use the vendor folder.
@@ -81,15 +79,7 @@ Example:
 	govendor remove +vendor
 	govendor list +ext +std
 
-To opt use the standard vendor directory:
-set GO15VENDOREXPERIMENT=1
-
-When GO15VENDOREXPERIMENT=1 imports are copied to the vendor directory without
-rewriting their import paths.
-
-If you are NOT using the GO15VENDOREXPERIMENT and still using import path rewrites,
-then you can set the directory vendor packages go into with the GOVENDORFOLDER
-env variable. It defaults to GOVENDORFOLDER="internal".
+If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 ```
 
 For example "govendor list +external" will tell you if there are any packages which
@@ -98,10 +88,6 @@ live outside the project.
 Before doing the commands add, update, or remove, all package dependencies are
 discovered. The commands will only act on discovered dependencies. Commands will
 never alter packages outside the project directory.
-
-The GO15VENDOREXPERIMENT=1 flag will be honored. If present the vendor file will
-be placed into the project root and vendor package will be placed into "vendor"
-folder. Import paths will not be rewriten in this case.
 
 When copying packages locally, vendored dependencies of dependencies are always
 copied to the "top" level in the internal package, so it also gets rid of the

@@ -76,8 +76,7 @@ func TestDuplicatePackage(t *testing.T) {
 
 	g.In("co1")
 	Vendor(g, "co1 init", "init", "")
-	Vendor(g, "co1 pre list", "list", `e co3/pk1
-e co2/pk1
+	Vendor(g, "co1 pre list", "list", `e co2/pk1
 e co3/pk1
 l co1/pk1
 `)

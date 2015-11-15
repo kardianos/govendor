@@ -143,16 +143,7 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 	pathToVendorFile := filepath.Join("vendor", vendorFilename)
 	rootIndicator := "vendor"
 	vendorFolder := "vendor"
-	go15VendorExperiment := os.Getenv("GO15VENDOREXPERIMENT") == "1"
-	if !go15VendorExperiment {
-		vendorFolder = "internal"
-		override := os.Getenv("GOVENDORFOLDER")
-		if len(override) != 0 {
-			vendorFolder = override
-		}
-		pathToVendorFile = filepath.Join(vendorFolder, vendorFilename)
-		rootIndicator = pathToVendorFile
-	}
+
 	root := wd
 	if !wdIsRoot {
 		root, err = findRoot(wd, rootIndicator)
@@ -167,7 +158,7 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 		return nil, ErrOldVersion{`Use the "migrate" command to update.`}
 	}
 
-	return NewContext(root, pathToVendorFile, vendorFolder, !go15VendorExperiment)
+	return NewContext(root, pathToVendorFile, vendorFolder, false)
 }
 
 // NewContext creates new context from a given root folder and vendor file path.
