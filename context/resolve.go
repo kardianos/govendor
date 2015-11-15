@@ -209,8 +209,8 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	inVendor := false
 	if at > 0 {
 		canonical = canonical[at:]
+		inVendor = true
 		if status == StatusUnknown {
-			inVendor = true
 			p := path.Join(ctx.RootImportPath, ctx.VendorDiscoverFolder)
 			if strings.HasPrefix(local, p) {
 				status = StatusVendor
