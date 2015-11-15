@@ -1,6 +1,7 @@
 ## Vendor tool for Go
 Supports the GO15VENDOREXPERIMENT environment flag. Imports are copied into the 
-"vendor" folder.
+"vendor" folder. If you require import path rewrites checkout the "rewrite" branch
+archived for that purpose.
 
 Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the
