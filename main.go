@@ -4,11 +4,11 @@
 
 // vendor tool to copy external source code to the local vendor folder.
 /*
-govendor: copy go packages locally. Uses vendor folder.
-govendor init
-govendor list [-v] [-no-status] [+<status>] [import-path-filter]
-govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
-govendor migrate [auto, godep, internal]
+	govendor: copy go packages locally. Uses vendor folder.
+	govendor init
+	govendor list [-v] [-no-status] [+<status>] [import-path-filter]
+	govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
+	govendor migrate [auto, godep, internal]
 
 	init
 		create a vendor file if it does not exist.
