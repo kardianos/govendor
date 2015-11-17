@@ -287,7 +287,15 @@ func (ctx *Context) VendorFilePackagePath(canonical string) *vendorfile.Package 
 
 // updatePackageReferences populates the referenced field in each Package.
 func (ctx *Context) updatePackageReferences() {
+	canonicalUnderDirLookup := make(map[string]map[string]*Package)
 	findCanonicalUnderDir := func(dir, canonical string) *Package {
+		if importMap, found := canonicalUnderDirLookup[dir]; found {
+			if pkg, found2 := importMap[canonical]; found2 {
+				return pkg
+			}
+		} else {
+			canonicalUnderDirLookup[dir] = make(map[string]*Package)
+		}
 		for _, pkg := range ctx.Package {
 			if !pkg.inVendor {
 				continue
@@ -305,8 +313,10 @@ func (ctx *Context) updatePackageReferences() {
 			if pkg.Canonical != canonical {
 				continue
 			}
+			canonicalUnderDirLookup[dir][canonical] = pkg
 			return pkg
 		}
+		canonicalUnderDirLookup[dir][canonical] = nil
 		return nil
 	}
 	for _, pkg := range ctx.Package {
