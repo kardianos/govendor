@@ -303,7 +303,8 @@ func TestUpdate(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 after add", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+	list(g, c, "co1 after add", `
+v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
 v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
 l co1/pk1 < []
 s bytes < ["co1/pk1"]
@@ -335,7 +336,8 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 after update", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+	list(g, c, "co1 after update", `
+v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
 v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
 l co1/pk1 < []
 s bytes < ["co1/pk1"]

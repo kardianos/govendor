@@ -741,6 +741,7 @@ func (ctx *Context) copy() error {
 
 // Alter runs any requested package alterations.
 func (ctx *Context) Alter() error {
+	ctx.dirty = true
 	err := ctx.copy()
 	if err != nil {
 		return err
