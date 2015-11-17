@@ -116,6 +116,22 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	if strings.HasSuffix(pathname, ".go") == false {
 		return nil
 	}
+	// No need to add the same file more then once.
+	for _, pkg := range ctx.Package {
+		if pathos.FileStringEquals(pkg.Dir, dir) == false {
+			continue
+		}
+		for _, f := range pkg.Files {
+			if pathos.FileStringEquals(f.Path, pathname) {
+				return nil
+			}
+		}
+		for _, f := range pkg.ignoreFile {
+			if pathos.FileStringEquals(f, filenameExt) {
+				return nil
+			}
+		}
+	}
 	f, err := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 	if err != nil {
 		return err
