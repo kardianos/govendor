@@ -5,11 +5,12 @@
 package vcs
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	os "github.com/kardianos/govendor/internal/vos"
 )
 
 type VcsBzr struct{}

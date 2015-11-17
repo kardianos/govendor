@@ -9,12 +9,12 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/dchest/safefile"
 	"github.com/kardianos/govendor/internal/pathos"
+	os "github.com/kardianos/govendor/internal/vos"
 )
 
 // Rewrite rewrites files to the local path.

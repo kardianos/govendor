@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	"time"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	os "github.com/kardianos/govendor/internal/vos"
 	"github.com/kardianos/govendor/vcs"
 	"github.com/kardianos/govendor/vendorfile"
 )

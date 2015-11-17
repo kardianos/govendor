@@ -8,13 +8,13 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	filepath "github.com/kardianos/govendor/internal/vfilepath"
+	os "github.com/kardianos/govendor/internal/vos"
 )
 
 var knownOS = make(map[string]bool)

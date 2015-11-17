@@ -7,11 +7,11 @@ package context
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	os "github.com/kardianos/govendor/internal/vos"
 	"github.com/kardianos/govendor/vendorfile"
 )
 

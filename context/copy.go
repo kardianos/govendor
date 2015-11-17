@@ -7,10 +7,10 @@ package context
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	os "github.com/kardianos/govendor/internal/vos"
 )
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
