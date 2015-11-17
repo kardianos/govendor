@@ -203,7 +203,6 @@ s strings < ["co3/pk3"]
 }
 
 func TestVendorProgram(t *testing.T) {
-	t.Skip("Known error")
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -221,7 +220,8 @@ func TestVendorProgram(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 list", `p co1/vendor/co2/main < []
+	list(g, c, "co1 list", `
+p co1/vendor/co2/main [co2/main] < []
 l co1/pk1 < []
 s bytes < ["co1/vendor/co2/main"]
 s strings < ["co1/pk1"]
