@@ -18,7 +18,7 @@ import (
 // Name of the vendor file.
 const Name = "vendor.json"
 
-// VendorFile is the structure of the vendor file.
+// File is the structure of the vendor file.
 type File struct {
 	Comment string
 
@@ -30,7 +30,7 @@ type File struct {
 	all map[string]interface{}
 }
 
-// VendorPackage represents each package.
+// Package represents each package.
 type Package struct {
 	// index of the package in the file as read.
 	index int
@@ -208,7 +208,7 @@ func (vf *File) toAll() {
 
 // Marshal the vendor file to the specified writer.
 // Retains read fields.
-func (vf *File) Marshal(w io.Writer) (err error) {
+func (vf *File) Marshal(w io.Writer) error {
 	if vf.all == nil {
 		vf.all = map[string]interface{}{}
 	}
@@ -220,15 +220,15 @@ func (vf *File) Marshal(w io.Writer) (err error) {
 
 	jb, err := json.Marshal(vf.all)
 	if err != nil {
-		return
+		return err
 	}
 	buf := &bytes.Buffer{}
 	err = json.Indent(buf, jb, "", "\t")
 	if err != nil {
-		return
+		return err
 	}
 	_, err = io.Copy(w, buf)
-	return
+	return err
 }
 
 // Unmarshal the vendor file from the specified reader.
