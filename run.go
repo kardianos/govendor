@@ -117,9 +117,24 @@ type filterImport struct {
 	Added  bool // Used to prevent imports from begin added twice.
 }
 
+func (f *filterImport) String() string {
+	return f.Import
+}
+
 type filter struct {
 	Status []Status
 	Import []*filterImport
+}
+
+func (f filter) String() string {
+	s := ""
+	for i, st := range f.Status {
+		if i != 0 {
+			s += ", "
+		}
+		s += "+" + st.String()
+	}
+	return fmt.Sprintf("status %q, import: %q", s, f.Import)
 }
 
 func (f filter) HasStatus(item StatusItem) bool {

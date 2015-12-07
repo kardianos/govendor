@@ -109,6 +109,7 @@ type Context struct {
 
 // Package maintains information pertaining to a package.
 type Package struct {
+	OriginDir  string
 	Dir        string
 	Canonical  string
 	Local      string
@@ -427,7 +428,7 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 
 func (ctx *Context) modifyAdd(pkg *Package) error {
 	var err error
-	src := pkg.Dir
+	src := pkg.OriginDir
 	dprintf("found import: %q\n", src)
 	// If the canonical package is also the local package, then the package
 	// isn't copied locally already and has already been checked for tags.
@@ -472,6 +473,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	if pathos.FileStringEquals(src, dest) {
 		return nil
 	}
+	dprintf("add op: %q\n", src)
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Pkg:        pkg,
 		Src:        src,

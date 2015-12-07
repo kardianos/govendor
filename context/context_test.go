@@ -327,12 +327,22 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 }
 `)
 
-	g.Setup("co1/vendor/co2/pk1/pk2",
+	g.Setup("co2/pk1/pk2",
 		gt.File("a.go", "strings", "encoding/csv"),
 	)
 
 	// Update an import.
 	g.Check(c.ModifyImport("co2/pk1/pk2", Update))
+	ct := 0
+	for _, op := range c.Operation {
+		if op.State == OpDone {
+			continue
+		}
+		ct++
+	}
+	if ct != 1 {
+		t.Fatal("Must only have a single operation. Has", ct)
+	}
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 

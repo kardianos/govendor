@@ -223,6 +223,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		at = strings.LastIndex(canonical, vStart) + len(vStart)
 	}
 
+	originDir := dir
 	inVendor := false
 	if at > 0 {
 		canonical = canonical[at:]
@@ -231,6 +232,10 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 			p := path.Join(ctx.RootImportPath, ctx.VendorDiscoverFolder)
 			if strings.HasPrefix(local, p) {
 				status = StatusVendor
+				od, _, err := ctx.findImportDir("", canonical)
+				if err == nil {
+					originDir = od
+				}
 			}
 		}
 	}
@@ -239,12 +244,21 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 			status = StatusVendor
 			inVendor = true
 			canonical = vp.Path
+			origin := vp.Origin
+			if len(origin) == 0 {
+				origin = canonical
+			}
+			od, _, err := ctx.findImportDir("", origin)
+			if err == nil {
+				originDir = od
+			}
 		}
 	}
 	if status == StatusUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
 		status = StatusLocal
 	}
 	pkg := &Package{
+		OriginDir: originDir,
 		Dir:       dir,
 		Canonical: canonical,
 		Local:     local,

@@ -31,7 +31,7 @@ func (ls Status) String() string {
 	case StatusVendor:
 		return "v"
 	}
-	return ""
+	panic("missing status")
 }
 
 const (
