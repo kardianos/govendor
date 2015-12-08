@@ -430,6 +430,9 @@ func TestUnused(t *testing.T) {
 	g.Setup("co1/pk1",
 		gt.File("a.go", "co2/pk1"),
 	)
+	g.Setup("co1/vendor/a",
+		gt.File("a.go", "encoding/csv"),
+	)
 	g.Setup("co2/pk1",
 		gt.File("a.go", "bytes"),
 	)
@@ -447,9 +450,11 @@ func TestUnused(t *testing.T) {
 
 	list(g, c, "co1 after add", `
 v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+u co1/vendor/a [a] < []
 u co1/vendor/co3/pk1 [co3/pk1] < []
 l co1/pk1 < []
 s bytes < ["co1/vendor/co2/pk1"]
+s encoding/csv < ["co1/vendor/a"]
 s strings < ["co1/vendor/co3/pk1"]
 `)
 }
