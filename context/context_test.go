@@ -459,6 +459,52 @@ s strings < ["co1/vendor/co3/pk1"]
 `)
 }
 
+func TestMissing(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co3/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "bytes"),
+	)
+	g.Setup("co3/pk1",
+		gt.File("a.go", "strings"),
+	)
+
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport("co3/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after add", `
+v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+v co1/vendor/co3/pk1 [co3/pk1] < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co1/vendor/co2/pk1"]
+s strings < ["co1/vendor/co3/pk1"]
+`)
+
+	g.In("co1")
+	c = ctx(g)
+
+	g.Remove("co1/vendor/co2/pk1")
+
+	g.Remove("co1/vendor/co3/pk1")
+	g.Remove("co3/pk1")
+
+	list(g, c, "co1 after remove", `
+e co2/pk1 < ["co1/pk1"]
+l co1/pk1 < []
+s bytes < ["co2/pk1"]
+m co3/pk1 < ["co1/pk1"]
+`)
+}
+
 func TestVendorFile(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()

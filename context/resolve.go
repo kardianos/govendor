@@ -241,7 +241,9 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	}
 	if status == StatusUnknown && inVendor == false {
 		if vp := ctx.VendorFilePackageLocal(local); vp != nil {
-			status = StatusVendor
+			// This will only be hit if the imported package is in the vendor
+			// file, present in GOPATH, but not in vendor folder.
+			status = StatusExternal
 			inVendor = true
 			canonical = vp.Path
 			origin := vp.Origin
