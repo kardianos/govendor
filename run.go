@@ -29,13 +29,13 @@ govendor list [options] [+<status>] [import-path-filter]
 		-v           verbose listing, show dependencies of each package
 		-no-status   do not prefix status to list, package names only
 
-govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
+govendor {add, update, remove} [options] [+status] [import-path-filter]
 	add    - Copy one or more packages into the vendor folder.
 	update - Update one or more packages from GOPATH into the vendor folder.
 	remove - Remove one or more packages from the vendor folder.
 	Options:
 		-n           dry run and print actions that would be taken
-		-tree        
+		-tree        copy package(s) and all sub-folders under each package
 		
 		The following may be replaced with something else in the future.
 		-short       if conflict, take short path 
