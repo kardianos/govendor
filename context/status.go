@@ -49,8 +49,10 @@ const (
 	StatusUnused
 	// StatusProgram indicates the import is a main package but internal or vendor.
 	StatusProgram
-	// StatusVendor indicates theimport is in the vendor folder.
+	// StatusVendor indicates the import is in the vendor folder.
 	StatusVendor
+	// StatusTree indicates the import is in the vendor folder, but only because it is matched by a tree package.
+	StatusTree
 )
 
 // ListItem represents a package in the current project.

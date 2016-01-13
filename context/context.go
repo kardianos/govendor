@@ -26,6 +26,10 @@ import (
 )
 
 const (
+	TreeSuffix = "/^"
+)
+
+const (
 	debug     = false
 	looplimit = 10000
 
@@ -117,7 +121,9 @@ type Package struct {
 	Gopath     string
 	Files      []*File
 	Status     Status
+	Tree       bool
 	inVendor   bool
+	inTree     bool
 
 	ignoreFile []string
 
@@ -347,6 +353,7 @@ const (
 	Add                     // Only add, error if it already exists.
 	Update                  // Only update, error if it doesn't currently exist.
 	Remove                  // Remove from vendor path.
+	Fetch                   // Get directly from remote repository.
 )
 
 // AddImport adds the package to the context. The vendorFolder is where the
@@ -359,6 +366,11 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 			return err
 		}
 	}
+	tree := strings.HasSuffix(sourcePath, TreeSuffix)
+	sourcePath = strings.TrimSuffix(sourcePath, TreeSuffix)
+
+	_ = tree
+
 	// Determine canonical and local import paths.
 	sourcePath = pathos.SlashToImportPath(sourcePath)
 	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
@@ -421,6 +433,8 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 		return ctx.modifyAdd(pkg)
 	case Remove:
 		return ctx.modifyRemove(pkg)
+	case Fetch:
+		return ctx.modifyFetch(pkg)
 	default:
 		panic("mod switch: case not handled")
 	}
@@ -556,6 +570,11 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 		ctx.RewriteRule[r.Local] = r.Canonical
 	}
 
+	return nil
+}
+
+// TODO: modify function to fetch given package.
+func (ctx *Context) modifyFetch(pkg *Package) error {
 	return nil
 }
 

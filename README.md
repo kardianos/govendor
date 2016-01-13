@@ -1,11 +1,12 @@
 ## Vendor tool for Go
-Supports the GO15VENDOREXPERIMENT environment flag. Imports are copied into the 
-"vendor" folder. If you require import path rewrites checkout the "rewrite" branch
-archived for that purpose.
+Imports are copied into the "vendor" folder.
 
 Uses the following vendor file specification:
 https://github.com/kardianos/vendor-spec . This vendor tool aims to aid in the
 establishment a final vendor file specification and be a useful tool.
+
+If you require import path rewrites checkout the "rewrite" branch archived for
+that purpose.
 
 ### What this vendor tool features:
  * flattens dependency tree to single level
@@ -22,24 +23,28 @@ establishment a final vendor file specification and be a useful tool.
 ```
 govendor: copy go packages locally. Uses vendor folder.
 govendor init
-govendor list [-v] [-no-status] [+<status>] [import-path-filter]
+	Creates a vendor file if it does not exist.
+
+govendor list [options] [+<status>] [import-path-filter]
+	List all dependencies and packages in folder tree.
+	Options:
+		-v           verbose listing, show dependencies of each package
+		-no-status   do not prefix status to list, package names only
+
 govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
+	add    - Copy one or more packages into the vendor folder.
+	update - Update one or more packages from GOPATH into the vendor folder.
+	remove - Remove one or more packages from the vendor folder.
+	Options:
+		-n           dry run and print actions that would be taken
+		-tree        
+		
+		The following may be replaced with something else in the future.
+		-short       if conflict, take short path 
+		-long        if conflict, take long path
+
 govendor migrate [auto, godep, internal]
-
-	init
-		create a vendor file if it does not exist.
-
-	add
-		copy one or more packages into the vendor folder.
-
-	update
-		update one or more packages from GOPATH into the vendor folder.
-
-	remove
-		remove one or more packages from the vendor folder.
-
-	migrate
-		change from a one schema to use the vendor folder.
+	Change from a one schema to use the vendor folder. Default to auto detect.
 
 Expanding "..."
 	A package import path may be expanded to other paths that
@@ -50,8 +55,23 @@ Flags
 	-n		print actions but do not run them
 	-short	chooses the shorter path in case of conflict
 	-long	chooses the longer path in case of conflict
+	
+"import-path-filter" arguements:
+	May be a literal individual package:
+		github.com/user/supercool
+		github.com/user/supercool/anotherpkg
+	
+	Match on any exising Go package that the project uses under "supercool"
+		github.com/user/supercool/...
+		
+	Match the package "supercool" and also copy all sub-folders.
+	Will copy non-Go files and Go packages that aren't used.
+		github.com/user/supercool/^
+	
+	Same as specifying:
+	-tree github.com/user/supercool
 
-Status list:
+Status list used in "+<status>" arguments:
 	external - package does not share root path
 	vendor - vendor folder; copied locally
 	unused - the package has been copied locally, but isn't used
@@ -60,6 +80,7 @@ Status list:
 	std - standard library package
 	program - package is a main package
 	---
+	outside - external + missing
 	all - all of the above status
 
 Status can be referenced by their initial letters.
@@ -71,14 +92,6 @@ Ignoring files with build tags:
 	It may contain a space separated list of build tags to ignore when
 	listing and copying files. By default the init command adds the
 	the "test" tag to the ignore list.
-
-Example:
-	govendor add github.com/kardianos/osext
-	govendor update github.com/kardianos/...
-	govendor add +external
-	govendor update +ven github.com/company/project/... bitbucket.org/user/pkg
-	govendor remove +vendor
-	govendor list +ext +std
 
 If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 ```
@@ -103,6 +116,11 @@ govendor add +external
 
 # Add a specific package.
 govendor add github.com/kardianos/osext
+
+# Add a package tree.
+govendor add -tree github.com/mattn/go-sqlite3
+    or
+govendor add github.com/mattn/go-sqlite3/^
 
 # Update vendor packages.
 govendor update +vendor
