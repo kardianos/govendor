@@ -349,6 +349,13 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			if f.HasStatus(item) {
 				err = ctx.ModifyImport(addTree(item.Local), mod)
 				if err != nil {
+					// Skip these errors if from status.
+					if _, is := err.(ErrTreeChildren); is {
+						continue
+					}
+					if _, is := err.(ErrTreeParents); is {
+						continue
+					}
 					return false, err
 				}
 			}

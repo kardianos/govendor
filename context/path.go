@@ -194,17 +194,18 @@ func RemovePackage(path, root string, tree bool) error {
 		return err
 	}
 	for _, fi := range fl {
+		fullPath := filepath.Join(path, fi.Name())
 		if fi.IsDir() {
 			if tree {
 				// If tree == true then remove sub-directories too.
-				err = os.RemoveAll(filepath.Join(path, fi.Name()))
+				err = os.RemoveAll(fullPath)
 				if err != nil {
 					return err
 				}
 			}
 			continue
 		}
-		err = os.Remove(filepath.Join(path, fi.Name()))
+		err = os.Remove(fullPath)
 		if err != nil {
 			return err
 		}

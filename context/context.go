@@ -403,8 +403,6 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 	tree := strings.HasSuffix(sourcePath, TreeSuffix)
 	sourcePath = strings.TrimSuffix(sourcePath, TreeSuffix)
 
-	_ = tree
-
 	// Determine canonical and local import paths.
 	sourcePath = pathos.SlashToImportPath(sourcePath)
 	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
@@ -460,12 +458,12 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 		if pkg.Tree {
 			children := ctx.findPackageChild(pkg)
 			if len(children) > 0 {
-				return fmt.Errorf("Cannot have a sub-tree %q contain sub-packages %q", pkg.Canonical, children)
+				return ErrTreeChildren{path: pkg.Canonical, children: children}
 			}
 		}
 		treeParents := ctx.findPackageParentTree(pkg)
 		if len(treeParents) > 0 {
-			return fmt.Errorf("Cannot add this package which is already found in sub-tree %q", treeParents)
+			return ErrTreeParents{path: pkg.Canonical, parents: treeParents}
 		}
 	}
 

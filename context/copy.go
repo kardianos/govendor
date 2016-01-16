@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
 	os "github.com/kardianos/govendor/internal/vos"
@@ -29,7 +30,15 @@ func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, 
 	if err != nil {
 		return err
 	}
-	// TODO: If tree == true then add sub-directories too.
+	ignoreTest := false
+	if tree {
+		for _, ignore := range ctx.ignoreTag {
+			if ignore == "test" {
+				ignoreTest = true
+				break
+			}
+		}
+	}
 
 	fl, err := destDir.Readdir(-1)
 	destDir.Close()
@@ -65,15 +74,24 @@ func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, 
 	}
 fileLoop:
 	for _, fi := range fl {
-		if fi.Name()[0] == '.' {
+		name := fi.Name()
+		if name[0] == '.' {
 			continue
 		}
 		if fi.IsDir() {
 			if !tree {
 				continue
 			}
-			nextDestPath := filepath.Join(destPath, fi.Name())
-			nextSrcPath := filepath.Join(srcPath, fi.Name())
+			if name[0] == '_' {
+				continue
+			}
+			if ignoreTest {
+				if strings.HasSuffix(name, "_test") || name == "testdata" {
+					continue
+				}
+			}
+			nextDestPath := filepath.Join(destPath, name)
+			nextSrcPath := filepath.Join(srcPath, name)
 			nextIgnoreFiles, err := ctx.getIngoreFiles(nextSrcPath)
 			if err != nil {
 				return err
@@ -86,13 +104,13 @@ fileLoop:
 			continue
 		}
 		for _, ignore := range ignoreFiles {
-			if pathos.FileStringEquals(fi.Name(), ignore) {
+			if pathos.FileStringEquals(name, ignore) {
 				continue fileLoop
 			}
 		}
 		err = copyFile(
-			filepath.Join(destPath, fi.Name()),
-			filepath.Join(srcPath, fi.Name()),
+			filepath.Join(destPath, name),
+			filepath.Join(srcPath, name),
 		)
 		if err != nil {
 			return err

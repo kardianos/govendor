@@ -51,8 +51,6 @@ const (
 	StatusProgram
 	// StatusVendor indicates the import is in the vendor folder.
 	StatusVendor
-	// StatusTree indicates the import is in the vendor folder, but only because it is matched by a tree package.
-	StatusTree
 )
 
 // ListItem represents a package in the current project.

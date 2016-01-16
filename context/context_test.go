@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -35,6 +36,27 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 	output := &bytes.Buffer{}
 	for _, item := range list {
 		output.WriteString(statusItemString(item))
+		output.WriteRune('\n')
+	}
+	if strings.TrimSpace(output.String()) != strings.TrimSpace(expected) {
+		g.Fatalf("(%s) Got\n%s", name, output.String())
+	}
+}
+
+func tree(g *gt.GopathTest, c *Context, name, expected string) {
+	tree := make([]string, 0, 6)
+	filepath.Walk(g.Current(), func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		tree = append(tree, strings.TrimPrefix(path, g.Current()))
+		return nil
+	})
+	sort.Strings(tree)
+
+	output := &bytes.Buffer{}
+	for _, item := range tree {
+		output.WriteString(item)
 		output.WriteRune('\n')
 	}
 	if strings.TrimSpace(output.String()) != strings.TrimSpace(expected) {
@@ -690,4 +712,46 @@ func TestAddMissing(t *testing.T) {
 	if _, is := err.(ErrNotInGOPATH); !is {
 		t.Fatalf("Expected not in GOPATH error. Got %v", err)
 	}
+}
+
+func TestTree(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1/c-code",
+		gt.File("stub.c"),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport("co2/pk1/^", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after add list", `
+v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+l co1/pk1 < []
+s strings < ["co1/vendor/co2/pk1"]
+`)
+	tree(g, c, "co1 after add tree", `
+/pk1/a.go
+/vendor/co2/pk1/a.go
+/vendor/co2/pk1/c-code/stub.c
+/vendor/vendor.json
+`)
+
+	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	tree(g, c, "co1 after remove tree", `
+/pk1/a.go
+/vendor/vendor.json
+`)
 }

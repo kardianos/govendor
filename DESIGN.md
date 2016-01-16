@@ -14,3 +14,9 @@ govendor fetch +m
 govendor fetch -tree github.com/mattn/sqlite
 ```
 
+
+## option "-tree"
+
+signal with "<package path>/^"
+
+
