@@ -44,6 +44,7 @@ type Package struct {
 	// See the vendor spec for definitions.
 	Origin       string
 	Path         string
+	Tree         bool
 	Revision     string
 	RevisionTime string
 	Comment      string
@@ -54,6 +55,7 @@ var (
 	ignoreNames       = []string{"ignore"}
 	originNames       = []string{"origin"}
 	pathNames         = []string{"path", "canonical", "Canonical", "vendor", "Vendor"}
+	treeNames         = []string{"tree"}
 	revisionNames     = []string{"revision", "Revision", "version", "Version"}
 	revisionTimeNames = []string{"revisionTime", "RevisionTime", "versionTime", "VersionTime"}
 	commentNames      = []string{"comment", "Comment"}
@@ -77,30 +79,58 @@ func (vp vendorPackageSort) Less(i, j int) bool {
 	return aPath < bPath
 }
 
-func setField(field *string, object map[string]interface{}, names []string) {
+func setField(fieldObj interface{}, object map[string]interface{}, names []string) {
+loop:
 	for _, name := range names {
 		raw, found := object[name]
 		if !found {
 			continue
 		}
-		value, is := raw.(string)
-		if !is {
-			continue
-		}
-		*field = value
-		if len(value) != 0 {
-			break
+		switch field := fieldObj.(type) {
+		default:
+			panic("unknown type")
+		case *string:
+			value, is := raw.(string)
+			if !is {
+				continue loop
+			}
+			*field = value
+			if len(value) != 0 {
+				break loop
+			}
+		case *bool:
+			value, is := raw.(bool)
+			if !is {
+				continue loop
+			}
+			*field = value
+			if value == true {
+				break loop
+			}
 		}
 	}
 }
 
-func setObject(field string, object map[string]interface{}, names []string, hideEmpty bool) {
-	for i, name := range names {
-		if i != 0 || (hideEmpty && len(field) == 0) {
-			delete(object, name)
-			continue
+func setObject(fieldObj interface{}, object map[string]interface{}, names []string, hideEmpty bool) {
+	switch field := fieldObj.(type) {
+	default:
+		panic("unknown type")
+	case string:
+		for i, name := range names {
+			if i != 0 || (hideEmpty && len(field) == 0) {
+				delete(object, name)
+				continue
+			}
+			object[name] = field
 		}
-		object[name] = field
+	case bool:
+		for i, name := range names {
+			if i != 0 || (hideEmpty && field == false) {
+				delete(object, name)
+				continue
+			}
+			object[name] = field
+		}
 	}
 }
 
@@ -144,6 +174,7 @@ func (vf *File) toFields() {
 		pkg.index = index
 		setField(&pkg.Origin, object, originNames)
 		setField(&pkg.Path, object, pathNames)
+		setField(&pkg.Tree, object, treeNames)
 		setField(&pkg.Revision, object, revisionNames)
 		setField(&pkg.RevisionTime, object, revisionTimeNames)
 		setField(&pkg.Comment, object, commentNames)
@@ -165,6 +196,7 @@ func (vf *File) toAll() {
 		}
 		setObject(pkg.Origin, obj, originNames, true)
 		setObject(pkg.Path, obj, pathNames, false)
+		setObject(pkg.Tree, obj, treeNames, true)
 		setObject(pkg.Revision, obj, revisionNames, false)
 		setObject(pkg.RevisionTime, obj, revisionTimeNames, true)
 		setObject(pkg.Comment, obj, commentNames, true)

@@ -120,7 +120,8 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			"path": "pkg3",
-			"revision": ""
+			"revision": "",
+			"tree": true
 		}
 	]
 }`
@@ -138,6 +139,7 @@ func TestAdd(t *testing.T) {
 	}, &Package{
 		Add:  true,
 		Path: "pkg3",
+		Tree: true,
 	})
 
 	buf := &bytes.Buffer{}

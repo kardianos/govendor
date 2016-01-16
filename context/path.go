@@ -180,13 +180,14 @@ func hasGoFileInFolder(folder string) (bool, error) {
 
 // RemovePackage removes the specified folder files. If folder is empty when
 // done (no nested folders, remove the folder and any empty parent folders.
-func RemovePackage(path, root string) error {
+func RemovePackage(path, root string, tree bool) error {
 	// Ensure the path is empty of files.
 	dir, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 
+	// Remove package files.
 	fl, err := dir.Readdir(-1)
 	dir.Close()
 	if err != nil {
@@ -194,6 +195,13 @@ func RemovePackage(path, root string) error {
 	}
 	for _, fi := range fl {
 		if fi.IsDir() {
+			if tree {
+				// If tree == true then remove sub-directories too.
+				err = os.RemoveAll(filepath.Join(path, fi.Name()))
+				if err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		err = os.Remove(filepath.Join(path, fi.Name()))
@@ -202,6 +210,7 @@ func RemovePackage(path, root string) error {
 		}
 	}
 
+	// Remove empty parent folders.
 	// Ignore errors here.
 	for i := 0; i <= looplimit; i++ {
 		if pathos.FileStringEquals(path, root) {

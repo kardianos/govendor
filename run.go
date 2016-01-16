@@ -6,12 +6,12 @@ package main
 
 // imports for this file should not contain "os".
 import (
-	"path"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -366,7 +366,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			}
 			importPath := strings.TrimSuffix(imp.Import, "...")
 			importPath = strings.TrimSuffix(importPath, "/")
-			if *tree
+
 			err = ctx.ModifyImport(addTree(importPath), mod)
 			if err != nil {
 				return false, err

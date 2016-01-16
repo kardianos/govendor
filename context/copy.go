@@ -15,7 +15,7 @@ import (
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
+func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -29,6 +29,7 @@ func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	if err != nil {
 		return err
 	}
+	// TODO: If tree == true then add sub-directories too.
 
 	fl, err := destDir.Readdir(-1)
 	destDir.Close()
@@ -37,6 +38,12 @@ func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	}
 	for _, fi := range fl {
 		if fi.IsDir() {
+			if tree {
+				err = os.RemoveAll(filepath.Join(destPath, fi.Name()))
+				if err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		err = os.Remove(filepath.Join(destPath, fi.Name()))
@@ -58,10 +65,24 @@ func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	}
 fileLoop:
 	for _, fi := range fl {
-		if fi.IsDir() {
+		if fi.Name()[0] == '.' {
 			continue
 		}
-		if fi.Name()[0] == '.' {
+		if fi.IsDir() {
+			if !tree {
+				continue
+			}
+			nextDestPath := filepath.Join(destPath, fi.Name())
+			nextSrcPath := filepath.Join(srcPath, fi.Name())
+			nextIgnoreFiles, err := ctx.getIngoreFiles(nextSrcPath)
+			if err != nil {
+				return err
+			}
+
+			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true)
+			if err != nil {
+				return err
+			}
 			continue
 		}
 		for _, ignore := range ignoreFiles {
