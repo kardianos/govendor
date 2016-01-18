@@ -301,6 +301,9 @@ func (ctx *Context) findPackageChild(ck *Package) []string {
 		if pkg == ck {
 			continue
 		}
+		if pkg.inVendor == false {
+			continue
+		}
 		if strings.HasPrefix(pkg.Canonical, canonical) {
 			out = append(out, pkg.Canonical)
 		}
@@ -314,6 +317,9 @@ func (ctx *Context) findPackageParentTree(ck *Package) []string {
 	canonical := ck.Canonical
 	out := make([]string, 0, 1)
 	for _, pkg := range ctx.Package {
+		if pkg.inVendor == false {
+			continue
+		}
 		if pkg.Tree == false || pkg == ck {
 			continue
 		}

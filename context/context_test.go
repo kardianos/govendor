@@ -724,8 +724,11 @@ func TestTree(t *testing.T) {
 	g.Setup("co2/pk1",
 		gt.File("a.go", "strings"),
 	)
-	g.Setup("co2/pk1/c-code",
+	g.Setup("co2/pk1/c_code",
 		gt.File("stub.c"),
+	)
+	g.Setup("co2/pk1/go_code",
+		gt.File("stub.go", "strings"),
 	)
 	g.In("co1")
 	c := ctx(g)
@@ -736,13 +739,15 @@ func TestTree(t *testing.T) {
 
 	list(g, c, "co1 after add list", `
 v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+u co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
 l co1/pk1 < []
-s strings < ["co1/vendor/co2/pk1"]
+s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
 `)
 	tree(g, c, "co1 after add tree", `
 /pk1/a.go
 /vendor/co2/pk1/a.go
-/vendor/co2/pk1/c-code/stub.c
+/vendor/co2/pk1/c_code/stub.c
+/vendor/co2/pk1/go_code/stub.go
 /vendor/vendor.json
 `)
 
