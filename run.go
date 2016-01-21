@@ -409,7 +409,7 @@ func checkNewContextError(err error) (bool, error) {
 		err = fmt.Errorf(`%v
 
 Ensure the current folder or a parent folder contains a folder named "vendor".
-In in doubt, run "govendor init" in the project root.
+If in doubt, run "govendor init" in the project root.
 `, err)
 		return false, err
 	}
