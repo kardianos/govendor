@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
 	os "github.com/kardianos/govendor/internal/vos"
@@ -15,7 +16,7 @@ import (
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
+func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -29,6 +30,15 @@ func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	if err != nil {
 		return err
 	}
+	ignoreTest := false
+	if tree {
+		for _, ignore := range ctx.ignoreTag {
+			if ignore == "test" {
+				ignoreTest = true
+				break
+			}
+		}
+	}
 
 	fl, err := destDir.Readdir(-1)
 	destDir.Close()
@@ -37,6 +47,12 @@ func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	}
 	for _, fi := range fl {
 		if fi.IsDir() {
+			if tree {
+				err = os.RemoveAll(filepath.Join(destPath, fi.Name()))
+				if err != nil {
+					return err
+				}
+			}
 			continue
 		}
 		err = os.Remove(filepath.Join(destPath, fi.Name()))
@@ -58,20 +74,43 @@ func CopyPackage(destPath, srcPath string, ignoreFiles []string) error {
 	}
 fileLoop:
 	for _, fi := range fl {
-		if fi.IsDir() {
+		name := fi.Name()
+		if name[0] == '.' {
 			continue
 		}
-		if fi.Name()[0] == '.' {
+		if fi.IsDir() {
+			if !tree {
+				continue
+			}
+			if name[0] == '_' {
+				continue
+			}
+			if ignoreTest {
+				if strings.HasSuffix(name, "_test") || name == "testdata" {
+					continue
+				}
+			}
+			nextDestPath := filepath.Join(destPath, name)
+			nextSrcPath := filepath.Join(srcPath, name)
+			nextIgnoreFiles, err := ctx.getIngoreFiles(nextSrcPath)
+			if err != nil {
+				return err
+			}
+
+			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true)
+			if err != nil {
+				return err
+			}
 			continue
 		}
 		for _, ignore := range ignoreFiles {
-			if pathos.FileStringEquals(fi.Name(), ignore) {
+			if pathos.FileStringEquals(name, ignore) {
 				continue fileLoop
 			}
 		}
 		err = copyFile(
-			filepath.Join(destPath, fi.Name()),
-			filepath.Join(srcPath, fi.Name()),
+			filepath.Join(destPath, name),
+			filepath.Join(srcPath, name),
 		)
 		if err != nil {
 			return err

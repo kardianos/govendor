@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -20,24 +21,28 @@ import (
 
 var help = `govendor: copy go packages locally. Uses vendor folder.
 govendor init
-govendor list [-v] [-no-status] [+<status>] [import-path-filter]
-govendor {add, update, remove} [-n] [-short | -long] [+status] [import-path-filter]
+	Creates a vendor file if it does not exist.
+
+govendor list [options] [+<status>] [import-path-filter]
+	List all dependencies and packages in folder tree.
+	Options:
+		-v           verbose listing, show dependencies of each package
+		-no-status   do not prefix status to list, package names only
+
+govendor {add, update, remove} [options] [+status] [import-path-filter]
+	add    - Copy one or more packages into the vendor folder.
+	update - Update one or more packages from GOPATH into the vendor folder.
+	remove - Remove one or more packages from the vendor folder.
+	Options:
+		-n           dry run and print actions that would be taken
+		-tree        copy package(s) and all sub-folders under each package
+		
+		The following may be replaced with something else in the future.
+		-short       if conflict, take short path 
+		-long        if conflict, take long path
+
 govendor migrate [auto, godep, internal]
-
-	init
-		create a vendor file if it does not exist.
-
-	add
-		copy one or more packages into the vendor folder.
-
-	update
-		update one or more packages from GOPATH into the vendor folder.
-
-	remove
-		remove one or more packages from the vendor folder.
-
-	migrate
-		change from a one schema to use the vendor folder.
+	Change from a one schema to use the vendor folder. Default to auto detect.
 
 Expanding "..."
 	A package import path may be expanded to other paths that
@@ -48,8 +53,23 @@ Flags
 	-n		print actions but do not run them
 	-short	chooses the shorter path in case of conflict
 	-long	chooses the longer path in case of conflict
+	
+"import-path-filter" arguements:
+	May be a literal individual package:
+		github.com/user/supercool
+		github.com/user/supercool/anotherpkg
+	
+	Match on any exising Go package that the project uses under "supercool"
+		github.com/user/supercool/...
+		
+	Match the package "supercool" and also copy all sub-folders.
+	Will copy non-Go files and Go packages that aren't used.
+		github.com/user/supercool/^
+	
+	Same as specifying:
+	-tree github.com/user/supercool
 
-Status list:
+Status list used in "+<status>" arguments:
 	external - package does not share root path
 	vendor - vendor folder; copied locally
 	unused - the package has been copied locally, but isn't used
@@ -58,6 +78,7 @@ Status list:
 	std - standard library package
 	program - package is a main package
 	---
+	outside - external + missing
 	all - all of the above status
 
 Status can be referenced by their initial letters.
@@ -70,20 +91,13 @@ Ignoring files with build tags:
 	listing and copying files. By default the init command adds the
 	the "test" tag to the ignore list.
 
-Example:
-	govendor add github.com/kardianos/osext
-	govendor update github.com/kardianos/...
-	govendor add +external
-	govendor update +ven github.com/company/project/... bitbucket.org/user/pkg
-	govendor remove +vendor
-	govendor list +ext +std
-
 If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 `
 
 var (
-	normal = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
-	all    = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStandard}
+	outside = []Status{StatusExternal, StatusMissing}
+	normal  = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
+	all     = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStandard}
 )
 
 func parseStatus(s string) (status []Status, err error) {
@@ -104,6 +118,8 @@ func parseStatus(s string) (status []Status, err error) {
 		status = []Status{StatusStandard}
 	case strings.HasPrefix("standard", s):
 		status = []Status{StatusStandard}
+	case strings.HasPrefix("outside", s):
+		status = outside
 	case strings.HasPrefix("all", s):
 		status = all
 	default:
@@ -276,11 +292,12 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 				}
 			}
 		}
-	case "add", "update", "remove":
-		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
+	case "add", "update", "remove", "fetch":
+		listFlags := flag.NewFlagSet("mod", flag.ContinueOnError)
 		dryrun := listFlags.Bool("n", false, "dry-run")
 		short := listFlags.Bool("short", false, "choose the short path")
 		long := listFlags.Bool("long", false, "choose the long path")
+		tree := listFlags.Bool("tree", false, "copy all folders including and under selected folder")
 		err := listFlags.Parse(appArgs[2:])
 		if err != nil {
 			return true, err
@@ -313,17 +330,37 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			mod = Update
 		case "remove":
 			mod = Remove
+		case "fetch":
+			// TODO: enable a code path that fetches recursivly on missing status.
+			mod = Fetch
+		}
+
+		addTree := func(s string) string {
+			if !*tree {
+				return s
+			}
+			if strings.HasSuffix(s, TreeSuffix) {
+				return s
+			}
+			return path.Join(s, TreeSuffix)
 		}
 
 		for _, item := range list {
 			if f.HasStatus(item) {
-				err = ctx.ModifyImport(item.Local, mod)
+				err = ctx.ModifyImport(addTree(item.Local), mod)
 				if err != nil {
+					// Skip these errors if from status.
+					if _, is := err.(ErrTreeChildren); is {
+						continue
+					}
+					if _, is := err.(ErrTreeParents); is {
+						continue
+					}
 					return false, err
 				}
 			}
 			if f.HasImport(item) {
-				err = ctx.ModifyImport(item.Local, mod)
+				err = ctx.ModifyImport(addTree(item.Local), mod)
 				if err != nil {
 					return false, err
 				}
@@ -336,7 +373,8 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			}
 			importPath := strings.TrimSuffix(imp.Import, "...")
 			importPath = strings.TrimSuffix(importPath, "/")
-			err = ctx.ModifyImport(importPath, mod)
+
+			err = ctx.ModifyImport(addTree(importPath), mod)
 			if err != nil {
 				return false, err
 			}
@@ -352,6 +390,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			conflicts = ResolveAutoShortestPath(conflicts)
 		}
 		ctx.ResloveApply(conflicts)
+
+		// TODO: loop through conflicts to see if there are any remaining conflicts.
+		// Print out any here.
 
 		if *dryrun {
 			for _, op := range ctx.Operation {

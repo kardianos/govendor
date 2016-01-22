@@ -26,6 +26,10 @@ import (
 )
 
 const (
+	TreeSuffix = "/^"
+)
+
+const (
 	debug     = false
 	looplimit = 10000
 
@@ -117,7 +121,9 @@ type Package struct {
 	Gopath     string
 	Files      []*File
 	Status     Status
+	Tree       bool
 	inVendor   bool
+	inTree     bool
 
 	ignoreFile []string
 
@@ -286,6 +292,46 @@ func (ctx *Context) VendorFilePackagePath(canonical string) *vendorfile.Package 
 	return nil
 }
 
+// findPackageChild finds any package under the current package.
+// Used for finding tree overlaps.
+func (ctx *Context) findPackageChild(ck *Package) []string {
+	canonical := ck.Canonical
+	out := make([]string, 0, 3)
+	for _, pkg := range ctx.Package {
+		if pkg == ck {
+			continue
+		}
+		if pkg.inVendor == false {
+			continue
+		}
+		if strings.HasPrefix(pkg.Canonical, canonical) {
+			out = append(out, pkg.Canonical)
+		}
+	}
+	return out
+}
+
+// findPackageParentTree finds any parent tree package that would
+// include the given canonical path.
+func (ctx *Context) findPackageParentTree(ck *Package) []string {
+	canonical := ck.Canonical
+	out := make([]string, 0, 1)
+	for _, pkg := range ctx.Package {
+		if pkg.inVendor == false {
+			continue
+		}
+		if pkg.Tree == false || pkg == ck {
+			continue
+		}
+		// pkg.Canonical = github.com/usera/pkg, tree = true
+		// canonical = github.com/usera/pkg/dance
+		if strings.HasPrefix(canonical, pkg.Canonical) {
+			out = append(out, pkg.Canonical)
+		}
+	}
+	return out
+}
+
 // updatePackageReferences populates the referenced field in each Package.
 func (ctx *Context) updatePackageReferences() {
 	canonicalUnderDirLookup := make(map[string]map[string]*Package)
@@ -347,6 +393,7 @@ const (
 	Add                     // Only add, error if it already exists.
 	Update                  // Only update, error if it doesn't currently exist.
 	Remove                  // Remove from vendor path.
+	Fetch                   // Get directly from remote repository.
 )
 
 // AddImport adds the package to the context. The vendorFolder is where the
@@ -359,6 +406,9 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 			return err
 		}
 	}
+	tree := strings.HasSuffix(sourcePath, TreeSuffix)
+	sourcePath = strings.TrimSuffix(sourcePath, TreeSuffix)
+
 	// Determine canonical and local import paths.
 	sourcePath = pathos.SlashToImportPath(sourcePath)
 	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
@@ -404,6 +454,26 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 		}
 	}
 
+	// Do not support setting "tree" on Remove.
+	if tree && mod != Remove {
+		pkg.Tree = true
+	}
+
+	// A restriction where packages cannot live inside a tree package.
+	if mod != Remove {
+		if pkg.Tree {
+			children := ctx.findPackageChild(pkg)
+			if len(children) > 0 {
+				return ErrTreeChildren{path: pkg.Canonical, children: children}
+			}
+		}
+		treeParents := ctx.findPackageParentTree(pkg)
+		if len(treeParents) > 0 {
+			return ErrTreeParents{path: pkg.Canonical, parents: treeParents}
+		}
+	}
+
+	// TODO (DT): figure out how to upgrade a non-tree package to a tree package with correct checks.
 	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(canonicalImportPath)))
 	if err != nil {
 		return err
@@ -421,9 +491,45 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 		return ctx.modifyAdd(pkg)
 	case Remove:
 		return ctx.modifyRemove(pkg)
+	case Fetch:
+		return ctx.modifyFetch(pkg)
 	default:
 		panic("mod switch: case not handled")
 	}
+}
+
+func (ctx *Context) getIngoreFiles(src string) ([]string, error) {
+	var ignoreFile []string
+	srcDir, err := os.Open(src)
+	if err != nil {
+		return nil, err
+	}
+	fl, err := srcDir.Readdir(-1)
+	srcDir.Close()
+	if err != nil {
+		return nil, err
+	}
+	for _, fi := range fl {
+		if fi.IsDir() {
+			continue
+		}
+		if fi.Name()[0] == '.' {
+			continue
+		}
+		tags, err := ctx.getFileTags(filepath.Join(src, fi.Name()), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, tag := range tags {
+			for _, ignore := range ctx.ignoreTag {
+				if tag == ignore {
+					ignoreFile = append(ignoreFile, fi.Name())
+				}
+			}
+		}
+	}
+	return ignoreFile, nil
 }
 
 func (ctx *Context) modifyAdd(pkg *Package) error {
@@ -438,34 +544,10 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	if cpkg, found := ctx.Package[pkg.Canonical]; found {
 		ignoreFile = cpkg.ignoreFile
 	} else {
-		srcDir, err := os.Open(src)
+		var err error
+		ignoreFile, err = ctx.getIngoreFiles(src)
 		if err != nil {
 			return err
-		}
-		fl, err := srcDir.Readdir(-1)
-		srcDir.Close()
-		if err != nil {
-			return err
-		}
-		for _, fi := range fl {
-			if fi.IsDir() {
-				continue
-			}
-			if fi.Name()[0] == '.' {
-				continue
-			}
-			tags, err := ctx.getFileTags(filepath.Join(src, fi.Name()), nil)
-			if err != nil {
-				return err
-			}
-
-			for _, tag := range tags {
-				for _, ignore := range ctx.ignoreTag {
-					if tag == ignore {
-						ignoreFile = append(ignoreFile, fi.Name())
-					}
-				}
-			}
 		}
 	}
 	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
@@ -494,6 +576,7 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 			vp.Origin = pkg.Local
 		}
 	}
+	vp.Tree = pkg.Tree
 
 	// Find the VCS information.
 	system, err := vcs.FindVcs(pkg.Gopath, src)
@@ -556,6 +639,11 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 		ctx.RewriteRule[r.Local] = r.Canonical
 	}
 
+	return nil
+}
+
+// TODO: modify function to fetch given package.
+func (ctx *Context) modifyFetch(pkg *Package) error {
 	return nil
 }
 
@@ -738,9 +826,9 @@ func (ctx *Context) copy() error {
 		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
 		// Copy the package or remove.
 		if len(op.Dest) == 0 {
-			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder))
+			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
 		} else {
-			err = CopyPackage(op.Dest, op.Src, op.IgnoreFile)
+			err = ctx.CopyPackage(op.Dest, op.Src, op.IgnoreFile, pkg.Tree)
 		}
 		if err != nil {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)

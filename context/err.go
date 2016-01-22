@@ -60,3 +60,21 @@ type ErrOldVersion struct {
 func (err ErrOldVersion) Error() string {
 	return fmt.Sprintf("The vendor file or is old. %s", err.Message)
 }
+
+type ErrTreeChildren struct {
+	path     string
+	children []string
+}
+
+func (err ErrTreeChildren) Error() string {
+	return fmt.Sprintf("Cannot have a sub-tree %q contain sub-packages %q", err.path, err.children)
+}
+
+type ErrTreeParents struct {
+	path    string
+	parents []string
+}
+
+func (err ErrTreeParents) Error() string {
+	return fmt.Sprintf("Cannot add package %q which is already found in sub-tree %q", err.path, err.parents)
+}

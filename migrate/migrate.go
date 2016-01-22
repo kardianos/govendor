@@ -98,8 +98,6 @@ func (sysGb) Migrate(root string) error {
 	// Move files from "src" to first GOPATH.
 	// Move vendor files from "vendor/src" to "vendor".
 	// Translate "vendor/manifest" to vendor.json file.
-
-	_ = context.CopyPackage
 	return errors.New("Migrate gb not implemented")
 }
 
@@ -205,7 +203,7 @@ func (sysGodep) Migrate(root string) error {
 
 	// Remove existing.
 	for _, r := range remove {
-		err = context.RemovePackage(r, "")
+		err = context.RemovePackage(r, "", false)
 		if err != nil {
 			return err
 		}
@@ -265,7 +263,7 @@ func (sysInternal) Migrate(root string) error {
 
 	// Remove existing.
 	for _, r := range remove {
-		err = context.RemovePackage(r, "")
+		err = context.RemovePackage(r, "", false)
 		if err != nil {
 			return err
 		}

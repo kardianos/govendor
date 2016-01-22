@@ -49,7 +49,7 @@ const (
 	StatusUnused
 	// StatusProgram indicates the import is a main package but internal or vendor.
 	StatusProgram
-	// StatusVendor indicates theimport is in the vendor folder.
+	// StatusVendor indicates the import is in the vendor folder.
 	StatusVendor
 )
 

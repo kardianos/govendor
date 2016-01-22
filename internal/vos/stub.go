@@ -43,6 +43,10 @@ func Remove(name string) error {
 	l("remove", name)
 	return os.Remove(name)
 }
+func RemoveAll(name string) error {
+	l("removeall", name)
+	return os.RemoveAll(name)
+}
 func Create(name string) (*os.File, error) {
 	l("create", name)
 	return os.Create(name)

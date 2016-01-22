@@ -1,0 +1,145 @@
+Vendor Packages in Go
+8 Jan 2015
+Tags: vendor-spec, vendor folder, govendor, godep
+
+Daniel Theophanes
+kardianos@gmail.com
+https://github.com/kardianos
+
+* What do we do with dependencies?
+In Java and C#:
+- Require project file
+- Compile halfway
+- Nuget or Maven on client, or copy dependencies with code.
+- End with list of dependencies and their versions.
+
+In Ruby, Node, PHP:
+- Gemfile specifies dependencies and versions
+- Gulp package.json file specifies dependencies and versions
+- PHP composer.json file specifies dependencies and versions
+
+Seeing a pattern?
+
+* In Go, what do we do with dependencies?
+
+Go doesn't need a project file to know how to build code.
+
+Go just uses source files.
+
+We have godoc.org (and others) for discovery. Storage is decentralized.
+
+Go's implementation includes all dependencies into artifact.
+
+* Why is Go different?
+
+Go is staticly compiled
+
+Go's import statement is all you need to strongly identify a package
+
+Decentralized not centralized
+
+* What is still missing?
+
+Go has a list of packages it need from import statements
+
+Still need revision or version of each package
+
+Might need to copy them into the local repository
+
+* Let's solve these problems!
+
+.link https://github.com/golang/go/wiki/PackageManagementTools Package Management Tools
+
+So many! Which one should I choose?
+
+All incompatible with each other :(
+- Modify GOPATH (godep v1)
+- Modify packages in GOPATH (glock)
+- Modify import paths (godep v2)
+
+* Let's solve these problems! (take 2)
+
+Russ added support in go1.5 for a "vendor" folder. Under a flag.
+In 1.6 the flag defaults to ON, flag still there to turn off.
+Example:
+
+	$GOPATH/src/$PROJ/
+		vendor/
+			github.com/user/pk1/pk2/
+				pkg2.go
+			crypto/tls/
+				tls.go
+		local/
+			local.go
+		main.go
+	
+	local.go <<<
+	package local
+	import (
+		"github.com/user/pk1/pk2" // Will reference package in "vendor" folder.
+		"crypto/tls"              // Will also reference code in "vendor" folder.
+	)
+	<<<
+
+* What does the "vendor" folder enable?
+- Option to copy packages locally AND build from them without hacks.
+- Option to specify packages needed, leave GOPATH packages along, update "vendor" folder.
+
+* What does the "vendor" folder not address?
+- It does not address recording VCS revisions or versions.
+- It does not address updating packages from a VCS from a given revision or version.
+
+Right now the intent is to let other tools handle that.
+Many opinions on what to do and how to do it.
+
+This is where we hope the "vendor-spec" will help.
+
+* What is the "vendor-spec"?
+.link https://github.com/kardianos/vendor-spec github.com/kardianos/vendor-spec
+
+Example:
+
+	{
+	    "package": [
+	        {
+	            "path": "rsc.io/pdf",
+	            "revision": "3a3aeae79a3ec4f6d093a6b036c24698938158f3"
+	        },
+	        {
+	            "origin": "github.com/MSOpenTech/azure-sdk-for-go/vendor/crypto/tls",
+	            "path": "crypto/tls",
+	            "revision": "80a4e93853ca8af3e273ac9aa92b1708a0d75f3a"
+	        }
+	    ]
+	}
+
+* What is the "vendor-spec"? (cont.)
+- Must be placed in "vendor" folder.
+- Named "vendor.json".
+- Never used for compiling.
+
+- The "package.path" field is what a package would import.
+- The "package.origin" field is where the package originated from (where it should be copied from).
+- Each entry is per package, not package tree or project.
+
+So long as this file is created and maintained by tools or developers, other tools will be able to understand what is in the vendor folder or what should be in the vendor folder.
+
+* What tools use "vendor-spec"?
+
+.link https://github.com/kardianos/govendor github.com/kardianos/govendor
+
+Edward is investigating compatibility issues with godep.
+
+Others have discussed using it, but not implmented it.
+I would like tools to write it, even if it isn't the primary file used.
+
+* Which leaves us where?
+I predict the "vendor" folder is here to stay.
+- Near universal positive reaction.
+- Solves all of the current hacks when compiling.
+- Main objections are in the details (name), not the concept.
+
+I hope for sake of consistency the "vendor-spec" can be adopted.
+- Time, effort, will tell.
+
+* Demo

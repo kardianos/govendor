@@ -225,6 +225,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 
 	originDir := dir
 	inVendor := false
+	tree := false
 	if at > 0 {
 		canonical = canonical[at:]
 		inVendor = true
@@ -237,6 +238,9 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 					originDir = od
 				}
 			}
+		}
+		if vp := ctx.VendorFilePackagePath(canonical); vp != nil {
+			tree = vp.Tree
 		}
 	}
 	if status == StatusUnknown && inVendor == false {
@@ -254,6 +258,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 			if err == nil {
 				originDir = od
 			}
+			tree = vp.Tree
 		}
 	}
 	if status == StatusUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
@@ -267,6 +272,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		Gopath:    gopath,
 		Status:    status,
 		inVendor:  inVendor,
+		Tree:      tree,
 	}
 	ctx.Package[local] = pkg
 	return pkg
