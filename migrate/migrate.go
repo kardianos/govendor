@@ -132,7 +132,7 @@ func (sysGodep) Migrate(root string) error {
 
 	remove := make([]string, 0, len(list))
 	for _, item := range list {
-		if item.Status != context.StatusVendor {
+		if item.Status.Location != context.LocationVendor {
 			continue
 		}
 		pkg := ctx.Package[item.Local]
@@ -174,7 +174,7 @@ func (sysGodep) Migrate(root string) error {
 
 	for _, d := range godeps.Deps {
 		for _, pkg := range ctx.Package {
-			if pkg.Status != context.StatusVendor {
+			if pkg.Status.Location != context.LocationVendor {
 				continue
 			}
 			if strings.HasPrefix(pkg.Canonical, d.ImportPath) == false {
@@ -239,7 +239,7 @@ func (sysInternal) Migrate(root string) error {
 	}
 	remove := make([]string, 0, len(list))
 	for _, item := range list {
-		if item.Status != context.StatusVendor {
+		if item.Status.Location != context.LocationVendor {
 			continue
 		}
 		pkg := ctx.Package[item.Local]

@@ -95,35 +95,73 @@ If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 `
 
 var (
-	outside = []Status{StatusExternal, StatusMissing}
-	normal  = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram}
-	all     = []Status{StatusExternal, StatusVendor, StatusUnused, StatusMissing, StatusLocal, StatusProgram, StatusStandard}
+	outside = []Status{
+		{Location: LocationExternal},
+		{Presence: PresenceMissing},
+	}
+	normal = []Status{
+		{Location: LocationExternal},
+		{Location: LocationVendor},
+		{Location: LocationLocal},
+		{Location: LocationNotFound},
+	}
+	all = []Status{
+		{Location: LocationStandard},
+		{Location: LocationExternal},
+		{Location: LocationVendor},
+		{Location: LocationLocal},
+		{Location: LocationNotFound},
+	}
 )
 
-func parseStatus(s string) (status []Status, err error) {
-	switch {
-	case strings.HasPrefix("external", s):
-		status = []Status{StatusExternal}
-	case strings.HasPrefix("vendor", s):
-		status = []Status{StatusVendor}
-	case strings.HasPrefix("unused", s):
-		status = []Status{StatusUnused}
-	case strings.HasPrefix("missing", s):
-		status = []Status{StatusMissing}
-	case strings.HasPrefix("local", s):
-		status = []Status{StatusLocal}
-	case strings.HasPrefix("program", s):
-		status = []Status{StatusProgram}
-	case strings.HasPrefix("std", s):
-		status = []Status{StatusStandard}
-	case strings.HasPrefix("standard", s):
-		status = []Status{StatusStandard}
-	case strings.HasPrefix("outside", s):
-		status = outside
-	case strings.HasPrefix("all", s):
-		status = all
-	default:
-		err = fmt.Errorf("unknown status %q", s)
+func parseStatus(statusString string) (status []StatusAnd, err error) {
+	ss := strings.Split(statusString, ",")
+	sa := StatusAnd{}
+
+	for _, s := range ss {
+		st := Status{}
+		if strings.HasPrefix(s, "!") {
+			st.Not = true
+			s = strings.TrimPrefix(s, "!")
+		}
+		var list []Status
+		switch {
+		case strings.HasPrefix("external", s):
+			st.Location = LocationExternal
+		case strings.HasPrefix("vendor", s):
+			st.Location = LocationVendor
+		case strings.HasPrefix("unused", s):
+			st.Presence = PresenceUnsued
+		case strings.HasPrefix("missing", s):
+			st.Presence = PresenceMissing
+		case strings.HasPrefix("local", s):
+			st.Location = LocationLocal
+		case strings.HasPrefix("program", s):
+			st.Type = TypeProgram
+		case strings.HasPrefix("std", s):
+			st.Location = LocationStandard
+		case strings.HasPrefix("standard", s):
+			st.Location = LocationStandard
+		case strings.HasPrefix("all", s):
+			list = all
+		case strings.HasPrefix("normal", s):
+			list = normal
+		case strings.HasPrefix("outside", s):
+			list = outside
+		default:
+			err = fmt.Errorf("unknown status %q", s)
+			return
+		}
+		if len(list) == 0 {
+			sa = append(sa, st)
+		} else {
+			for _, st := range list {
+				status = append(status, StatusAnd{st})
+			}
+		}
+	}
+	if len(sa) > 0 {
+		status = append(status, sa)
 	}
 	return
 }
@@ -138,7 +176,7 @@ func (f *filterImport) String() string {
 }
 
 type filter struct {
-	Status []Status
+	Status []StatusAnd
 	Import []*filterImport
 }
 
@@ -154,8 +192,8 @@ func (f filter) String() string {
 }
 
 func (f filter) HasStatus(item StatusItem) bool {
-	for _, s := range f.Status {
-		if s == item.Status {
+	for _, fs := range f.Status {
+		if item.Status.MatchAnd(fs) {
 			return true
 		}
 	}
@@ -187,7 +225,7 @@ func (f filter) HasImport(item StatusItem) bool {
 
 func parseFilter(args []string) (filter, error) {
 	f := filter{
-		Status: make([]Status, 0, len(args)),
+		Status: make([]StatusAnd, 0, len(args)),
 		Import: make([]*filterImport, 0, len(args)),
 	}
 	for _, a := range args {
@@ -245,7 +283,10 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			return true, err
 		}
 		if len(f.Status) == 0 {
-			f.Status = append(f.Status, normal...)
+			f.Status, err = parseStatus("normal")
+			if err != nil {
+				panic("unknown status")
+			}
 		}
 		// Print all listed status.
 		ctx, err := NewContextWD(false)
@@ -285,9 +326,9 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			if *verbose {
 				for i, imp := range item.ImportedBy {
 					if i != len(item.ImportedBy)-1 {
-						fmt.Fprintf(w, "  ├── %s\n", imp)
+						fmt.Fprintf(w, "    ├── %s\n", imp)
 					} else {
-						fmt.Fprintf(w, "  └── %s\n", imp)
+						fmt.Fprintf(w, "    └── %s\n", imp)
 					}
 				}
 			}
