@@ -19,17 +19,17 @@ import (
 	"github.com/kardianos/govendor/migrate"
 )
 
-var help = `govendor: copy go packages locally. Uses vendor folder.
+var helpFull = `govendor: copy go packages locally. Uses vendor folder.
 govendor init
 	Creates a vendor file if it does not exist.
 
-govendor list [options] [+<status>] [import-path-filter]
+govendor list [options] ( +status or import-path-filter )
 	List all dependencies and packages in folder tree.
 	Options:
 		-v           verbose listing, show dependencies of each package
 		-no-status   do not prefix status to list, package names only
 
-govendor {add, update, remove} [options] [+status] [import-path-filter]
+govendor {add, update, remove} [options] ( +status or import-path-filter )
 	add    - Copy one or more packages into the vendor folder.
 	update - Update one or more packages from GOPATH into the vendor folder.
 	remove - Remove one or more packages from the vendor folder.
@@ -85,6 +85,9 @@ Status can be referenced by their initial letters.
 	"st" == "std"
 	"e" == "external"
 
+Status can be joined together with boolean AND and OR
+	govendor list +vendor,program +e --> (vendor AND program) OR external
+
 Ignoring files with build tags:
 	The "vendor.json" file contains a string field named "ignore".
 	It may contain a space separated list of build tags to ignore when
@@ -92,6 +95,58 @@ Ignoring files with build tags:
 	the "test" tag to the ignore list.
 
 If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
+
+Examples:
+	$ govendor list -no-status +local
+	$ govendor list +vend,prog +local,program
+	$ govendor list +local,!prog
+
+`
+
+var helpList = `govendor list [options]  ( +status or import-path-filter )
+	List all dependencies and packages in folder tree.
+	Options:
+		-v           verbose listing, show dependencies of each package
+		-no-status   do not prefix status to list, package names only
+Examples:
+	$ govendor list -no-status +local
+	$ govendor list +vend,prog +local,program
+	$ govendor list +local,!prog
+`
+
+var helpAdd = `govendor add [options] ( +status or import-path-filter )
+	Copy one or more packages into the vendor folder.
+	Options:
+		-n           dry run and print actions that would be taken
+		-tree        copy package(s) and all sub-folders under each package
+		
+		The following may be replaced with something else in the future.
+		-short       if conflict, take short path 
+		-long        if conflict, take long path
+`
+
+var helpUpdate = `govendor update [options] ( +status or import-path-filter )
+	Update one or more packages from GOPATH into the vendor folder.
+	Options:
+		-n           dry run and print actions that would be taken
+		-tree        copy package(s) and all sub-folders under each package
+		
+		The following may be replaced with something else in the future.
+		-short       if conflict, take short path 
+		-long        if conflict, take long path
+`
+
+var helpRemove = `govendor remove [options] ( +status or import-path-filter )
+	Remove one or more packages from the vendor folder.
+	Options:
+		-n           dry run and print actions that would be taken
+`
+
+var helpFetch = `govendor fetch <TBD>
+`
+
+var helpMigrate = `govendor migrate [auto, godep, internal]
+	Change from a one schema to use the vendor folder. Default to auto detect.
 `
 
 var (
@@ -246,11 +301,25 @@ func parseFilter(args []string) (filter, error) {
 	return f, nil
 }
 
+type HelpMessage byte
+
+const (
+	MsgNone HelpMessage = iota
+	MsgFull
+	MsgList
+	MsgAdd
+	MsgUpdate
+	MsgRemove
+	MsgFetch
+	MsgMigrate
+)
+
 // run is isoloated from main and os.Args to help with testing.
 // Shouldn't directly print to console, just write through w.
-func run(w io.Writer, appArgs []string) (bool, error) {
+// TODO (DT): replace bool with const help type.
+func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 	if len(appArgs) == 1 {
-		return true, nil
+		return MsgFull, nil
 	}
 
 	cmd := appArgs[1]
@@ -258,16 +327,16 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 	case "init":
 		ctx, err := NewContextWD(true)
 		if err != nil {
-			return false, err
+			return MsgNone, err
 		}
 		ctx.VendorFile.Ignore = "test" // Add default ignore rule.
 		err = ctx.WriteVendorFile()
 		if err != nil {
-			return false, err
+			return MsgNone, err
 		}
 		err = os.MkdirAll(filepath.Join(ctx.RootDir, ctx.VendorFolder), 0777)
 		if err != nil {
-			return false, err
+			return MsgNone, err
 		}
 	case "list":
 		listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
@@ -275,12 +344,12 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		noStatus := listFlags.Bool("no-status", false, "do not show the status")
 		err := listFlags.Parse(appArgs[2:])
 		if err != nil {
-			return true, err
+			return MsgList, err
 		}
 		args := listFlags.Args()
 		f, err := parseFilter(args)
 		if err != nil {
-			return true, err
+			return MsgList, err
 		}
 		if len(f.Status) == 0 {
 			f.Status, err = parseStatus("normal")
@@ -295,7 +364,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		}
 		list, err := ctx.Status()
 		if err != nil {
-			return false, err
+			return MsgNone, err
 		}
 
 		formatSame := "%[1]v %[2]s\n"
@@ -334,6 +403,24 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			}
 		}
 	case "add", "update", "remove", "fetch":
+		msg := MsgFull
+		var mod Modify
+
+		switch cmd {
+		case "add":
+			msg = MsgAdd
+			mod = Add
+		case "update":
+			msg = MsgUpdate
+			mod = Update
+		case "remove":
+			msg = MsgRemove
+			mod = Remove
+		case "fetch":
+			msg = MsgFetch
+			// TODO: enable a code path that fetches recursivly on missing status.
+			mod = Fetch
+		}
 		listFlags := flag.NewFlagSet("mod", flag.ContinueOnError)
 		dryrun := listFlags.Bool("n", false, "dry-run")
 		short := listFlags.Bool("short", false, "choose the short path")
@@ -341,18 +428,18 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		tree := listFlags.Bool("tree", false, "copy all folders including and under selected folder")
 		err := listFlags.Parse(appArgs[2:])
 		if err != nil {
-			return true, err
+			return msg, err
 		}
 		if *short && *long {
-			return false, errors.New("cannot select both long and short path")
+			return MsgNone, errors.New("cannot select both long and short path")
 		}
 		args := listFlags.Args()
 		if len(args) == 0 {
-			return true, errors.New("missing package or status")
+			return msg, errors.New("missing package or status")
 		}
 		f, err := parseFilter(args)
 		if err != nil {
-			return true, err
+			return msg, err
 		}
 		ctx, err := NewContextWD(false)
 		if err != nil {
@@ -360,20 +447,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 		}
 		list, err := ctx.Status()
 		if err != nil {
-			return true, err
-		}
-
-		var mod Modify
-		switch cmd {
-		case "add":
-			mod = Add
-		case "update":
-			mod = Update
-		case "remove":
-			mod = Remove
-		case "fetch":
-			// TODO: enable a code path that fetches recursivly on missing status.
-			mod = Fetch
+			return msg, err
 		}
 
 		addTree := func(s string) string {
@@ -397,13 +471,13 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 					if _, is := err.(ErrTreeParents); is {
 						continue
 					}
-					return false, err
+					return MsgNone, err
 				}
 			}
 			if f.HasImport(item) {
 				err = ctx.ModifyImport(addTree(item.Local), mod)
 				if err != nil {
-					return false, err
+					return MsgNone, err
 				}
 			}
 		}
@@ -417,7 +491,7 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 
 			err = ctx.ModifyImport(addTree(importPath), mod)
 			if err != nil {
-				return false, err
+				return MsgNone, err
 			}
 		}
 
@@ -446,17 +520,17 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 					}
 				}
 			}
-			return false, nil
+			return MsgNone, nil
 		}
 
 		// Write out vendor file and do change.
 		err = ctx.WriteVendorFile()
 		if err != nil {
-			return false, err
+			return MsgNone, err
 		}
 		err = ctx.Alter()
 		if err != nil {
-			return false, err
+			return MsgNone, err
 		}
 	case "migrate":
 		args := appArgs[2:]
@@ -472,20 +546,20 @@ func run(w io.Writer, appArgs []string) (bool, error) {
 			case "internal":
 				from = migrate.Internal
 			default:
-				return true, fmt.Errorf("Unknown migrate command %q", args[0])
+				return MsgMigrate, fmt.Errorf("Unknown migrate command %q", args[0])
 			}
 		}
-		return false, migrate.MigrateWD(from)
+		return MsgNone, migrate.MigrateWD(from)
 	default:
-		return true, fmt.Errorf("Unknown command %q", cmd)
+		return MsgFull, fmt.Errorf("Unknown command %q", cmd)
 	}
-	return false, nil
+	return MsgNone, nil
 }
 
-func checkNewContextError(err error) (bool, error) {
+func checkNewContextError(err error) (HelpMessage, error) {
 	// Diagnose error, show current value of 1.5vendor, suggest alter.
 	if err == nil {
-		return false, nil
+		return MsgNone, nil
 	}
 	if _, is := err.(ErrMissingVendorFile); is {
 		err = fmt.Errorf(`%v
@@ -493,7 +567,7 @@ func checkNewContextError(err error) (bool, error) {
 Ensure the current folder or a parent folder contains a folder named "vendor".
 In in doubt, run "govendor init" in the project root.
 `, err)
-		return false, err
+		return MsgNone, err
 	}
-	return false, err
+	return MsgNone, err
 }

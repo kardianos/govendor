@@ -25,13 +25,13 @@ govendor: copy go packages locally. Uses vendor folder.
 govendor init
 	Creates a vendor file if it does not exist.
 
-govendor list [options] [+<status>] [import-path-filter]
+govendor list [options] ( +status or import-path-filter )
 	List all dependencies and packages in folder tree.
 	Options:
 		-v           verbose listing, show dependencies of each package
 		-no-status   do not prefix status to list, package names only
 
-govendor {add, update, remove} [options] [+status] [import-path-filter]
+govendor {add, update, remove} [options] ( +status or import-path-filter )
 	add    - Copy one or more packages into the vendor folder.
 	update - Update one or more packages from GOPATH into the vendor folder.
 	remove - Remove one or more packages from the vendor folder.
@@ -87,6 +87,9 @@ Status can be referenced by their initial letters.
 	"st" == "std"
 	"e" == "external"
 
+Status can be joined together with boolean AND and OR
+	govendor list +vendor,program +e --> (vendor AND program) OR external
+
 Ignoring files with build tags:
 	The "vendor.json" file contains a string field named "ignore".
 	It may contain a space separated list of build tags to ignore when
@@ -94,6 +97,11 @@ Ignoring files with build tags:
 	the "test" tag to the ignore list.
 
 If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
+
+Examples:
+	$ govendor list -no-status +local
+	$ govendor list +vend,prog +local,program
+	$ govendor list +local,!prog
 ```
 
 For example "govendor list +external" will tell you if there are any packages which
