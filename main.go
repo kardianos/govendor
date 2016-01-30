@@ -74,14 +74,36 @@ import (
 )
 
 func main() {
-	printHelp, err := run(os.Stdout, os.Args)
+	msg, err := run(os.Stdout, os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
-	if printHelp {
-		fmt.Fprint(os.Stderr, help)
+	msgText := ""
+	if msg == MsgFull {
 	}
-	if printHelp || err != nil {
+	switch msg {
+	case MsgFull:
+		msgText = helpFull
+	case MsgList:
+		msgText = helpList
+	case MsgAdd:
+		msgText = helpAdd
+	case MsgUpdate:
+		msgText = helpUpdate
+	case MsgRemove:
+		msgText = helpRemove
+	case MsgFetch:
+		msgText = helpFetch
+	case MsgMigrate:
+		msgText = helpMigrate
+	}
+	if len(msgText) > 0 {
+		fmt.Fprint(os.Stderr, msgText)
+	}
+	if err != nil {
+		os.Exit(2)
+	}
+	if msg != MsgNone {
 		os.Exit(1)
 	}
 }

@@ -141,17 +141,32 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	if err != nil {
 		return err
 	}
+	// if file has "// +build ignore", can mix package main with normal package.
+	isIgnore := false
+	for _, tag := range tags {
+		if tag == "ignore" {
+			isIgnore = true
+		}
+	}
+	// For now, just ignore ignored packages.
+	if isIgnore {
+		return nil
+	}
 
 	pkg, found := ctx.Package[importPath]
 	if !found {
-		status := StatusUnknown
+		status := Status{
+			Type:     TypePackage,
+			Location: LocationUnknown,
+			Presence: PresenceFound,
+		}
 		if f.Name.Name == "main" {
-			status = StatusProgram
+			status.Type = TypeProgram
 		}
 		pkg = ctx.setPackage(dir, importPath, importPath, gopath, status)
 		ctx.Package[importPath] = pkg
 	}
-	if pkg.Status != StatusLocal && pkg.Status != StatusProgram {
+	if pkg.Status.Location != LocationLocal {
 		for _, tag := range tags {
 			for _, ignore := range ctx.ignoreTag {
 				if tag == ignore {
@@ -229,10 +244,10 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	if at > 0 {
 		canonical = canonical[at:]
 		inVendor = true
-		if status == StatusUnknown {
+		if status.Location == LocationUnknown {
 			p := path.Join(ctx.RootImportPath, ctx.VendorDiscoverFolder)
 			if strings.HasPrefix(local, p) {
-				status = StatusVendor
+				status.Location = LocationVendor
 				od, _, err := ctx.findImportDir("", canonical)
 				if err == nil {
 					originDir = od
@@ -243,11 +258,11 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 			tree = vp.Tree
 		}
 	}
-	if status == StatusUnknown && inVendor == false {
+	if status.Location == LocationUnknown && inVendor == false {
 		if vp := ctx.VendorFilePackageLocal(local); vp != nil {
 			// This will only be hit if the imported package is in the vendor
 			// file, present in GOPATH, but not in vendor folder.
-			status = StatusExternal
+			status.Location = LocationExternal
 			inVendor = true
 			canonical = vp.Path
 			origin := vp.Origin
@@ -261,8 +276,8 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 			tree = vp.Tree
 		}
 	}
-	if status == StatusUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
-		status = StatusLocal
+	if status.Location == LocationUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
+		status.Location = LocationLocal
 	}
 	pkg := &Package{
 		OriginDir: originDir,
@@ -291,13 +306,21 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 	dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
 	if err != nil {
 		if _, is := err.(ErrNotInGOPATH); is {
-			ctx.setPackage("", imp, imp, "", StatusMissing)
+			ctx.setPackage("", imp, imp, "", Status{
+				Type:     TypePackage,
+				Location: LocationNotFound,
+				Presence: PresenceMissing,
+			})
 			return nil
 		}
 		return err
 	}
 	if pathos.FileStringEquals(gopath, ctx.Goroot) {
-		ctx.setPackage(dir, imp, imp, ctx.Goroot, StatusStandard)
+		ctx.setPackage(dir, imp, imp, ctx.Goroot, Status{
+			Type:     TypePackage,
+			Location: LocationStandard,
+			Presence: PresenceFound,
+		})
 		return nil
 	}
 	df, err := os.Open(dir)
@@ -332,25 +355,25 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 func (ctx *Context) determinePackageStatus() error {
 	// Determine the status of remaining imports.
 	for _, pkg := range ctx.Package {
-		if pkg.Status != StatusUnknown {
+		if pkg.Status.Location != LocationUnknown {
 			continue
 		}
 		if vp := ctx.VendorFilePackageLocal(pkg.Local); vp != nil {
-			pkg.Status = StatusVendor
+			pkg.Status.Location = LocationVendor
 			pkg.inVendor = true
 			pkg.Canonical = vp.Path
 			continue
 		}
 		if strings.HasPrefix(pkg.Canonical, ctx.RootImportPath) {
-			pkg.Status = StatusLocal
+			pkg.Status.Location = LocationLocal
 			continue
 		}
-		pkg.Status = StatusExternal
+		pkg.Status.Location = LocationExternal
 	}
 
 	// Check all "external" packages for vendor.
 	for _, pkg := range ctx.Package {
-		if pkg.Status != StatusExternal {
+		if pkg.Status.Location != LocationExternal {
 			continue
 		}
 		root, err := findRoot(pkg.Dir, vendorFilename)
@@ -376,9 +399,17 @@ func (ctx *Context) determinePackageStatus() error {
 	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for path, pkg := range ctx.Package {
-			if len(pkg.referenced) == 0 && pkg.Status == StatusVendor {
+			if pkg.Status.Presence == PresenceUnsued || pkg.Status.Type == TypeProgram || pkg.Status.Presence == PresenceTree {
+				continue
+			}
+			if len(pkg.referenced) == 0 && pkg.Status.Location == LocationVendor {
 				altered = true
-				pkg.Status = StatusUnused
+				parentTrees := ctx.findPackageParentTree(pkg)
+				if len(parentTrees) > 0 {
+					pkg.Status.Presence = PresenceTree
+				} else {
+					pkg.Status.Presence = PresenceUnsued
+				}
 				for _, other := range ctx.Package {
 					delete(other.referenced, path)
 				}

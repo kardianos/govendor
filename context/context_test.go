@@ -65,9 +65,9 @@ func tree(g *gt.GopathTest, c *Context, name, expected string) {
 }
 func statusItemString(li StatusItem) string {
 	if li.Local == li.Canonical {
-		return fmt.Sprintf("%s %s < %q", li.Status, li.Canonical, li.ImportedBy)
+		return fmt.Sprintf("%s %s < %q", li.Status.String(), li.Canonical, li.ImportedBy)
 	}
-	return fmt.Sprintf("%s %s [%s] < %q", li.Status, li.Local, li.Canonical, li.ImportedBy)
+	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Canonical, li.ImportedBy)
 }
 
 func vendorFile(g *gt.GopathTest, expected string) {
@@ -112,11 +112,11 @@ func TestSimple(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 	list(g, c, "initial", `
-e co2/pk1 < ["co1/pk1"]
-e co2/pk2 < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co2/pk1" "co2/pk2"]
+ e  co2/pk1 < ["co1/pk1"]
+ e  co2/pk2 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co2/pk1" "co2/pk2"]
 `)
 }
 
@@ -138,7 +138,7 @@ func TestDuplicatePackage(t *testing.T) {
 	statusList, err := c.Status()
 	g.Check(err)
 	for _, item := range statusList {
-		if item.Status != StatusExternal {
+		if item.Status.Location != LocationExternal {
 			continue
 		}
 		g.Check(c.ModifyImport(item.Local, AddUpdate))
@@ -159,25 +159,25 @@ func TestDuplicatePackage(t *testing.T) {
 `)
 
 	list(g, c, "co2 list", `
-v co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
-l co2/pk2 < []
-s strings < ["co2/vendor/co3/pk3"]
+ v  co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
+ l  co2/pk2 < []
+ s  strings < ["co2/vendor/co3/pk3"]
 `)
 
 	g.In("co1")
 	c = ctx(g)
 	list(g, c, "co1 pre list", `
-e co2/pk2 < ["co1/pk1"]
-e co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
-e co3/pk3 < ["co1/pk1"]
-l co1/pk1 < []
-s strings < ["co2/vendor/co3/pk3" "co3/pk3"]
+ e  co2/pk2 < ["co1/pk1"]
+ e  co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
+ e  co3/pk3 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  strings < ["co2/vendor/co3/pk3" "co3/pk3"]
 `)
 
 	statusList, err = c.Status()
 	g.Check(err)
 	for _, item := range statusList {
-		if item.Status != StatusExternal {
+		if item.Status.Location != LocationExternal {
 			continue
 		}
 		g.Check(c.ModifyImport(item.Local, AddUpdate))
@@ -203,10 +203,10 @@ s strings < ["co2/vendor/co3/pk3" "co3/pk3"]
 `)
 
 	expected := `
-v co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
-v co1/vendor/co3/pk3 [co3/pk3] < ["co1/pk1" "co1/vendor/co2/pk2"]
-l co1/pk1 < []
-s strings < ["co1/vendor/co3/pk3"]
+ v  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
+ v  co1/vendor/co3/pk3 [co3/pk3] < ["co1/pk1" "co1/vendor/co2/pk2"]
+ l  co1/pk1 < []
+ s  strings < ["co1/vendor/co3/pk3"]
 `
 
 	list(g, c, "co1 list 1", expected)
@@ -217,10 +217,11 @@ s strings < ["co1/vendor/co3/pk3"]
 	g.Check(c.ModifyImport("co3/pk3", Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
-	list(g, c, "co1 remove", `v co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
-e co3/pk3 < ["co1/pk1" "co1/vendor/co2/pk2"]
-l co1/pk1 < []
-s strings < ["co3/pk3"]
+	list(g, c, "co1 remove", `
+ v  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
+ e  co3/pk3 < ["co1/pk1" "co1/vendor/co2/pk2"]
+ l  co1/pk1 < []
+ s  strings < ["co3/pk3"]
 `)
 }
 
@@ -243,10 +244,10 @@ func TestVendorProgram(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 list", `
-p co1/vendor/co2/main [co2/main] < []
-l co1/pk1 < []
-s bytes < ["co1/vendor/co2/main"]
-s strings < ["co1/pk1"]
+ pv  co1/vendor/co2/main [co2/main] < []
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/main"]
+ s  strings < ["co1/pk1"]
 `)
 }
 
@@ -269,11 +270,12 @@ func TestImportSimple(t *testing.T) {
 	g.Check(c.ModifyImport("co2/pk1", AddUpdate))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
-	expected := `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-e co2/pk2 < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
+	expected := `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ e  co2/pk2 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 `
 	list(g, c, "same", expected)
 
@@ -296,11 +298,12 @@ s strings < ["co1/vendor/co2/pk1" "co2/pk2"]
 	g.Check(c.ModifyImport("co2/pk1", Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
-	list(g, c, "co1 remove", `e co2/pk1 < ["co1/pk1"]
-e co2/pk2 < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co2/pk1" "co2/pk2"]
+	list(g, c, "co1 remove", `
+ e  co2/pk1 < ["co1/pk1"]
+ e  co2/pk2 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co2/pk1" "co2/pk2"]
 `)
 }
 
@@ -326,11 +329,11 @@ func TestUpdate(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ v  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 `)
 
 	vendorFile(g, `{
@@ -369,24 +372,25 @@ s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after update", `
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s encoding/csv < ["co1/vendor/co2/pk1/pk2"]
-s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ v  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  encoding/csv < ["co1/vendor/co2/pk1/pk2"]
+ s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 `)
 
 	// Now remove an import.
 	g.Check(c.ModifyImport("co2/pk1", Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
-	list(g, c, "co1 remove", `v co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
-e co2/pk1 < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s encoding/csv < ["co1/vendor/co2/pk1/pk2"]
-s strings < ["co1/vendor/co2/pk1/pk2" "co2/pk1"]
+	list(g, c, "co1 remove", `
+ v  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+ e  co2/pk1 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  encoding/csv < ["co1/vendor/co2/pk1/pk2"]
+ s  strings < ["co1/vendor/co2/pk1/pk2" "co2/pk1"]
 `)
 }
 
@@ -408,11 +412,12 @@ func TestVendor(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	list(g, c, "co1 list", `e co2/pk1 < ["co1/pk1"]
-e co2/vendor/a [a] < ["co2/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co2/vendor/a"]
+	list(g, c, "co1 list", `
+ e  co2/pk1 < ["co1/pk1"]
+ e  co2/vendor/a [a] < ["co2/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co2/vendor/a"]
 `)
 
 	g.Check(c.ModifyImport("co2/pk1", Add))
@@ -420,11 +425,12 @@ s strings < ["co2/vendor/a"]
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 after add", `v co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co1/vendor/a"]
+	list(g, c, "co1 after add", `
+ v  co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co1/vendor/a"]
 `)
 
 	vendorFile(g, `{
@@ -471,13 +477,13 @@ func TestUnused(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-u co1/vendor/a [a] < []
-u co1/vendor/co3/pk1 [co3/pk1] < []
-l co1/pk1 < []
-s bytes < ["co1/vendor/co2/pk1"]
-s encoding/csv < ["co1/vendor/a"]
-s strings < ["co1/vendor/co3/pk1"]
+ vu co1/vendor/a [a] < []
+ vu co1/vendor/co3/pk1 [co3/pk1] < []
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/pk1"]
+ s  encoding/csv < ["co1/vendor/a"]
+ s  strings < ["co1/vendor/co3/pk1"]
 `)
 }
 
@@ -504,11 +510,11 @@ func TestMissing(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-v co1/vendor/co3/pk1 [co3/pk1] < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/vendor/co2/pk1"]
-s strings < ["co1/vendor/co3/pk1"]
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ v  co1/vendor/co3/pk1 [co3/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/pk1"]
+ s  strings < ["co1/vendor/co3/pk1"]
 `)
 
 	g.In("co1")
@@ -520,10 +526,10 @@ s strings < ["co1/vendor/co3/pk1"]
 	g.Remove("co3/pk1")
 
 	list(g, c, "co1 after remove", `
-e co2/pk1 < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co2/pk1"]
-m co3/pk1 < ["co1/pk1"]
+  m co3/pk1 < ["co1/pk1"]
+ e  co2/pk1 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co2/pk1"]
 `)
 }
 
@@ -554,11 +560,12 @@ func TestVendorFile(t *testing.T) {
 
 	g.In("co1")
 	c = ctx(g)
-	list(g, c, "co1 list", `e co2/pk1 < ["co1/pk1"]
-e co2/vendor/a [a] < ["co2/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co2/vendor/a"]
+	list(g, c, "co1 list", `
+ e  co2/pk1 < ["co1/pk1"]
+ e  co2/vendor/a [a] < ["co2/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co2/vendor/a"]
 `)
 
 	g.Check(c.ModifyImport("co2/pk1", Add))
@@ -566,11 +573,12 @@ s strings < ["co2/vendor/a"]
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 after add", `v co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s strings < ["co1/vendor/a"]
+	list(g, c, "co1 after add", `
+ v  co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  strings < ["co1/vendor/a"]
 `)
 
 	vendorFile(g, `{
@@ -609,12 +617,13 @@ func TestTagList(t *testing.T) {
 	c := ctx(g)
 	c.IgnoreBuild("test appengine")
 
-	list(g, c, "co1 list", `e co2/pk1 < ["co1/pk1"]
-l co1/pk1 < []
-s bytes < ["co1/pk1"]
-s encoding/csv < ["co2/pk1"]
-s encoding/hex < ["co1/pk1"]
-s testing < ["co1/pk1"]
+	list(g, c, "co1 list", `
+ e  co2/pk1 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  encoding/csv < ["co2/pk1"]
+ s  encoding/hex < ["co1/pk1"]
+ s  testing < ["co1/pk1"]
 `)
 }
 
@@ -644,10 +653,11 @@ func TestTagAdd(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 after add", `v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-l co1/pk1 < []
-s fmt < ["co1/pk1"]
-s strings < ["co1/vendor/co2/pk1"]
+	list(g, c, "co1 after add", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  fmt < ["co1/pk1"]
+ s  strings < ["co1/vendor/co2/pk1"]
 `)
 
 	checkPathBase := filepath.Join(g.Current(), "vendor", "co2", "pk1")
@@ -738,10 +748,10 @@ func TestTree(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add list", `
-v co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
-u co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
-l co1/pk1 < []
-s strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
+ vt co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
 `)
 	tree(g, c, "co1 after add tree", `
 /pk1/a.go

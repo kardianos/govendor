@@ -122,7 +122,7 @@ type Package struct {
 	Files      []*File
 	Status     Status
 	Tree       bool
-	inVendor   bool
+	inVendor   bool // Different then Status.Location, this is in *any* vendor tree.
 	inTree     bool
 
 	ignoreFile []string
@@ -614,10 +614,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	if pathos.FileHasPrefix(pkg.Dir, ctx.RootDir) == false {
 		return nil
 	}
-	if pkg.Status == StatusLocal {
-		return nil
-	}
-	if pkg.Status == StatusProgram && pkg.inVendor == false {
+	if pkg.Status.Location == LocationLocal {
 		return nil
 	}
 	ctx.Operation = append(ctx.Operation, &Operation{
@@ -659,7 +656,7 @@ func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
 				}
 			case next == nil:
 			case next.Canonical == next.Local:
-			case next.Status != StatusExternal:
+			case next.Status.Location != LocationExternal:
 			}
 		}
 	}

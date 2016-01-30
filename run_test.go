@@ -25,7 +25,7 @@ func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	if printHelp == true {
 		g.Fatalf("(%s) Printed help", name)
 	}
-	if output.String() != expectedOutput {
+	if strings.TrimSpace(output.String()) != strings.TrimSpace(expectedOutput) {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
 	}
 }
@@ -46,14 +46,16 @@ func TestSimple(t *testing.T) {
 	)
 	g.In("co1")
 	Vendor(g, "co1 init", "init", "")
-	Vendor(g, "", "list", `e co2/pk1
-e co2/pk2
-l co1/pk1
+	Vendor(g, "", "list", `
+ e  co2/pk1
+ e  co2/pk2
+ l  co1/pk1
 `)
 	Vendor(g, "co1 add ext", "add +ext", "")
-	Vendor(g, "co1 list", "list", `v co2/pk1
-v co2/pk2
-l co1/pk1
+	Vendor(g, "co1 list", "list", `
+ v  co2/pk1
+ v  co2/pk2
+ l  co1/pk1
 `)
 }
 
@@ -76,15 +78,17 @@ func TestDuplicatePackage(t *testing.T) {
 
 	g.In("co1")
 	Vendor(g, "co1 init", "init", "")
-	Vendor(g, "co1 pre list", "list", `e co2/pk1
-e co3/pk1
-e co3/pk1
-l co1/pk1
+	Vendor(g, "co1 pre list", "list", `
+ e  co2/pk1
+ e  co3/pk1
+ e  co3/pk1
+ l  co1/pk1
 `)
 	Vendor(g, "co1 add", "add -long +ext", "")
-	Vendor(g, "co1 list", "list", `v co2/pk1
-v co3/pk1
-l co1/pk1
+	Vendor(g, "co1 list", "list", `
+ v  co2/pk1
+ v  co3/pk1
+ l  co1/pk1
 `)
 }
 
@@ -104,13 +108,15 @@ func TestEllipsis(t *testing.T) {
 	)
 	g.In("co1")
 	Vendor(g, "co1 init", "init", "")
-	Vendor(g, "", "list", `e co2/pk1
-e co2/pk1/pk2
-l co1/pk1
+	Vendor(g, "", "list", `
+ e  co2/pk1
+ e  co2/pk1/pk2
+ l  co1/pk1
 `)
 	Vendor(g, "co1 add ext", "add co2/pk1/...", "")
-	Vendor(g, "co1 list", "list", `v co2/pk1
-v co2/pk1/pk2
-l co1/pk1
+	Vendor(g, "co1 list", "list", `
+ v  co2/pk1
+ v  co2/pk1/pk2
+ l  co1/pk1
 `)
 }

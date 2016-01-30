@@ -5,52 +5,150 @@
 package context
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 )
 
-// Status indicates the status of the import.
-type Status byte
+type (
+	// Status is the package type, location, and presence indicators.
+	Status struct {
+		Type     StatusType     // program, package
+		Location StatusLocation // vendor, local, external, stdlib
+		Presence StatusPresence // missing, unused, tree
 
-func (ls Status) String() string {
-	switch ls {
-	case StatusUnknown:
-		return "?"
-	case StatusMissing:
-		return "m"
-	case StatusStandard:
-		return "s"
-	case StatusLocal:
-		return "l"
-	case StatusExternal:
-		return "e"
-	case StatusUnused:
-		return "u"
-	case StatusProgram:
-		return "p"
-	case StatusVendor:
-		return "v"
+		Not bool // Not indicates boolean operation "not" on above.
 	}
-	panic("missing status")
+
+	StatusType     byte // StatusType is main or not-main.
+	StatusLocation byte // StatusLocation is where the package is.
+	StatusPresence byte // StatusPresence is if it can be found or referenced.
+
+	// StatusAnd is a list of status filters that should be "and'ed" together.
+	StatusAnd []Status
+)
+
+func (s Status) String() string {
+	t := ' '
+	l := ' '
+	p := ' '
+	not := ""
+	if s.Not {
+		not = "!"
+	}
+	switch s.Type {
+	default:
+		panic("Unknown Type type")
+	case TypeUnknown:
+		t = '?'
+	case TypePackage:
+		t = ' '
+	case TypeProgram:
+		t = 'p'
+	}
+	switch s.Location {
+	default:
+		panic("Unkown Location type")
+	case LocationUnknown:
+		l = '?'
+	case LocationNotFound:
+		l = ' '
+	case LocationLocal:
+		l = 'l'
+	case LocationExternal:
+		l = 'e'
+	case LocationVendor:
+		l = 'v'
+	case LocationStandard:
+		l = 's'
+	}
+	switch s.Presence {
+	default:
+		panic("Unknown Presence type")
+	case PresenceUnknown:
+		p = '?'
+	case PresenceFound:
+		p = ' '
+	case PresenceMissing:
+		p = 'm'
+	case PresenceUnsued:
+		p = 'u'
+	case PresenceTree:
+		p = 't'
+	}
+	return not + string(t) + string(l) + string(p)
+}
+
+func (sa StatusAnd) String() string {
+	if len(sa) == 0 {
+		return "NOOP"
+	}
+	buf := &bytes.Buffer{}
+	buf.WriteString("and(")
+	for i, s := range sa {
+		if i != 0 {
+			buf.WriteString(",")
+		}
+		buf.WriteString(s.String())
+	}
+	buf.WriteString(")")
+	return buf.String()
+}
+
+func (pkgSt Status) Match(filterSt Status) bool {
+	// not: true, pkg: A, filter: B
+	// true == (A == B) -> true == false -> false
+	//
+	// not: false, pkg: A, filter: B
+	// false == (A == B) -> false == false -> true
+	//
+	// not: true, pkg: A, filter: A
+	// true == (A == A) -> true == true) -> true
+	//
+	// not: false, pkg: A, filter: A
+	// false == (A == A) -> false == true -> false
+	if filterSt.Location != LocationUnknown && filterSt.Not == (pkgSt.Location == filterSt.Location) {
+		return false
+	}
+	if filterSt.Type != TypeUnknown && filterSt.Not == (pkgSt.Type == filterSt.Type) {
+		return false
+	}
+	if filterSt.Presence != PresenceUnknown && filterSt.Not == (pkgSt.Presence == filterSt.Presence) {
+		return false
+	}
+	return true
+}
+
+func (pkgSt Status) MatchAnd(filterSt StatusAnd) bool {
+	for _, fs := range filterSt {
+		if pkgSt.Match(fs) == false {
+			return false
+		}
+	}
+	return true
 }
 
 const (
-	// StatusUnknown indicates the status was unable to be obtained.
-	StatusUnknown Status = iota
-	// StatusMissing indicates import not found in GOROOT or GOPATH.
-	StatusMissing
-	// StatusStd indicates import found in GOROOT.
-	StatusStandard
-	// StatusLocal indicates import is part of the local project.
-	StatusLocal
-	// StatusExternal indicates import is found in GOPATH and not copied.
-	StatusExternal
-	// StatusUnused indicates import has been copied, but is no longer used.
-	StatusUnused
-	// StatusProgram indicates the import is a main package but internal or vendor.
-	StatusProgram
-	// StatusVendor indicates the import is in the vendor folder.
-	StatusVendor
+	TypeUnknown StatusType = iota // TypeUnknown is unset StatusType.
+	TypePackage                   // TypePackage package is a non-main package.
+	TypeProgram                   // TypeProgram package is a main package.
+)
+
+const (
+	LocationUnknown  StatusLocation = iota // LocationUnknown is unset StatusLocation.
+	LocationNotFound                       // LocationNotFound package is not to be found (use PresenceMissing).
+	LocationStandard                       // LocationStandard package is in the standard library.
+	LocationLocal                          // LocationLocal package is in a project, not in a vendor folder.
+	LocationExternal                       // LocationExternal package is not in a project, in GOPATH.
+	LocationVendor                         // LocationVendor package is in a vendor folder.
+)
+
+const (
+	PresenceUnknown StatusPresence = iota // PresenceUnknown is unset StatusPresence.
+	PresenceFound                         // PresenceFound package exists.
+	PresenceMissing                       // PresenceMissing package is referenced but not found.
+	PresenceUnsued                        // PresenceUnused package is found locally but not referenced.
+	PresenceTree                          // PresenceTree package is in vendor folder, in a tree, but not referenced.
 )
 
 // ListItem represents a package in the current project.
@@ -73,8 +171,14 @@ type statusItemSort []StatusItem
 func (li statusItemSort) Len() int      { return len(li) }
 func (li statusItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
 func (li statusItemSort) Less(i, j int) bool {
+	if li[i].Status.Presence != li[j].Status.Presence {
+		return li[i].Status.Presence > li[j].Status.Presence
+	}
+	if li[i].Status.Location != li[j].Status.Location {
+		return li[i].Status.Location > li[j].Status.Location
+	}
 	if li[i].Status != li[j].Status {
-		return li[i].Status > li[j].Status
+		return li[i].Status.Type > li[j].Status.Type
 	}
 	return li[i].Local < li[j].Local
 }
