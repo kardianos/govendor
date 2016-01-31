@@ -18,11 +18,11 @@ func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	os.Setenv("GOVENDORFOLDER", "")
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
-	printHelp, err := run(output, args)
+	msg, err := run(output, args)
 	if err != nil {
 		g.Fatalf("(%s) Error: %v", name, err)
 	}
-	if printHelp == true {
+	if msg != MsgNone {
 		g.Fatalf("(%s) Printed help", name)
 	}
 	if strings.TrimSpace(output.String()) != strings.TrimSpace(expectedOutput) {

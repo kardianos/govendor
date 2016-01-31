@@ -24,8 +24,13 @@ type (
 	StatusLocation byte // StatusLocation is where the package is.
 	StatusPresence byte // StatusPresence is if it can be found or referenced.
 
-	// StatusAnd is a list of status filters that should be "and'ed" together.
-	StatusAnd []Status
+	// StatusGroup is the logical filter for status with "and", "not", and grouping.
+	StatusGroup struct {
+		Status []Status
+		Group  []StatusGroup
+		And    bool
+		Not    bool
+	}
 )
 
 func (s Status) String() string {
@@ -40,7 +45,7 @@ func (s Status) String() string {
 	default:
 		panic("Unknown Type type")
 	case TypeUnknown:
-		t = '?'
+		t = '_'
 	case TypePackage:
 		t = ' '
 	case TypeProgram:
@@ -50,7 +55,7 @@ func (s Status) String() string {
 	default:
 		panic("Unkown Location type")
 	case LocationUnknown:
-		l = '?'
+		l = '_'
 	case LocationNotFound:
 		l = ' '
 	case LocationLocal:
@@ -66,7 +71,7 @@ func (s Status) String() string {
 	default:
 		panic("Unknown Presence type")
 	case PresenceUnknown:
-		p = '?'
+		p = '_'
 	case PresenceFound:
 		p = ' '
 	case PresenceMissing:
@@ -79,19 +84,30 @@ func (s Status) String() string {
 	return not + string(t) + string(l) + string(p)
 }
 
-func (sa StatusAnd) String() string {
-	if len(sa) == 0 {
-		return "NOOP"
-	}
+func (sg StatusGroup) String() string {
 	buf := &bytes.Buffer{}
-	buf.WriteString("and(")
-	for i, s := range sa {
+	if sg.And {
+		buf.WriteString("and")
+	} else {
+		buf.WriteString("or")
+	}
+	buf.WriteRune('(')
+	for i, s := range sg.Status {
 		if i != 0 {
-			buf.WriteString(",")
+			buf.WriteRune(',')
 		}
 		buf.WriteString(s.String())
 	}
-	buf.WriteString(")")
+	if len(sg.Status) > 0 && len(sg.Group) > 0 {
+		buf.WriteRune(',')
+	}
+	for i, ssg := range sg.Group {
+		if i != 0 {
+			buf.WriteRune(',')
+		}
+		buf.WriteString(ssg.String())
+	}
+	buf.WriteRune(')')
 	return buf.String()
 }
 
@@ -119,13 +135,19 @@ func (pkgSt Status) Match(filterSt Status) bool {
 	return true
 }
 
-func (pkgSt Status) MatchAnd(filterSt StatusAnd) bool {
-	for _, fs := range filterSt {
-		if pkgSt.Match(fs) == false {
-			return false
+func (status Status) MatchGroup(filter StatusGroup) bool {
+	or := !filter.And
+	for _, fs := range filter.Status {
+		if status.Match(fs) == or {
+			return or != filter.Not
 		}
 	}
-	return true
+	for _, fg := range filter.Group {
+		if status.MatchGroup(fg) == or {
+			return or != filter.Not
+		}
+	}
+	return filter.And
 }
 
 const (

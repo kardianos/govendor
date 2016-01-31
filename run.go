@@ -169,10 +169,20 @@ var (
 	}
 )
 
-func parseStatus(statusString string) (status []StatusAnd, err error) {
-	ss := strings.Split(statusString, ",")
-	sa := StatusAnd{}
+func statusGroupFromList(list []Status, and, not bool) StatusGroup {
+	sg := StatusGroup{
+		Not: not,
+		And: and,
+	}
+	for _, s := range list {
+		sg.Status = append(sg.Status, s)
+	}
+	return sg
+}
 
+func parseStatusGroup(statusString string) (sg StatusGroup, err error) {
+	ss := strings.Split(statusString, ",")
+	sg.And = true
 	for _, s := range ss {
 		st := Status{}
 		if strings.HasPrefix(s, "!") {
@@ -208,15 +218,10 @@ func parseStatus(statusString string) (status []StatusAnd, err error) {
 			return
 		}
 		if len(list) == 0 {
-			sa = append(sa, st)
+			sg.Status = append(sg.Status, st)
 		} else {
-			for _, st := range list {
-				status = append(status, StatusAnd{st})
-			}
+			sg.Group = append(sg.Group, statusGroupFromList(list, false, st.Not))
 		}
-	}
-	if len(sa) > 0 {
-		status = append(status, sa)
 	}
 	return
 }
@@ -231,28 +236,16 @@ func (f *filterImport) String() string {
 }
 
 type filter struct {
-	Status []StatusAnd
+	Status StatusGroup
 	Import []*filterImport
 }
 
 func (f filter) String() string {
-	s := ""
-	for i, st := range f.Status {
-		if i != 0 {
-			s += ", "
-		}
-		s += "+" + st.String()
-	}
-	return fmt.Sprintf("status %q, import: %q", s, f.Import)
+	return fmt.Sprintf("status %q, import: %q", f.Status, f.Import)
 }
 
 func (f filter) HasStatus(item StatusItem) bool {
-	for _, fs := range f.Status {
-		if item.Status.MatchAnd(fs) {
-			return true
-		}
-	}
-	return false
+	return item.Status.MatchGroup(f.Status)
 }
 func (f filter) HasImport(item StatusItem) bool {
 	for _, imp := range f.Import {
@@ -280,7 +273,6 @@ func (f filter) HasImport(item StatusItem) bool {
 
 func parseFilter(args []string) (filter, error) {
 	f := filter{
-		Status: make([]StatusAnd, 0, len(args)),
 		Import: make([]*filterImport, 0, len(args)),
 	}
 	for _, a := range args {
@@ -289,16 +281,34 @@ func parseFilter(args []string) (filter, error) {
 		}
 		// Check if item is a status.
 		if a[0] == '+' {
-			ss, err := parseStatus(a[1:])
+			sg, err := parseStatusGroup(a[1:])
 			if err != nil {
 				return f, err
 			}
-			f.Status = append(f.Status, ss...)
+			f.Status.Group = append(f.Status.Group, sg)
 		} else {
 			f.Import = append(f.Import, &filterImport{Import: a})
 		}
 	}
 	return f, nil
+}
+
+func insertListToAllNot(sg *StatusGroup, list []Status) {
+	if len(sg.Group) == 0 {
+		allStatusNot := true
+		for _, s := range sg.Status {
+			if s.Not == false {
+				allStatusNot = false
+				break
+			}
+		}
+		if allStatusNot {
+			sg.Group = append(sg.Group, statusGroupFromList(list, false, false))
+		}
+	}
+	for i := range sg.Group {
+		insertListToAllNot(&sg.Group[i], list)
+	}
 }
 
 type HelpMessage byte
@@ -351,12 +361,9 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 		if err != nil {
 			return MsgList, err
 		}
-		if len(f.Status) == 0 {
-			f.Status, err = parseStatus("normal")
-			if err != nil {
-				panic("unknown status")
-			}
-		}
+		insertListToAllNot(&f.Status, normal)
+		// fmt.Printf("Status: %q\n", f.Status)
+
 		// Print all listed status.
 		ctx, err := NewContextWD(false)
 		if err != nil {
