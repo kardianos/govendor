@@ -14,8 +14,7 @@ import (
 )
 
 func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
-	os.Setenv("GO15VENDOREXPERIMENT", "0")
-	os.Setenv("GOVENDORFOLDER", "")
+	os.Setenv("GO15VENDOREXPERIMENT", "1")
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
 	msg, err := run(output, args)

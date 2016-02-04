@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -43,6 +44,10 @@ govendor {add, update, remove} [options] ( +status or import-path-filter )
 
 govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
+	
+govendor [fmt, build, install, clean, test] ( +status or import-path-filter )
+	Run "go" commands using status filters.
+	$ govendor test +local
 
 Expanding "..."
 	A package import path may be expanded to other paths that
@@ -335,7 +340,7 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 	cmd := appArgs[1]
 	switch cmd {
 	case "init":
-		ctx, err := NewContextWD(true)
+		ctx, err := NewContextWD(RootWD)
 		if err != nil {
 			return MsgNone, err
 		}
@@ -365,7 +370,7 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 		// fmt.Printf("Status: %q\n", f.Status)
 
 		// Print all listed status.
-		ctx, err := NewContextWD(false)
+		ctx, err := NewContextWD(RootVendorOrWD)
 		if err != nil {
 			return checkNewContextError(err)
 		}
@@ -448,7 +453,7 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 		if err != nil {
 			return msg, err
 		}
-		ctx, err := NewContextWD(false)
+		ctx, err := NewContextWD(RootVendor)
 		if err != nil {
 			return checkNewContextError(err)
 		}
@@ -557,10 +562,48 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 			}
 		}
 		return MsgNone, migrate.MigrateWD(from)
+	case "fmt", "build", "install", "clean", "test":
+		return goCmd(cmd, appArgs[2:])
 	default:
 		return MsgFull, fmt.Errorf("Unknown command %q", cmd)
 	}
 	return MsgNone, nil
+}
+
+func goCmd(subcmd string, args []string) (HelpMessage, error) {
+	ctx, err := NewContextWD(RootVendorOrWD)
+	if err != nil {
+		return MsgNone, err
+	}
+	statusArgs := make([]string, 0, len(args))
+	otherArgs := make([]string, 1, len(args)+1)
+	otherArgs[0] = subcmd
+
+	for _, a := range args {
+		if a[0] == '+' {
+			statusArgs = append(statusArgs, a)
+		} else {
+			otherArgs = append(otherArgs, a)
+		}
+	}
+	f, err := parseFilter(statusArgs)
+	if err != nil {
+		return MsgNone, err
+	}
+	list, err := ctx.Status()
+	if err != nil {
+		return MsgNone, err
+	}
+
+	for _, item := range list {
+		if f.HasStatus(item) {
+			otherArgs = append(otherArgs, item.Local)
+		}
+	}
+	cmd := exec.Command("go", otherArgs...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	return MsgNone, cmd.Run()
 }
 
 func checkNewContextError(err error) (HelpMessage, error) {

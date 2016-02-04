@@ -140,9 +140,17 @@ type File struct {
 	ImportComment string
 }
 
+type RootType byte
+
+const (
+	RootVendor RootType = iota
+	RootWD
+	RootVendorOrWD
+)
+
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
-func NewContextWD(wdIsRoot bool) (*Context, error) {
+func NewContextWD(rt RootType) (*Context, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -152,10 +160,18 @@ func NewContextWD(wdIsRoot bool) (*Context, error) {
 	vendorFolder := "vendor"
 
 	root := wd
-	if !wdIsRoot {
-		root, err = findRoot(wd, rootIndicator)
-		if err != nil {
-			return nil, err
+	if rt == RootVendor || rt == RootVendorOrWD {
+		tryRoot, err := findRoot(wd, rootIndicator)
+		switch rt {
+		case RootVendor:
+			if err != nil {
+				return nil, err
+			}
+			root = tryRoot
+		case RootVendorOrWD:
+			if err == nil {
+				root = tryRoot
+			}
 		}
 	}
 
