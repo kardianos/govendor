@@ -44,7 +44,8 @@ govendor {add, update, remove} [options] ( +status or import-path-filter )
 
 govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
-	
+
+
 govendor [fmt, build, install, clean, test] ( +status or import-path-filter )
 	Run "go" commands using status filters.
 	$ govendor test +local
