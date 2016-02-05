@@ -46,6 +46,7 @@ govendor {add, update, remove} [options] ( +status or import-path-filter )
 govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
 
+
 govendor [fmt, build, install, clean, test] ( +status or import-path-filter )
 	Run "go" commands using status filters.
 	$ govendor test +local
@@ -105,7 +106,7 @@ If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 Examples:
 	$ govendor list -no-status +local
 	$ govendor list +vend,prog +local,program
-	$ govendor list +local,!prog
+	$ govendor list +local,^prog
 ```
 
 For example "govendor list +external" will tell you if there are any packages which

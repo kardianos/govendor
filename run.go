@@ -105,7 +105,7 @@ If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 Examples:
 	$ govendor list -no-status +local
 	$ govendor list +vend,prog +local,program
-	$ govendor list +local,!prog
+	$ govendor list +local,^prog
 
 `
 
@@ -117,7 +117,7 @@ var helpList = `govendor list [options]  ( +status or import-path-filter )
 Examples:
 	$ govendor list -no-status +local
 	$ govendor list +vend,prog +local,program
-	$ govendor list +local,!prog
+	$ govendor list +local,^prog
 `
 
 var helpAdd = `govendor add [options] ( +status or import-path-filter )
@@ -186,14 +186,16 @@ func statusGroupFromList(list []Status, and, not bool) StatusGroup {
 	return sg
 }
 
+const notOp = "^"
+
 func parseStatusGroup(statusString string) (sg StatusGroup, err error) {
 	ss := strings.Split(statusString, ",")
 	sg.And = true
 	for _, s := range ss {
 		st := Status{}
-		if strings.HasPrefix(s, "!") {
+		if strings.HasPrefix(s, notOp) {
 			st.Not = true
-			s = strings.TrimPrefix(s, "!")
+			s = strings.TrimPrefix(s, notOp)
 		}
 		var list []Status
 		switch {
