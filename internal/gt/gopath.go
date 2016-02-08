@@ -107,13 +107,16 @@ var fileSpecFile = template.Must(template.New("").Funcs(map[string]interface{}{
 		_, pkg := path.Split(s)
 		return pkg
 	},
+	"imp": func(s string) string {
+		return "`" + s + "`"
+	},
 }).Parse(` {{if .Build}}
 // +build {{.Build}}
 {{end}}
 package {{.Pkg|pkg}}
 
 import (
-{{range .Imports}}	"{{.}}"
+{{range .Imports}}	{{.|imp}}
 {{end}})
 `))
 

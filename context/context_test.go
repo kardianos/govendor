@@ -770,3 +770,32 @@ func TestTree(t *testing.T) {
 /vendor/vendor.json
 `)
 }
+
+func TestBadImport(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("b.go", `
+****************************************************************************
+                 XXXX requires Go 1.X or later.
+****************************************************************************
+`),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	tree(g, c, "co1 after add", `
+/pk1/a.go
+/vendor/co2/pk1/b.go
+/vendor/vendor.json
+
+`)
+}

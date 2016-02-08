@@ -132,9 +132,10 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 			}
 		}
 	}
-	f, err := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
-	if err != nil {
-		return err
+	// Ignore error here and continue on best effort.
+	f, _ := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
+	if f == nil {
+		f = &ast.File{}
 	}
 
 	tags, err := ctx.getFileTags(pathname, f)
