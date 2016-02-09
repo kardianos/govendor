@@ -796,6 +796,42 @@ func TestBadImport(t *testing.T) {
 /pk1/a.go
 /vendor/co2/pk1/b.go
 /vendor/vendor.json
+`)
+}
 
+func TestLicense(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2",
+		gt.File("LICENSE"),
+	)
+	g.Setup("co2/go/pk1",
+		gt.File("b.go", "strings"),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport("co2/go/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	tree(g, c, "co1 after add", `
+/pk1/a.go
+/vendor/co2/LICENSE
+/vendor/co2/go/pk1/b.go
+/vendor/vendor.json
+`)
+
+	g.Check(c.ModifyImport("co2/go/pk1", Remove))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	tree(g, c, "co1 after remove", `
+/pk1/a.go
+/vendor/vendor.json
 `)
 }

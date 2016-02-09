@@ -230,9 +230,18 @@ func RemovePackage(path, root string, tree bool) error {
 			return nil
 		}
 		if len(fl) > 0 {
-			return nil
+			allAreLicense := true
+			for _, fi := range fl {
+				if isLicenseFile(fi.Name()) == false {
+					allAreLicense = false
+					break
+				}
+			}
+			if !allAreLicense {
+				return nil
+			}
 		}
-		err = os.Remove(path)
+		err = os.RemoveAll(path)
 		if err != nil {
 			// fmt.Fprintf(os.Stderr, "Failedd to remove empty directory %q: %v\n", path, err)
 			return nil

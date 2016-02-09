@@ -80,7 +80,7 @@ type Conflict struct {
 
 // Context represents the current project context.
 type Context struct {
-	GopathList []string // List of GOPATHs in environment.
+	GopathList []string // List of GOPATHs in environment. Includes "src" dir.
 	Goroot     string   // The path to the standard library.
 
 	RootDir        string // Full path to the project root.
@@ -118,7 +118,7 @@ type Package struct {
 	Canonical  string
 	Local      string
 	SourcePath string
-	Gopath     string
+	Gopath     string // Inlcudes trailing "src".
 	Files      []*File
 	Status     Status
 	Tree       bool
@@ -841,7 +841,7 @@ func (ctx *Context) copy() error {
 		if len(op.Dest) == 0 {
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
 		} else {
-			err = ctx.CopyPackage(op.Dest, op.Src, op.IgnoreFile, pkg.Tree)
+			err = ctx.CopyPackage(op.Dest, op.Src, op.IgnoreFile, pkg.Tree, pkg.Gopath)
 		}
 		if err != nil {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)

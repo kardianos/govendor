@@ -16,7 +16,7 @@ import (
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool) error {
+func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool, gopath string) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -97,7 +97,7 @@ fileLoop:
 				return err
 			}
 
-			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true)
+			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true, gopath)
 			if err != nil {
 				return err
 			}
@@ -116,7 +116,8 @@ fileLoop:
 			return err
 		}
 	}
-	return nil
+
+	return licenseCopy(gopath, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder))
 }
 
 func copyFile(destPath, srcPath string) error {
