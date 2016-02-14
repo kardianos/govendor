@@ -12,11 +12,10 @@ that purpose.
  * flattens dependency tree to single level
  * Can ignore test files and other build tags
  * Tested cross platform support
- * Package import comment removal
  * Inspection of the current state package locations
- * Handles packages, not directory trees
+ * Handles packages and directory trees
  * Handles the simple and complex cases
- * Use "..." to also handle packages in sub-folders
+ * Use "/..." to also handle packages in sub-folders or "/^" to handle directory trees
  * Handle packages based on their status
 
 ### Usage
