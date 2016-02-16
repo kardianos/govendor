@@ -46,7 +46,7 @@ govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
 
 
-govendor [fmt, build, install, clean, test] ( +status or import-path-filter )
+govendor [fmt, build, install, clean, test, vet] ( +status or import-path-filter )
 	Run "go" commands using status filters.
 	$ govendor test +local
 
@@ -565,7 +565,7 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 			}
 		}
 		return MsgNone, migrate.MigrateWD(from)
-	case "fmt", "build", "install", "clean", "test":
+	case "fmt", "build", "install", "clean", "test", "vet":
 		return goCmd(cmd, appArgs[2:])
 	default:
 		return MsgFull, fmt.Errorf("Unknown command %q", cmd)
