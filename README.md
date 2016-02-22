@@ -80,6 +80,7 @@ Status list used in "+<status>" arguments:
 	vendor - vendor folder; copied locally
 	unused - the package has been copied locally, but isn't used
 	local - shares the root path and is not a vendor package
+	direct - directly imported by local packages
 	missing - referenced but not found in GOROOT or GOPATH
 	std - standard library package
 	program - package is a main package

@@ -112,8 +112,8 @@ func TestSimple(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 	list(g, c, "initial", `
- e  co2/pk1 < ["co1/pk1"]
- e  co2/pk2 < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
+de  co2/pk2 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  strings < ["co2/pk1" "co2/pk2"]
@@ -159,7 +159,7 @@ func TestDuplicatePackage(t *testing.T) {
 `)
 
 	list(g, c, "co2 list", `
- v  co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
+dv  co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
  l  co2/pk2 < []
  s  strings < ["co2/vendor/co3/pk3"]
 `)
@@ -167,9 +167,9 @@ func TestDuplicatePackage(t *testing.T) {
 	g.In("co1")
 	c = ctx(g)
 	list(g, c, "co1 pre list", `
- e  co2/pk2 < ["co1/pk1"]
+de  co2/pk2 < ["co1/pk1"]
  e  co2/vendor/co3/pk3 [co3/pk3] < ["co2/pk2"]
- e  co3/pk3 < ["co1/pk1"]
+de  co3/pk3 < ["co1/pk1"]
  l  co1/pk1 < []
  s  strings < ["co2/vendor/co3/pk3" "co3/pk3"]
 `)
@@ -203,8 +203,8 @@ func TestDuplicatePackage(t *testing.T) {
 `)
 
 	expected := `
- v  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
- v  co1/vendor/co3/pk3 [co3/pk3] < ["co1/pk1" "co1/vendor/co2/pk2"]
+dv  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
+dv  co1/vendor/co3/pk3 [co3/pk3] < ["co1/pk1" "co1/vendor/co2/pk2"]
  l  co1/pk1 < []
  s  strings < ["co1/vendor/co3/pk3"]
 `
@@ -218,8 +218,8 @@ func TestDuplicatePackage(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `
- v  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
- e  co3/pk3 < ["co1/pk1" "co1/vendor/co2/pk2"]
+dv  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
+de  co3/pk3 < ["co1/pk1" "co1/vendor/co2/pk2"]
  l  co1/pk1 < []
  s  strings < ["co3/pk3"]
 `)
@@ -271,8 +271,8 @@ func TestImportSimple(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	expected := `
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
- e  co2/pk2 < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+de  co2/pk2 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  strings < ["co1/vendor/co2/pk1" "co2/pk2"]
@@ -299,8 +299,8 @@ func TestImportSimple(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `
- e  co2/pk1 < ["co1/pk1"]
- e  co2/pk2 < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
+de  co2/pk2 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  strings < ["co2/pk1" "co2/pk2"]
@@ -329,8 +329,8 @@ func TestUpdate(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
- v  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
@@ -372,8 +372,8 @@ func TestUpdate(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after update", `
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
- v  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  encoding/csv < ["co1/vendor/co2/pk1/pk2"]
@@ -385,8 +385,8 @@ func TestUpdate(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `
- v  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
- e  co2/pk1 < ["co1/pk1"]
+dv  co1/vendor/co2/pk1/pk2 [co2/pk1/pk2] < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  encoding/csv < ["co1/vendor/co2/pk1/pk2"]
@@ -413,7 +413,7 @@ func TestVendor(t *testing.T) {
 	c := ctx(g)
 
 	list(g, c, "co1 list", `
- e  co2/pk1 < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
  e  co2/vendor/a [a] < ["co2/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
@@ -427,7 +427,7 @@ func TestVendor(t *testing.T) {
 
 	list(g, c, "co1 after add", `
  v  co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  strings < ["co1/vendor/a"]
@@ -479,7 +479,7 @@ func TestUnused(t *testing.T) {
 	list(g, c, "co1 after add", `
  vu co1/vendor/a [a] < []
  vu co1/vendor/co3/pk1 [co3/pk1] < []
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/vendor/co2/pk1"]
  s  encoding/csv < ["co1/vendor/a"]
@@ -510,8 +510,8 @@ func TestMissing(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
- v  co1/vendor/co3/pk1 [co3/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co3/pk1 [co3/pk1] < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/vendor/co2/pk1"]
  s  strings < ["co1/vendor/co3/pk1"]
@@ -526,8 +526,8 @@ func TestMissing(t *testing.T) {
 	g.Remove("co3/pk1")
 
 	list(g, c, "co1 after remove", `
-  m co3/pk1 < ["co1/pk1"]
- e  co2/pk1 < ["co1/pk1"]
+d m co3/pk1 < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co2/pk1"]
 `)
@@ -561,7 +561,7 @@ func TestVendorFile(t *testing.T) {
 	g.In("co1")
 	c = ctx(g)
 	list(g, c, "co1 list", `
- e  co2/pk1 < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
  e  co2/vendor/a [a] < ["co2/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
@@ -575,7 +575,7 @@ func TestVendorFile(t *testing.T) {
 
 	list(g, c, "co1 after add", `
  v  co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  strings < ["co1/vendor/a"]
@@ -618,7 +618,7 @@ func TestTagList(t *testing.T) {
 	c.IgnoreBuild("test appengine")
 
 	list(g, c, "co1 list", `
- e  co2/pk1 < ["co1/pk1"]
+de  co2/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  encoding/csv < ["co2/pk1"]
@@ -654,7 +654,7 @@ func TestTagAdd(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
  l  co1/pk1 < []
  s  fmt < ["co1/pk1"]
  s  strings < ["co1/vendor/co2/pk1"]
@@ -749,7 +749,7 @@ func TestTree(t *testing.T) {
 
 	list(g, c, "co1 after add list", `
  vt co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+dv  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
  l  co1/pk1 < []
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
 `)

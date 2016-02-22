@@ -50,6 +50,8 @@ func (s Status) String() string {
 		t = ' '
 	case TypeProgram:
 		t = 'p'
+	case TypeDirect:
+		t = 'd'
 	}
 	switch s.Location {
 	default:
@@ -154,6 +156,7 @@ const (
 	TypeUnknown StatusType = iota // TypeUnknown is unset StatusType.
 	TypePackage                   // TypePackage package is a non-main package.
 	TypeProgram                   // TypeProgram package is a main package.
+	TypeDirect                    // TypeDirect is a direct dependency of a local package.
 )
 
 const (
@@ -198,9 +201,6 @@ func (li statusItemSort) Less(i, j int) bool {
 	}
 	if li[i].Status.Location != li[j].Status.Location {
 		return li[i].Status.Location > li[j].Status.Location
-	}
-	if li[i].Status != li[j].Status {
-		return li[i].Status.Type > li[j].Status.Type
 	}
 	return li[i].Local < li[j].Local
 }

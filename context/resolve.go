@@ -423,5 +423,21 @@ func (ctx *Context) determinePackageStatus() error {
 			panic("determinePackageStatus loop limit")
 		}
 	}
+	for _, pkg := range ctx.Package {
+		s := pkg.Status
+		if s.Location == LocationLocal || s.Location == LocationStandard {
+			continue
+		}
+		if s.Type == TypeProgram {
+			continue
+		}
+		for _, rpkg := range pkg.referenced {
+			// check if pkg is used in a local package.
+			if rpkg.Status.Location == LocationLocal {
+				pkg.Status.Type = TypeDirect
+				break
+			}
+		}
+	}
 	return nil
 }

@@ -80,6 +80,7 @@ Status list used in "+<status>" arguments:
 	vendor - vendor folder; copied locally
 	unused - the package has been copied locally, but isn't used
 	local - shares the root path and is not a vendor package
+	direct - directly imported by local packages
 	missing - referenced but not found in GOROOT or GOPATH
 	std - standard library package
 	program - package is a main package
@@ -211,6 +212,8 @@ func parseStatusGroup(statusString string) (sg StatusGroup, err error) {
 			st.Location = LocationLocal
 		case strings.HasPrefix("program", s):
 			st.Type = TypeProgram
+		case strings.HasPrefix("direct", s):
+			st.Type = TypeDirect
 		case strings.HasPrefix("std", s):
 			st.Location = LocationStandard
 		case strings.HasPrefix("standard", s):
