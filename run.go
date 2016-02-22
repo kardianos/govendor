@@ -477,6 +477,9 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 
 		for _, item := range list {
 			if f.HasStatus(item) {
+				if mod == Add && ctx.VendorFilePackagePath(item.Canonical) != nil {
+					continue
+				}
 				err = ctx.ModifyImport(addTree(item.Local), mod)
 				if err != nil {
 					// Skip these errors if from status.
@@ -539,11 +542,11 @@ func run(w io.Writer, appArgs []string) (HelpMessage, error) {
 		}
 
 		// Write out vendor file and do change.
-		err = ctx.WriteVendorFile()
+		err = ctx.Alter()
 		if err != nil {
 			return MsgNone, err
 		}
-		err = ctx.Alter()
+		err = ctx.WriteVendorFile()
 		if err != nil {
 			return MsgNone, err
 		}
