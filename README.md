@@ -8,6 +8,15 @@ establishment a final vendor file specification and be a useful tool.
 If you require import path rewrites checkout the "rewrite" branch archived for
 that purpose.
 
+### Quick Start
+```
+$ cd "project in GOPATH"
+$ govendor init
+$ govendor add +external
+$ govendor list
+$ govendor update github.com/user/pkg/...
+```
+
 ### What this vendor tool features:
  * flattens dependency tree to single level
  * Can ignore test files and other build tags
