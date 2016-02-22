@@ -799,7 +799,7 @@ func TestBadImport(t *testing.T) {
 `)
 }
 
-func TestLicense(t *testing.T) {
+func TestLicenseSimple(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -832,6 +832,51 @@ func TestLicense(t *testing.T) {
 
 	tree(g, c, "co1 after remove", `
 /pk1/a.go
+/vendor/vendor.json
+`)
+}
+func TestLicenseNested(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("b.go", "co3/pk1"),
+	)
+	g.Setup("co3",
+		gt.File("LICENSE"),
+	)
+	g.Setup("co3/pk1",
+		gt.File("c.go", "strings"),
+	)
+	g.In("co2")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport("co3/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	tree(g, c, "co2 after add", `
+/pk1/b.go
+/vendor/co3/LICENSE
+/vendor/co3/pk1/c.go
+/vendor/vendor.json
+`)
+	g.In("co1")
+	c = ctx(g)
+
+	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport("co2/vendor/co3/pk1", Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	tree(g, c, "co1 after add", `
+/pk1/a.go
+/vendor/co2/pk1/b.go
+/vendor/co3/LICENSE
+/vendor/co3/pk1/c.go
 /vendor/vendor.json
 `)
 }

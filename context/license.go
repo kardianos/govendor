@@ -95,7 +95,7 @@ func licenseCopy(root, startIn, vendorRoot string) error {
 			}
 
 			srcPath := filepath.Join(folder, name)
-			destPath := filepath.Join(vendorRoot, pathos.FileTrimPrefix(folder, root), name)
+			destPath := filepath.Join(vendorRoot, pathos.FileTrimPrefix(getLastVendorRoot(folder), root), name)
 
 			// Only copy if file does not exist.
 			_, err := os.Stat(destPath)
@@ -120,4 +120,13 @@ func licenseCopy(root, startIn, vendorRoot string) error {
 		folder = nextFolder
 	}
 	panic("copyLicense loop limit")
+}
+
+func getLastVendorRoot(s string) string {
+	w := strings.Replace(s, "\\", "/", -1)
+	ix := strings.LastIndex(w, "/vendor/")
+	if ix < 0 {
+		return s
+	}
+	return s[ix+len("/vendor"):]
 }
