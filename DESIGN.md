@@ -36,6 +36,10 @@ New field in vendor-spec "checksumSHA256", sums the head content of all
 files in the package listing. Only sum the first 500 KB.
 "filename:<filename>,size:<number of bytes>,first N bytes".
 
+New field in vendor-spec "version". Add the version as specified after the
+"@" in the version spec. When pulling in dependencies, this field is merged
+into the rest of the project vendor-spec. Conflicts are resolved by dev.
+
 These checksums are re-computed after an update or fetch. They are
 checked after a sync. They are used to determine what needs a sync and
 what does not need a sync during the `govendor sync` command.
@@ -51,7 +55,7 @@ Sub-command "fetch" will need to get any new dependencies recursivly as well.
 ### Version spec
 
 Versions in the package-spec are a special prefix matching that
-checks vcs branches then tags.
+checks vcs branches and tags.
 When "version = v1" then the following would all match: v1.4, v1.8, v1.12.
 The following would *not* match: v10, foo-v1.4, v1-40
 
@@ -60,7 +64,8 @@ returned. Of the following: "v1.4, v1.8, v1.12, v1.12-beta --> v1.12 would
 be choosen.
 
 There is no precedence between branches and tags, they are both searched for
-labels and sorted all together to find the correct match.
+labels and sorted all together to find the correct match. In case of two
+labels with exactly the same, one from branch, one from tag, choose the branch.
 
 In the go repo: "version = release-branch.go1" would currently return
 the branch: "release-branch.go1.6".
