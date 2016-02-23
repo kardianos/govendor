@@ -94,3 +94,8 @@ Might support a new flag in add/update called "-uncommitted" which bypasses
 checks for commited and puts the fact that the version is uncommitted in
 the vendor-spec.
 
+Would need some type of status ("+outstanding" ?) check to look for any uncommitted packages.
+
+Also add a new flag like `govendor list -should-not +outstanding` which exits non-zero 
+if there are any non-committed changes present.
+
