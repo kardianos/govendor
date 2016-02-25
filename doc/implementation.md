@@ -1,11 +1,13 @@
 # Implementation of design
 
+*Each point in a section should be done in order they appear on the list.*
+
 ## Fetch and sync sub-commands
 
  - [ ] Factor out govendor/run.go into govendor/runner package.
  - [ ] Create a package interface to ask questions and get answers.
  - [ ] In govendor main package, add in a CLI interface to ask questions and get answers.
- - [ ] Sub out fetch and sync sub-commands.
+ - [ ] Stub out fetch and sync sub-commands.
  - [ ] Update parsing package-spec to include:
   * version-spec
   * origin
