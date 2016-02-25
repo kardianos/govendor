@@ -78,6 +78,12 @@ version) will be used.
 
 Make interactive, but separate out asking from CLI in API.
 
+### Setting the origin
+
+If may be benefitial to be able to set the origin when fetching packages. A
+possible design would look like this:
+`package-sepc = <path>[::<origin>][{/...|/^}][@[<version-spec>]]`
+
 ### Summary
 
 Support fetching versions, but version ranges are not facy, just a spiced up
@@ -99,3 +105,8 @@ Would need some type of status ("+outstanding" ?) check to look for any uncommit
 Also add a new flag like `govendor list -should-not +outstanding` which exits non-zero 
 if there are any non-committed changes present.
 
+## A way to add/remove all at once.
+
+Thinking of issue #75, could add a `govendor addremove` command
+that fetches missing packages, adds external packages, and removes unused
+packages. I'm not sure if it is worth it or not though.
