@@ -28,7 +28,9 @@
 		need to be fetched. If no checksum is present, fetch package
 		and write new checksum.
  - [ ] Implement the fetch command when fetch specifies a revision.
- - [ ] Add fetching the version from version-spec.
+ - [ ] Add fetching the version from version-spec. For git try to rely
+		on standard git command, but also might look into
+		"github.com/src-d/go-git" for inspecting versions remotely.
 
 ## Vendor package with outstanding changes
 
