@@ -4,6 +4,9 @@
 
 ## Fetch and sync sub-commands
 
+For current work and status see the
+[fetch branch](https://github.com/kardianos/govendor/blob/fetch/doc/implementation.md).
+
  - [ ] Factor out govendor/run.go into govendor/runner package.
  - [ ] Create a package interface to ask questions and get answers.
  - [ ] In govendor main package, add in a CLI interface to ask questions and get answers.
