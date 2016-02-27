@@ -1,0 +1,83 @@
+// Copyright 2016 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package run
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/migrate"
+)
+
+func Init() (HelpMessage, error) {
+	ctx, err := context.NewContextWD(context.RootWD)
+	if err != nil {
+		return MsgNone, err
+	}
+	ctx.VendorFile.Ignore = "test" // Add default ignore rule.
+	err = ctx.WriteVendorFile()
+	if err != nil {
+		return MsgNone, err
+	}
+	err = os.MkdirAll(filepath.Join(ctx.RootDir, ctx.VendorFolder), 0777)
+	return MsgNone, err
+}
+func Migrate(subCmdArgs []string) (HelpMessage, error) {
+	from := migrate.Auto
+	if len(subCmdArgs) > 0 {
+		switch subCmdArgs[0] {
+		case "auto":
+			from = migrate.Auto
+		case "gb":
+			from = migrate.Gb
+		case "godep":
+			from = migrate.Godep
+		case "internal":
+			from = migrate.Internal
+		default:
+			return MsgMigrate, fmt.Errorf("Unknown migrate command %q", subCmdArgs[0])
+		}
+	}
+	return MsgNone, migrate.MigrateWD(from)
+}
+
+func GoCmd(subcmd string, args []string) (HelpMessage, error) {
+	ctx, err := context.NewContextWD(context.RootVendorOrWD)
+	if err != nil {
+		return MsgNone, err
+	}
+	statusArgs := make([]string, 0, len(args))
+	otherArgs := make([]string, 1, len(args)+1)
+	otherArgs[0] = subcmd
+
+	for _, a := range args {
+		if a[0] == '+' {
+			statusArgs = append(statusArgs, a)
+		} else {
+			otherArgs = append(otherArgs, a)
+		}
+	}
+	f, err := parseFilter(statusArgs)
+	if err != nil {
+		return MsgNone, err
+	}
+	list, err := ctx.Status()
+	if err != nil {
+		return MsgNone, err
+	}
+
+	for _, item := range list {
+		if f.HasStatus(item) {
+			otherArgs = append(otherArgs, item.Local)
+		}
+	}
+	cmd := exec.Command("go", otherArgs...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	return MsgNone, cmd.Run()
+}

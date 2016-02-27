@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package run
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	os.Setenv("GO15VENDOREXPERIMENT", "1")
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
-	msg, err := run(output, args)
+	msg, err := Run(output, args)
 	if err != nil {
 		g.Fatalf("(%s) Error: %v", name, err)
 	}
