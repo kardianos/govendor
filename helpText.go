@@ -26,6 +26,16 @@ govendor {add, update, remove} [options] ( +status or import-path-filter )
 		-short       if conflict, take short path 
 		-long        if conflict, take long path
 
+govendor fetch [options] ( +status or package-spec )
+	Fetches packages directly into the vendor folder.
+	package-sepc = <path>[::<origin>][{/...|/^}][@[<version-spec>]]
+	Options:
+		-tree        copy package(s) and all sub-folders under each package
+		-insecure    allow downloading over insecure connection
+	
+govendor sync
+	Ensures the contents of the vendor folder matches the vendor file.
+
 govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
 
@@ -132,7 +142,16 @@ var helpRemove = `govendor remove [options] ( +status or import-path-filter )
 		-n           dry run and print actions that would be taken
 `
 
-var helpFetch = `govendor fetch <TBD>
+var helpFetch = `govendor fetch [options] ( +status or package-spec )
+	Fetches packages directly into the vendor folder.
+	package-sepc = <path>[::<origin>][{/...|/^}][@[<version-spec>]]
+	Options:
+		-tree        copy package(s) and all sub-folders under each package
+		-insecure    allow downloading over insecure connection
+`
+
+var helpSync = `govendor sync
+	Ensures the contents of the vendor folder matches the vendor file.
 `
 
 var helpMigrate = `govendor migrate [auto, godep, internal]

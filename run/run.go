@@ -22,6 +22,7 @@ const (
 	MsgUpdate
 	MsgRemove
 	MsgFetch
+	MsgSync
 	MsgMigrate
 )
 
@@ -52,9 +53,15 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 			mod = context.Fetch
 		}
 		return Modify(w, appArgs[2:], mod, ask)
+	case "sync":
+		return Sync(w, appArgs[2:])
 	case "migrate":
 		return Migrate(appArgs[2:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
+		msg, err := Sync(w, nil)
+		if err != nil {
+			return msg, err
+		}
 		return GoCmd(cmd, appArgs[2:])
 	default:
 		return MsgFull, fmt.Errorf("Unknown command %q", cmd)

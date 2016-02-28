@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kardianos/govendor/run"
 	"github.com/kardianos/govendor/cliprompt"
+	"github.com/kardianos/govendor/run"
 )
 
 func main() {
@@ -22,6 +22,8 @@ func main() {
 	}
 	msgText := ""
 	switch msg {
+	default:
+		panic("Unknown message type")
 	case run.MsgFull:
 		msgText = helpFull
 	case run.MsgList:
@@ -34,6 +36,8 @@ func main() {
 		msgText = helpRemove
 	case run.MsgFetch:
 		msgText = helpFetch
+	case run.MsgSync:
+		msgText = helpSync
 	case run.MsgMigrate:
 		msgText = helpMigrate
 	}
