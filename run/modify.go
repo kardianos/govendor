@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/pkgspec"
 	"github.com/kardianos/govendor/prompt"
 )
 
@@ -89,10 +90,10 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		if !*tree {
 			return s
 		}
-		if strings.HasSuffix(s, context.TreeSuffix) {
+		if strings.HasSuffix(s, pkgspec.TreeIncludeSuffix) {
 			return s
 		}
-		return path.Join(s, context.TreeSuffix)
+		return path.Join(s, pkgspec.TreeIncludeSuffix)
 	}
 
 	for _, item := range list {

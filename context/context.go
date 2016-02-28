@@ -21,12 +21,9 @@ import (
 
 	"github.com/kardianos/govendor/internal/pathos"
 	os "github.com/kardianos/govendor/internal/vos"
+	"github.com/kardianos/govendor/pkgspec"
 	"github.com/kardianos/govendor/vcs"
 	"github.com/kardianos/govendor/vendorfile"
-)
-
-const (
-	TreeSuffix = "/^"
 )
 
 const (
@@ -422,8 +419,8 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 			return err
 		}
 	}
-	tree := strings.HasSuffix(sourcePath, TreeSuffix)
-	sourcePath = strings.TrimSuffix(sourcePath, TreeSuffix)
+	tree := strings.HasSuffix(sourcePath, pkgspec.TreeIncludeSuffix)
+	sourcePath = strings.TrimSuffix(sourcePath, pkgspec.TreeIncludeSuffix)
 
 	// Determine canonical and local import paths.
 	sourcePath = pathos.SlashToImportPath(sourcePath)

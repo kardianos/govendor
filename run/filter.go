@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/pkgspec"
 )
 
 var (
@@ -117,15 +118,8 @@ func (f filter) HasImport(item context.StatusItem) bool {
 			imp.Added = true
 			return true
 		}
-		if strings.HasSuffix(imp.Import, "/...") {
-			base := strings.TrimSuffix(imp.Import, "/...")
-			if strings.HasPrefix(item.Local, base) || strings.HasPrefix(item.Canonical, base) {
-				imp.Added = true
-				return true
-			}
-		}
-		if strings.HasSuffix(imp.Import, "...") {
-			base := strings.TrimSuffix(imp.Import, "...")
+		if strings.HasSuffix(imp.Import, pkgspec.TreeMatchSuffix) {
+			base := strings.TrimSuffix(imp.Import, pkgspec.TreeMatchSuffix)
 			if strings.HasPrefix(item.Local, base) || strings.HasPrefix(item.Canonical, base) {
 				imp.Added = true
 				return true

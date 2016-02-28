@@ -12,7 +12,7 @@
   * If only other and no multiple choice, simply prompt.
  - [x] In govendor main package, add in a CLI interface to ask questions and get answers.
  - [x] Stub out fetch and sync sub-commands.
- - [ ] Update parsing package-spec to include:
+ - [x] Update parsing package-spec to include:
   * version-spec
   * origin
  - [ ] Add fields to the vendorfile package:
