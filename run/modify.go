@@ -13,9 +13,10 @@ import (
 	"strings"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/prompt"
 )
 
-func Modify(w io.Writer, subCmdArgs []string, mod context.Modify) (HelpMessage, error) {
+func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Prompt) (HelpMessage, error) {
 	msg := MsgFull
 	switch mod {
 	case context.Add:
@@ -27,12 +28,40 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify) (HelpMessage, 
 	case context.Fetch:
 		msg = MsgFetch
 	}
+	var err error
+	/*
+		// Fake example prompt.
+		q := &prompt.Question{
+			Error:  "An error goes here",
+			Prompt: "Do you want to do this?",
+			Type:   prompt.TypeSelectOne,
+			Options: []prompt.Option{
+				prompt.NewOption("yes", "Yes, continue", false),
+				prompt.NewOption("no", "No, stop", false),
+				prompt.NewOption("", "What?", true),
+			},
+		}
+		q.Options[2].Choosen = true
+		q.Options[2] = prompt.ValidateOption(q.Options[2], "Choose again!")
+		resp, err := ask.Ask(q)
+		if err != nil {
+			return msg, err
+		}
+		if resp == prompt.RespCancel {
+			fmt.Printf("Cancelled\n")
+			return MsgNone, nil
+		}
+		choosen := q.AnswerSingle(true)
+
+		fmt.Printf("Choosen: %s\n", choosen.String())
+	*/
+
 	listFlags := flag.NewFlagSet("mod", flag.ContinueOnError)
 	dryrun := listFlags.Bool("n", false, "dry-run")
 	short := listFlags.Bool("short", false, "choose the short path")
 	long := listFlags.Bool("long", false, "choose the long path")
 	tree := listFlags.Bool("tree", false, "copy all folders including and under selected folder")
-	err := listFlags.Parse(subCmdArgs)
+	err = listFlags.Parse(subCmdArgs)
 	if err != nil {
 		return msg, err
 	}

@@ -5,7 +5,11 @@
 ## Fetch and sync sub-commands
 
  - [x] Factor out govendor/run.go into govendor/runner package.
- - [ ] Create a package interface to ask questions and get answers.
+ - [x] Create a package interface to ask questions and get answers.
+  * Ask multiple choice question.
+  * Choice can also be "other".
+  * Can validate other option.
+  * If only other and no multiple choice, simply prompt.
  - [ ] In govendor main package, add in a CLI interface to ask questions and get answers.
  - [ ] Stub out fetch and sync sub-commands.
  - [ ] Update parsing package-spec to include:

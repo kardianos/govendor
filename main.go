@@ -11,10 +11,12 @@ import (
 	"os"
 
 	"github.com/kardianos/govendor/run"
+	"github.com/kardianos/govendor/cliprompt"
 )
 
 func main() {
-	msg, err := run.Run(os.Stdout, os.Args)
+	prompt := &cliprompt.Prompt{}
+	msg, err := run.Run(os.Stdout, os.Args, prompt)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}

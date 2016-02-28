@@ -11,13 +11,34 @@ import (
 	"testing"
 
 	"github.com/kardianos/govendor/internal/gt"
+	"github.com/kardianos/govendor/prompt"
 )
+
+type testPrompt struct{}
+
+func (p *testPrompt) Ask(q *prompt.Question) (prompt.Response, error) {
+	var opt *prompt.Option
+	for i := range q.Options {
+		if opt == nil {
+			opt = &q.Options[i]
+			continue
+		}
+		item := &q.Options[i]
+		if len(item.Key().(string)) > len(opt.Key().(string)) {
+			opt = item
+		}
+	}
+	if opt != nil {
+		opt.Choosen = true
+	}
+	return prompt.RespAnswer, nil
+}
 
 func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	os.Setenv("GO15VENDOREXPERIMENT", "1")
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
-	msg, err := Run(output, args)
+	msg, err := Run(output, args, &testPrompt{})
 	if err != nil {
 		g.Fatalf("(%s) Error: %v", name, err)
 	}

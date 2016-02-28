@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/prompt"
 )
 
 type HelpMessage byte
@@ -26,7 +27,7 @@ const (
 
 // Run is isoloated from main and os.Args to help with testing.
 // Shouldn't directly print to console, just write through w.
-func Run(w io.Writer, appArgs []string) (HelpMessage, error) {
+func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) {
 	if len(appArgs) == 1 {
 		return MsgFull, nil
 	}
@@ -50,7 +51,7 @@ func Run(w io.Writer, appArgs []string) (HelpMessage, error) {
 			// TODO: enable a code path that fetches recursivly on missing status.
 			mod = context.Fetch
 		}
-		return Modify(w, appArgs[2:], mod)
+		return Modify(w, appArgs[2:], mod, ask)
 	case "migrate":
 		return Migrate(appArgs[2:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
