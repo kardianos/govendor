@@ -32,7 +32,7 @@ govendor fetch github.com/kardianos/osext@
 govendor sync
 ```
 
-New field in vendor-spec "checksumSHA256", sums the head content of all
+New field in vendor-spec "checksumSHA1", sums the head content of all
 files in the package listing. Only sum the first 500 KB.
 "filename:<filename>,size:<number of bytes>,first N bytes".
 

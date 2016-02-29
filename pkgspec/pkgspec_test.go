@@ -12,16 +12,16 @@ func TestParse(t *testing.T) {
 		Pkg  *Pkg
 		Err  error
 	}{
-		{"abc/def", nil, nil},
+		{"abc/def", &Pkg{Path: "abc/def"}, nil},
 		{"", nil, ErrEmptyPath},
 		{"::", nil, ErrEmptyPath},
 		{"::foo", nil, ErrEmptyPath},
 		{"abc/def::", nil, ErrEmptyOrigin},
 		{"abc/def::foo/bar/vendor/abc/def", nil, nil},
 		{"abc/def::foo/bar/vendor/abc/def@", nil, nil},
-		{"abc/def::foo/bar/vendor/abc/def@v1.2.3", nil, nil},
-		{"abc/def@", nil, nil},
-		{"abc/def@v1.2.3", nil, nil},
+		{"abc/def::foo/bar/vendor/abc/def@v1.2.3", &Pkg{Path: "abc/def", Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}, nil},
+		{"abc/def@", &Pkg{Path: "abc/def", HasVersion: true}, nil},
+		{"abc/def@v1.2.3", &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, nil},
 	}
 
 	for _, item := range list {
@@ -45,6 +45,13 @@ func TestParse(t *testing.T) {
 		if str != item.Spec {
 			t.Errorf("For %q, round tripped to %q", item.Spec, str)
 			continue
+		}
+		if item.Pkg != nil {
+			diffA := pkg.Path != item.Pkg.Path || pkg.Origin != item.Pkg.Origin || pkg.Version != item.Pkg.Version
+			diffB := pkg.HasVersion != item.Pkg.HasVersion || pkg.MatchTree != item.Pkg.MatchTree || pkg.IncludeTree != item.Pkg.IncludeTree
+			if diffA || diffB {
+				t.Errorf("For %q, pkg detail diff: got %#v", item.Spec, pkg)
+			}
 		}
 	}
 }

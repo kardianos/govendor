@@ -47,6 +47,8 @@ type Package struct {
 	Tree         bool
 	Revision     string
 	RevisionTime string
+	Version      string
+	ChecksumSHA1 string
 	Comment      string
 }
 
@@ -58,6 +60,8 @@ var (
 	treeNames         = []string{"tree"}
 	revisionNames     = []string{"revision", "Revision", "version", "Version"}
 	revisionTimeNames = []string{"revisionTime", "RevisionTime", "versionTime", "VersionTime"}
+	versionNames      = []string{"version"}
+	checksumSHA1Names = []string{"checksumSHA1"}
 	commentNames      = []string{"comment", "Comment"}
 )
 
@@ -177,6 +181,8 @@ func (vf *File) toFields() {
 		setField(&pkg.Tree, object, treeNames)
 		setField(&pkg.Revision, object, revisionNames)
 		setField(&pkg.RevisionTime, object, revisionTimeNames)
+		setField(&pkg.Version, object, versionNames)
+		setField(&pkg.ChecksumSHA1, object, checksumSHA1Names)
 		setField(&pkg.Comment, object, commentNames)
 	}
 }
@@ -199,6 +205,8 @@ func (vf *File) toAll() {
 		setObject(pkg.Tree, obj, treeNames, true)
 		setObject(pkg.Revision, obj, revisionNames, false)
 		setObject(pkg.RevisionTime, obj, revisionTimeNames, true)
+		setObject(pkg.Version, obj, versionNames, true)
+		setObject(pkg.ChecksumSHA1, obj, checksumSHA1Names, true)
 		setObject(pkg.Comment, obj, commentNames, true)
 	}
 

@@ -15,10 +15,10 @@
  - [x] Update parsing package-spec to include:
   * version-spec
   * origin
- - [ ] Add fields to the vendorfile package:
+ - [x] Add fields to the vendorfile package:
   * version
-  * checksumSHA256
- - [ ] Have add and update start populating checksum field. Add tests.
+  * checksumSHA1
+ - [ ] Have "add" and "update" start populating checksum field. Add tests.
  - [ ] Add a label matcher function, return 0 or 1 labels. Add tests. 
 		Each potential label should have: Source {branch, tag}, Name string.
 		Do not integrate yet.
