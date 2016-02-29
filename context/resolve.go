@@ -135,7 +135,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	// Ignore error here and continue on best effort.
 	f, _ := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 	if f == nil {
-		f = &ast.File{}
+		return nil
 	}
 
 	tags, err := ctx.getFileTags(pathname, f)
