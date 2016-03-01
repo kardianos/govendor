@@ -98,7 +98,13 @@ If you don't want to check in dependencies, add "vendor/*/" in the .gitignore.
 
 Might support a new flag in add/update called "-uncommitted" which bypasses
 checks for commited and puts the fact that the version is uncommitted in
-the vendor-spec.
+the vendor-spec. When we add uncommitted changes, put in a bogus checksum (deadbeef).
+This way it indicates it is not up-to-date.
+
+Might need another sub-command to check for out of date or missing vendor packages.
+Maybe `govendor sync -n` (check what would be synced).
+
+### Probably don't do the following.
 
 Would need some type of status ("+outstanding" ?) check to look for any uncommitted packages.
 
