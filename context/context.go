@@ -9,6 +9,8 @@ package context
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -838,7 +840,16 @@ func (ctx *Context) copy() error {
 		if len(op.Dest) == 0 {
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
 		} else {
-			err = ctx.CopyPackage(op.Dest, op.Src, op.IgnoreFile, pkg.Tree, pkg.Gopath)
+			h := sha1.New()
+			var checksum []byte
+			err = ctx.CopyPackage(op.Dest, op.Src, op.IgnoreFile, pkg.Tree, pkg.Gopath, h)
+			if err == nil {
+				checksum = h.Sum(nil)
+				vpkg := ctx.VendorFilePackagePath(pkg.Canonical)
+				if vpkg != nil {
+					vpkg.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
+				}
+			}
 		}
 		if err != nil {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)

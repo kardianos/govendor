@@ -151,6 +151,7 @@ func TestDuplicatePackage(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "1wArEyRQSnOYA1LDiCNvZxF4sm8=",
 			"path": "co3/pk3",
 			"revision": ""
 		}
@@ -190,10 +191,12 @@ func TestDuplicatePackage(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "KrGLRMVV0FyxFX0FI4NavEDVJlY=",
 			"path": "co2/pk2",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "1wArEyRQSnOYA1LDiCNvZxF4sm8=",
 			"origin": "co1/vendor/co3/pk3",
 			"path": "co3/pk3",
 			"revision": ""
@@ -287,6 +290,7 @@ func TestImportSimple(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
 			"path": "co2/pk1",
 			"revision": ""
 		}
@@ -341,10 +345,12 @@ func TestUpdate(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
 			"path": "co2/pk1",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "n1nb7gB6rHnnWwN+27InTig/ePo=",
 			"path": "co2/pk1/pk2",
 			"revision": ""
 		}
@@ -438,11 +444,13 @@ func TestVendor(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "auzf5l1iVWjiCTOwR9TuaFF2Db8=",
 			"origin": "co2/vendor/a",
 			"path": "a",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "Ejt2NhWYzgcLKV1gpBW3Py9aF5w=",
 			"path": "co2/pk1",
 			"revision": ""
 		}
@@ -586,11 +594,13 @@ func TestVendorFile(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "auzf5l1iVWjiCTOwR9TuaFF2Db8=",
 			"origin": "co2/vendor/a",
 			"path": "a",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "Ejt2NhWYzgcLKV1gpBW3Py9aF5w=",
 			"path": "co2/pk1",
 			"revision": ""
 		}

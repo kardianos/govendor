@@ -103,7 +103,7 @@ func licenseCopy(root, startIn, vendorRoot string) error {
 				continue
 			}
 
-			err = copyFile(destPath, srcPath)
+			err = copyFile(destPath, srcPath, nil)
 			if err != nil {
 				return err
 			}

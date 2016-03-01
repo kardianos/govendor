@@ -6,17 +6,31 @@ package context
 
 import (
 	"fmt"
+	"hash"
 	"io"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
-	os "github.com/kardianos/govendor/internal/vos"
 )
+
+type fileInfoSort []os.FileInfo
+
+func (l fileInfoSort) Len() int {
+	return len(l)
+}
+func (l fileInfoSort) Less(i, j int) bool {
+	return l[i].Name() < l[j].Name()
+}
+func (l fileInfoSort) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool, gopath string) error {
+func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool, gopath string, h hash.Hash) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -44,6 +58,13 @@ func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, 
 	destDir.Close()
 	if err != nil {
 		return err
+	}
+	if h != nil {
+		// Write relative path to GOPATH.
+		relPath := strings.Trim(pathos.SlashToImportPath(getLastVendorRoot(pathos.FileTrimPrefix(srcPath, gopath))), "/")
+		h.Write([]byte(relPath))
+		// Sort file list to present a stable hash.
+		sort.Sort(fileInfoSort(fl))
 	}
 	for _, fi := range fl {
 		if fi.IsDir() {
@@ -96,8 +117,7 @@ fileLoop:
 			if err != nil {
 				return err
 			}
-
-			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true, gopath)
+			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true, gopath, h)
 			if err != nil {
 				return err
 			}
@@ -108,9 +128,13 @@ fileLoop:
 				continue fileLoop
 			}
 		}
+		if h != nil {
+			h.Write([]byte(name))
+		}
 		err = copyFile(
 			filepath.Join(destPath, name),
 			filepath.Join(srcPath, name),
+			h,
 		)
 		if err != nil {
 			return err
@@ -120,7 +144,14 @@ fileLoop:
 	return licenseCopy(gopath, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder))
 }
 
-func copyFile(destPath, srcPath string) error {
+type checksumType byte
+
+const (
+	hashNone checksumType = iota
+	hashSHA1
+)
+
+func copyFile(destPath, srcPath string, h hash.Hash) error {
 	ss, err := os.Stat(srcPath)
 	if err != nil {
 		return err
@@ -136,7 +167,13 @@ func copyFile(destPath, srcPath string) error {
 		return err
 	}
 
-	_, err = io.Copy(dest, src)
+	r := io.Reader(src)
+
+	if h != nil {
+		r = io.TeeReader(src, h)
+	}
+
+	_, err = io.Copy(dest, r)
 	// Close before setting mod and time.
 	dest.Close()
 	if err != nil {
