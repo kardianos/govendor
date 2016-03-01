@@ -144,13 +144,6 @@ fileLoop:
 	return licenseCopy(gopath, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder))
 }
 
-type checksumType byte
-
-const (
-	hashNone checksumType = iota
-	hashSHA1
-)
-
 func copyFile(destPath, srcPath string, h hash.Hash) error {
 	ss, err := os.Stat(srcPath)
 	if err != nil {
