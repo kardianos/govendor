@@ -19,7 +19,7 @@
   * version
   * checksumSHA1
  - [x] Have "add" and "update" start populating checksum field. Add tests.
- - [ ] Add a label matcher function, return 0 or 1 labels. Add tests. 
+ - [x] Add a label matcher function, return 0 or 1 labels. Add tests. 
 		Each potential label should have: Source {branch, tag}, Name string.
 		Do not integrate yet.
  - [ ] Add a function to decide if a version is a label or revision.
