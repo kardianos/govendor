@@ -39,6 +39,11 @@ func (l Label) String() string {
 	return fmt.Sprintf("[%s]%s", l.Source, l.Text)
 }
 
+type labelGroup struct {
+	seq      string
+	sections []labelSection
+}
+
 type labelSection struct {
 	seq      string
 	number   int64
@@ -46,8 +51,8 @@ type labelSection struct {
 }
 
 type labelAnalysis struct {
-	Label    Label
-	Sections []labelSection
+	Label  Label
+	Groups []labelGroup
 }
 
 func (item *labelAnalysis) fillSections(buf *bytes.Buffer) {
@@ -55,9 +60,9 @@ func (item *labelAnalysis) fillSections(buf *bytes.Buffer) {
 	number := false
 
 	isBreak := func(r rune) bool {
-		return r == '.' || r == '-'
+		return r == '.'
 	}
-	add := func(r rune) {
+	add := func(r rune, group *labelGroup) {
 		if buf.Len() > 0 {
 			sVal := buf.String()
 			buf.Reset()
@@ -68,30 +73,36 @@ func (item *labelAnalysis) fillSections(buf *bytes.Buffer) {
 			if isBreak(r) == false {
 				r = 0
 			}
-			item.Sections = append(item.Sections, labelSection{
+			group.sections = append(group.sections, labelSection{
 				seq:      sVal,
 				number:   value,
 				brokenBy: r,
 			})
 		}
 	}
-	for index, r := range item.Label.Text {
-		number = unicode.IsNumber(r)
-		different := number != previousNumber && index > 0
-		previousNumber = number
-		if isBreak(r) {
-			add(r)
-			continue
+	for _, groupText := range strings.Split(item.Label.Text, "-") {
+		group := labelGroup{
+			seq: groupText,
 		}
-		if different {
-			add(r)
+		for index, r := range groupText {
+			number = unicode.IsNumber(r)
+			different := number != previousNumber && index > 0
+			previousNumber = number
+			if isBreak(r) {
+				add(r, &group)
+				continue
+			}
+			if different {
+				add(r, &group)
+				buf.WriteRune(r)
+				continue
+			}
 			buf.WriteRune(r)
-			continue
 		}
-		buf.WriteRune(r)
+		add(0, &group)
+		buf.Reset()
+		item.Groups = append(item.Groups, group)
 	}
-	add(0)
-	buf.Reset()
 }
 
 type labelAnalysisList []*labelAnalysis
@@ -107,98 +118,81 @@ func (l labelAnalysisList) Less(i, j int) bool {
 	const debug = false
 	df := func(f string, a ...interface{}) {
 		if debug {
-			fmt.Printf(f, a)
+			fmt.Printf(f, a...)
 		}
 	}
 	a := l[i]
 	b := l[j]
-	swap := false
-	min := a
-	max := b
-	if len(max.Sections) < len(min.Sections) {
-		min, max = max, min
-		swap = true
+
+	// Want to return the *smaller* of the two group counts.
+	if len(a.Groups) != len(b.Groups) {
+		return len(a.Groups) < len(b.Groups)
 	}
+
+	gct := len(a.Groups)
+	if gct > len(b.Groups) {
+		gct = len(b.Groups)
+	}
+
 	df(":: %s vs %s ::\n", a.Label.Text, b.Label.Text)
-	for i := range min.Sections {
-		sa := a.Sections[i]
-		sb := b.Sections[i]
+	for ig := 0; ig < gct; ig++ {
+		ga := a.Groups[ig]
+		gb := b.Groups[ig]
 
-		// Sort "-alpha" and "-beta" tags down.
-		if sa.brokenBy != sb.brokenBy {
-			if sa.brokenBy == '-' {
-				return false
-			}
-			if sb.brokenBy == '-' {
-				return true
-			}
+		if ga.seq == gb.seq {
+			df("pt 1 %q\n", ga.seq)
+			continue
 		}
 
-		if sa.number != sb.number {
-			df("PT A")
-			return sa.number > sb.number
+		ct := len(ga.sections)
+		if ct > len(gb.sections) {
+			ct = len(gb.sections)
 		}
-		if sa.seq != sb.seq {
-			df("PT B")
-			return sa.seq > sb.seq
-		}
-	}
-	if len(a.Sections) == len(b.Sections) {
-		if a.Label.Source != b.Label.Source {
-			if a.Label.Source == LabelBranch {
-				df("PT C")
-				return true
+
+		// Compare common sections.
+		for i := 0; i < ct; i++ {
+			sa := ga.sections[i]
+			sb := gb.sections[i]
+
+			// Sort each section by number and alpha.
+			if sa.number != sb.number {
+				df("PT A\n")
+				return sa.number > sb.number
+			}
+			if sa.seq != sb.seq {
+				df("PT B\n")
+				return sa.seq > sb.seq
 			}
 		}
-		df("PT D")
-		return false
+
+		// Sections that we can compare are equal, we want
+		// the longer of the two sections if lengths un-equal.
+		if len(ga.sections) != len(gb.sections) {
+			return len(ga.sections) > len(gb.sections)
+		}
 	}
-	var bb rune
-	if len(min.Sections) == 0 {
-		bb = max.Sections[0].brokenBy
-	} else {
-		bb = max.Sections[len(min.Sections)-1].brokenBy
+	// At this point we have same number of groups and same number
+	// of sections. We can assume the labels are the same.
+	// Check to see if the source of the label is different.
+	if a.Label.Source != b.Label.Source {
+		if a.Label.Source == LabelBranch {
+			df("PT C\n")
+			return true
+		}
 	}
-	if bb == '-' {
-		df("PT E")
-		return !swap
-	}
-	df("PT F")
-	return swap
+	// We ran out of things to check. Assume one is not "less" then the other.
+	df("PT D\n")
+	return false
 }
 
 // FindLabel matches a single label from a list of labels, given a version.
 // If the returning label.Source is LabelNone, then no labels match.
+//
+// Labels are first broken into sections separated by "-". Shortest wins.
+// If they have the same number of above sections, then they are compared
+// further. Number sequences are treated as numbers. Numbers do not need a
+// separator. The "." is a break point as well.
 func FindLabel(version string, labels []Label) Label {
-	//Versions in the package-spec are a special prefix matching that
-	//checks vcs branches and tags.
-	//When "version = v1" then the following would all match: v1.4, v1.8, v1.12.
-	//The following would *not* match: v10, foo-v1.4, v1-40
-	//
-	//After matching acceptable labels, they must be sorted and a single label
-	//returned. Of the following: "v1.4, v1.8, v1.12, v1.12-beta --> v1.12 would
-	//be choosen.
-	//
-	//There is no precedence between branches and tags, they are both searched for
-	//labels and sorted all together to find the correct match. In case of two
-	//labels with exactly the same, one from branch, one from tag, choose the branch.
-	//
-	//In the go repo: "version = release-branch.go1" would currently return
-	//the branch: "release-branch.go1.6".
-
-	/*
-		Match version string prefix.
-			If no simple prefix match found, reject.
-
-		Next character after match must be end of string, "." or "-".
-			If not, reject.
-
-		Push into list sequences of letters, sequences of numbers, broken by "." or "-" as well.
-		Keep track of how it is broken up. (letter number transition, "." or "-", or end of string.
-
-		StableSort list of sequences, choose top one.
-	*/
-
 	list := make([]*labelAnalysis, 0, 6)
 
 	for _, label := range labels {
@@ -208,13 +202,15 @@ func FindLabel(version string, labels []Label) Label {
 		remain := strings.TrimPrefix(label.Text, version)
 		if len(remain) > 0 {
 			next := remain[0]
+			// The stated version must either be the full label,
+			// followed by a "." or "-".
 			if next != '.' && next != '-' {
 				continue
 			}
 		}
 		list = append(list, &labelAnalysis{
-			Label:    label,
-			Sections: make([]labelSection, 0, 6),
+			Label:  label,
+			Groups: make([]labelGroup, 0, 3),
 		})
 	}
 	if len(list) == 0 {
