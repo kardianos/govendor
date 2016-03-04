@@ -22,11 +22,6 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 		return MsgList, err
 	}
 	args := listFlags.Args()
-	f, err := parseFilter(args)
-	if err != nil {
-		return MsgList, err
-	}
-	insertListToAllNot(&f.Status, normal)
 	// fmt.Printf("Status: %q\n", f.Status)
 
 	// Print all listed status.
@@ -34,6 +29,16 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	if err != nil {
 		return checkNewContextError(err)
 	}
+	cgp, err := currentGoPath(ctx)
+	if err != nil {
+		return MsgNone, err
+	}
+	f, err := parseFilter(cgp, args)
+	if err != nil {
+		return MsgList, err
+	}
+	insertListToAllNot(&f.Status, normal)
+
 	list, err := ctx.Status()
 	if err != nil {
 		return MsgNone, err

@@ -413,7 +413,7 @@ const (
 
 // AddImport adds the package to the context. The vendorFolder is where the
 // package should be added to relative to the project root.
-func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
+func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	var err error
 	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
@@ -421,8 +421,8 @@ func (ctx *Context) ModifyImport(sourcePath string, mod Modify) error {
 			return err
 		}
 	}
-	tree := strings.HasSuffix(sourcePath, pkgspec.TreeIncludeSuffix)
-	sourcePath = strings.TrimSuffix(sourcePath, pkgspec.TreeIncludeSuffix)
+	sourcePath := ps.Path
+	tree := ps.IncludeTree
 
 	// Determine canonical and local import paths.
 	sourcePath = pathos.SlashToImportPath(sourcePath)

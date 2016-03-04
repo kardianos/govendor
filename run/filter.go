@@ -6,9 +6,11 @@ package run
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/internal/pathos"
 	"github.com/kardianos/govendor/pkgspec"
 )
 
@@ -92,12 +94,12 @@ func parseStatusGroup(statusString string) (sg context.StatusGroup, err error) {
 }
 
 type filterImport struct {
-	Import string
-	Added  bool // Used to prevent imports from begin added twice.
+	Pkg   *pkgspec.Pkg
+	Added bool // Used to prevent imports from begin added twice.
 }
 
 func (f *filterImport) String() string {
-	return f.Import
+	return f.Pkg.String()
 }
 
 type filter struct {
@@ -114,13 +116,12 @@ func (f filter) HasStatus(item context.StatusItem) bool {
 }
 func (f filter) HasImport(item context.StatusItem) bool {
 	for _, imp := range f.Import {
-		if imp.Import == item.Local || imp.Import == item.Canonical {
+		if imp.Pkg.Path == item.Local || imp.Pkg.Path == item.Canonical {
 			imp.Added = true
 			return true
 		}
-		if strings.HasSuffix(imp.Import, pkgspec.TreeMatchSuffix) {
-			base := strings.TrimSuffix(imp.Import, pkgspec.TreeMatchSuffix)
-			if strings.HasPrefix(item.Local, base) || strings.HasPrefix(item.Canonical, base) {
+		if imp.Pkg.MatchTree {
+			if strings.HasPrefix(item.Local, imp.Pkg.Path) || strings.HasPrefix(item.Canonical, imp.Pkg.Path) {
 				imp.Added = true
 				return true
 			}
@@ -129,7 +130,18 @@ func (f filter) HasImport(item context.StatusItem) bool {
 	return false
 }
 
-func parseFilter(args []string) (filter, error) {
+func currentGoPath(ctx *context.Context) (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	wdpath := pathos.FileTrimPrefix(wd, ctx.RootGopath)
+	wdpath = pathos.SlashToFilepath(wdpath)
+	wdpath = strings.Trim(wdpath, "/")
+	return wdpath, nil
+}
+
+func parseFilter(currentGoPath string, args []string) (filter, error) {
 	f := filter{
 		Import: make([]*filterImport, 0, len(args)),
 	}
@@ -145,7 +157,11 @@ func parseFilter(args []string) (filter, error) {
 			}
 			f.Status.Group = append(f.Status.Group, sg)
 		} else {
-			f.Import = append(f.Import, &filterImport{Import: a})
+			pkg, err := pkgspec.Parse(currentGoPath, a)
+			if err != nil {
+				return f, err
+			}
+			f.Import = append(f.Import, &filterImport{Pkg: pkg})
 		}
 	}
 	return f, nil

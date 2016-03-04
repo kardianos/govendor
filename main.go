@@ -24,6 +24,7 @@ func main() {
 	switch msg {
 	default:
 		panic("Unknown message type")
+	case run.MsgNone:
 	case run.MsgFull:
 		msgText = helpFull
 	case run.MsgList:

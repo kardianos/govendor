@@ -26,6 +26,8 @@
 		A revision will either be a valid base64 string or a number without
 		any letters and greater then 100. A version will be anything else.
 		A revision might be a short hash or long hash.
+ - [x] Move existing commands to use the pkg-spec parser.
+ - [ ] Add common code to verify package's checksum, report package or folder trees that are not valid.
  - [ ] Implement the sync command (sync only looks at revision field).
 		Might be able to use
 		https://godoc.org/golang.org/x/tools/go/vcs#Cmd.CreateAtRev .

@@ -9,8 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"path"
-	"strings"
 
 	"github.com/kardianos/govendor/context"
 	"github.com/kardianos/govendor/pkgspec"
@@ -73,27 +71,32 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	if len(args) == 0 {
 		return msg, errors.New("missing package or status")
 	}
-	f, err := parseFilter(args)
-	if err != nil {
-		return msg, err
-	}
 	ctx, err := context.NewContextWD(context.RootVendor)
 	if err != nil {
 		return checkNewContextError(err)
+	}
+	cgp, err := currentGoPath(ctx)
+	if err != nil {
+		return msg, err
+	}
+	f, err := parseFilter(cgp, args)
+	if err != nil {
+		return msg, err
 	}
 	list, err := ctx.Status()
 	if err != nil {
 		return msg, err
 	}
 
-	addTree := func(s string) string {
-		if !*tree {
-			return s
+	addTree := func(s string) *pkgspec.Pkg {
+		ps, err := pkgspec.Parse("", s)
+		if err != nil {
+			panic("error parsing pkg path")
 		}
-		if strings.HasSuffix(s, pkgspec.TreeIncludeSuffix) {
-			return s
+		if *tree {
+			ps.IncludeTree = true
 		}
-		return path.Join(s, pkgspec.TreeIncludeSuffix)
+		return ps
 	}
 
 	for _, item := range list {
@@ -125,10 +128,8 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		if imp.Added {
 			continue
 		}
-		importPath := strings.TrimSuffix(imp.Import, "...")
-		importPath = strings.TrimSuffix(importPath, "/")
 
-		err = ctx.ModifyImport(addTree(importPath), mod)
+		err = ctx.ModifyImport(imp.Pkg, mod)
 		if err != nil {
 			return MsgNone, err
 		}

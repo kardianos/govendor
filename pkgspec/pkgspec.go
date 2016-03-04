@@ -7,6 +7,7 @@ package pkgspec
 
 import (
 	"errors"
+	"path"
 	"strings"
 )
 
@@ -27,7 +28,7 @@ var (
 
 // Parse a package spec according to:
 // package-sepc = <path>[{/...|/^}][::<origin>][@[<version-spec>]]
-func Parse(s string) (*Pkg, error) {
+func Parse(currentGoPath, s string) (*Pkg, error) {
 	s = strings.TrimSpace(s)
 	if len(s) == 0 {
 		return nil, ErrEmptyPath
@@ -70,6 +71,9 @@ func Parse(s string) (*Pkg, error) {
 	} else if strings.HasSuffix(pkg.Path, TreeIncludeSuffix) {
 		pkg.IncludeTree = true
 		pkg.Path = strings.TrimSuffix(pkg.Path, TreeIncludeSuffix)
+	}
+	if strings.HasPrefix(pkg.Path, ".") && len(currentGoPath) != 0 {
+		pkg.Path = path.Join(currentGoPath, pkg.Path)
 	}
 
 	return pkg, nil

@@ -11,21 +11,23 @@ func TestParse(t *testing.T) {
 		Spec string
 		Pkg  *Pkg
 		Err  error
+		WD   string
 	}{
-		{"abc/def", &Pkg{Path: "abc/def"}, nil},
-		{"", nil, ErrEmptyPath},
-		{"::", nil, ErrEmptyPath},
-		{"::foo", nil, ErrEmptyPath},
-		{"abc/def::", nil, ErrEmptyOrigin},
-		{"abc/def::foo/bar/vendor/abc/def", nil, nil},
-		{"abc/def::foo/bar/vendor/abc/def@", nil, nil},
-		{"abc/def::foo/bar/vendor/abc/def@v1.2.3", &Pkg{Path: "abc/def", Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}, nil},
-		{"abc/def@", &Pkg{Path: "abc/def", HasVersion: true}, nil},
-		{"abc/def@v1.2.3", &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, nil},
+		{"abc/def", &Pkg{Path: "abc/def"}, nil, ""},
+		{"", nil, ErrEmptyPath, ""},
+		{"::", nil, ErrEmptyPath, ""},
+		{"::foo", nil, ErrEmptyPath, ""},
+		{"abc/def::", nil, ErrEmptyOrigin, ""},
+		{"abc/def::foo/bar/vendor/abc/def", nil, nil, ""},
+		{"abc/def::foo/bar/vendor/abc/def@", nil, nil, ""},
+		{"abc/def::foo/bar/vendor/abc/def@v1.2.3", &Pkg{Path: "abc/def", Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}, nil, ""},
+		{"abc/def@", &Pkg{Path: "abc/def", HasVersion: true}, nil, ""},
+		{"abc/def@v1.2.3", &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, nil, ""},
+		{"./def@v1.2.3", &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, nil, "abc/"},
 	}
 
 	for _, item := range list {
-		pkg, err := Parse(item.Spec)
+		pkg, err := Parse(item.WD, item.Spec)
 		if err != nil && item.Err != nil {
 			if err != item.Err {
 				t.Errorf("For %q, got error %q but expected error %q", item.Spec, err, item.Err)
@@ -42,7 +44,7 @@ func TestParse(t *testing.T) {
 			continue
 		}
 		str := pkg.String()
-		if str != item.Spec {
+		if len(item.WD) == 0 && str != item.Spec {
 			t.Errorf("For %q, round tripped to %q", item.Spec, str)
 			continue
 		}

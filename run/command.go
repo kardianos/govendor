@@ -62,7 +62,11 @@ func GoCmd(subcmd string, args []string) (HelpMessage, error) {
 			otherArgs = append(otherArgs, a)
 		}
 	}
-	f, err := parseFilter(statusArgs)
+	cgp, err := currentGoPath(ctx)
+	if err != nil {
+		return MsgNone, err
+	}
+	f, err := parseFilter(cgp, statusArgs)
 	if err != nil {
 		return MsgNone, err
 	}
