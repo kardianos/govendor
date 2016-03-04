@@ -22,7 +22,12 @@ func (l fileInfoSort) Len() int {
 	return len(l)
 }
 func (l fileInfoSort) Less(i, j int) bool {
-	return l[i].Name() < l[j].Name()
+	a := l[i]
+	b := l[j]
+	if a.IsDir() == b.IsDir() {
+		return l[i].Name() < l[j].Name()
+	}
+	return !a.IsDir()
 }
 func (l fileInfoSort) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
@@ -59,13 +64,6 @@ func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, 
 	if err != nil {
 		return err
 	}
-	if h != nil {
-		// Write relative path to GOPATH.
-		relPath := strings.Trim(pathos.SlashToImportPath(getLastVendorRoot(pathos.FileTrimPrefix(srcPath, gopath))), "/")
-		h.Write([]byte(relPath))
-		// Sort file list to present a stable hash.
-		sort.Sort(fileInfoSort(fl))
-	}
 	for _, fi := range fl {
 		if fi.IsDir() {
 			if tree {
@@ -92,6 +90,13 @@ func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, 
 	srcDir.Close()
 	if err != nil {
 		return err
+	}
+	if h != nil {
+		// Write relative path to GOPATH.
+		relPath := strings.Trim(pathos.SlashToImportPath(getLastVendorRoot(pathos.FileTrimPrefix(srcPath, gopath))), "/")
+		h.Write([]byte(relPath))
+		// Sort file list to present a stable hash.
+		sort.Sort(fileInfoSort(fl))
 	}
 fileLoop:
 	for _, fi := range fl {

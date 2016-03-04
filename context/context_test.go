@@ -52,6 +52,18 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 	}
 }
 
+func verifyChecksum(g *gt.GopathTest, c *Context, name string) {
+	list, err := c.VerifyVendor()
+	g.Check(err)
+	if len(list) != 0 {
+		names := make([]string, len(list))
+		for i := range list {
+			names[i] = list[i].Path
+		}
+		g.Errorf("(%s) Failed to verify checksum %q", name, names)
+	}
+}
+
 func tree(g *gt.GopathTest, c *Context, name, expected string) {
 	tree := make([]string, 0, 6)
 	filepath.Walk(g.Current(), func(path string, info os.FileInfo, err error) error {
@@ -213,6 +225,7 @@ func TestDuplicatePackage(t *testing.T) {
 	]
 }
 `)
+	verifyChecksum(g, c, "after add")
 
 	expected := `
  v  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
@@ -306,6 +319,7 @@ func TestImportSimple(t *testing.T) {
 	]
 }
 `)
+	verifyChecksum(g, c, "new")
 
 	// Now remove an import.
 	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
@@ -366,6 +380,7 @@ func TestUpdate(t *testing.T) {
 	]
 }
 `)
+	verifyChecksum(g, c, "co1 after add")
 
 	g.Setup("co2/pk1/pk2",
 		gt.File("a.go", "strings", "encoding/csv"),
@@ -466,6 +481,7 @@ func TestVendor(t *testing.T) {
 	]
 }
 `)
+	verifyChecksum(g, c, "co1 after add")
 }
 
 func TestUnused(t *testing.T) {
@@ -616,6 +632,7 @@ func TestVendorFile(t *testing.T) {
 	]
 }
 `)
+	verifyChecksum(g, c, "co1 after add")
 }
 
 func TestTagList(t *testing.T) {
@@ -779,6 +796,21 @@ func TestTree(t *testing.T) {
 /vendor/co2/pk1/go_code/stub.go
 /vendor/vendor.json
 `)
+
+	vendorFile(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "2pIxVvLJ4iUMSmTWHwnAINQwI6A=",
+			"path": "co2/pk1",
+			"revision": "",
+			"tree": true
+		}
+	]
+}
+`)
+	verifyChecksum(g, c, "add tree")
 
 	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
 	g.Check(c.Alter())

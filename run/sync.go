@@ -4,8 +4,16 @@
 
 package run
 
-import "io"
+import (
+	"io"
+
+	"github.com/kardianos/govendor/context"
+)
 
 func Sync(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
-	return MsgSync, nil
+	ctx, err := context.NewContextWD(context.RootVendor)
+	if err != nil {
+		return MsgSync, err
+	}
+	return MsgNone, ctx.Sync()
 }
