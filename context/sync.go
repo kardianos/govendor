@@ -133,13 +133,42 @@ func similarSegments(p1, p2 string) (string, int) {
 	return similar.String(), ct
 }
 
+type remoteFailure struct {
+	Path string
+	Err  error
+}
+
+func (fail remoteFailure) Error() string {
+	return fmt.Sprintf("Failed for %q: %v", fail.Path, fail.Err)
+}
+
+type remoteFailureList []remoteFailure
+
+func (list remoteFailureList) Error() string {
+	if len(list) == 0 {
+		return "(no remote failure)"
+	}
+	buf := &bytes.Buffer{}
+	buf.WriteString("Remotes failed for:\n")
+	for _, item := range list {
+		buf.WriteString("\t")
+		buf.WriteString(item.Error())
+		buf.WriteString("\n")
+	}
+	return buf.String()
+}
+
 type syncBundle struct {
 	Packages []*vendorfile.Package
 	Root     string // Root directory file path.
 	Revision string
 	Segment  string // Base path segment for similar origin.
+	RepoRoot string // The part of the import path where the repo is cloned.
+	Err      error
 }
 
+// Sync checks for outdated packages in the vendor folder and fetches the
+// correct revision from the remote.
 func (ctx *Context) Sync() (err error) {
 	outOfDate, err := ctx.VerifyVendor()
 	if err != nil {
@@ -193,34 +222,70 @@ outer:
 	for _, b := range bundles {
 		rr, err := vcs.RepoRootForImportPath(b.Segment, false)
 		if err != nil {
-			// TODO (DT): support failing a download and continuing with the rest.
-			return err
+			// Support failing a download and continuing with the rest.
+			b.Err = err
+			continue
 		}
+		b.RepoRoot = rr.Root
 		// TODO (DT): shallow fetch.
 		err = rr.VCS.CreateAtRev(b.Root, rr.Repo, b.Revision)
 		if err != nil {
-			// TODO (DT): support failing and continuing with rest.
+			// Support failing a download and continuing with the rest.
+			b.Err = err
+			continue
+		}
+	}
+
+	rem := remoteFailureList{}
+	updatedVendorFile := false
+
+	// Copy each vendor file (listed in each bundle) into the vendor folder.
+	// Ensure we hash the values and update the vendor file package listing.
+	h := sha1.New()
+	for _, b := range bundles {
+		if b.Err != nil {
+			rem = append(rem, remoteFailure{
+				Path: b.Segment,
+				Err:  err,
+			})
+			continue
+		}
+		for _, vp := range b.Packages {
+			from := vp.Path
+			if len(vp.Origin) != 0 {
+				from = vp.Origin
+			}
+			from = strings.Trim(pathos.FileTrimPrefix(b.RepoRoot, from), "/")
+			dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(vp.Path))
+			// Path handling with single sub-packages and differing origins need to be properly handled.
+			src := filepath.Join(b.Root, from)
+
+			// Scan go files for files that should be ignored based on tags and filenames.
+			ignoreFiles, err := ctx.getIngoreFiles(src)
+			if err != nil {
+				return err
+			}
+			// Need to ensure we copy files from "b.Root/<import-path>" for the following command.
+			ctx.CopyPackage(dest, src, b.Root, vp.Path, ignoreFiles, vp.Tree, h)
+			checksum := h.Sum(nil)
+			h.Reset()
+			vp.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
+			updatedVendorFile = true
+		}
+	}
+
+	// Only write a vendor file if something changes.
+	if updatedVendorFile {
+		err = ctx.WriteVendorFile()
+		if err != nil {
 			return err
 		}
 	}
 
-	// TODO (DT): Copy each vendor file (listed in each bundle) into the vendor folder.
-	// Ensure we hash the values and update the vendor file package listing.
-	h := sha1.New()
-	for _, b := range bundles {
-		for _, vp := range b.Packages {
-			dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(vp.Path))
-			// TODO (DT): path handling with single sub-packages and differing origins need to be properly handled.
-			src := b.Root
-			// TODO (DT): scan go files for files that should be ignored based on tags and filenames.
-			ignoreFiles := []string{}
-			// Need to ensure we copy files from "b.Root/<import-path>" for the following command.
-			ctx.CopyPackage(dest, src, ignoreFiles, vp.Tree, b.Root, h)
-			checksum := h.Sum(nil)
-			h.Reset()
-			vp.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
-		}
+	// Return network errors here.
+	if len(rem) > 0 {
+		return rem
 	}
 
-	return ctx.WriteVendorFile()
+	return nil
 }

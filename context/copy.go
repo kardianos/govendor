@@ -9,6 +9,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -35,7 +36,7 @@ func (l fileInfoSort) Swap(i, j int) {
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, tree bool, gopath string, h hash.Hash) error {
+func (ctx *Context) CopyPackage(destPath, srcPath, lookRoot, pkgPath string, ignoreFiles []string, tree bool, h hash.Hash) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -93,8 +94,7 @@ func (ctx *Context) CopyPackage(destPath, srcPath string, ignoreFiles []string, 
 	}
 	if h != nil {
 		// Write relative path to GOPATH.
-		relPath := strings.Trim(pathos.SlashToImportPath(getLastVendorRoot(pathos.FileTrimPrefix(srcPath, gopath))), "/")
-		h.Write([]byte(relPath))
+		h.Write([]byte(strings.Trim(pkgPath, "/")))
 		// Sort file list to present a stable hash.
 		sort.Sort(fileInfoSort(fl))
 	}
@@ -122,7 +122,7 @@ fileLoop:
 			if err != nil {
 				return err
 			}
-			err = ctx.CopyPackage(nextDestPath, nextSrcPath, nextIgnoreFiles, true, gopath, h)
+			err = ctx.CopyPackage(nextDestPath, nextSrcPath, lookRoot, path.Join(pkgPath, name), nextIgnoreFiles, true, h)
 			if err != nil {
 				return err
 			}
@@ -146,7 +146,7 @@ fileLoop:
 		}
 	}
 
-	return licenseCopy(gopath, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder))
+	return licenseCopy(lookRoot, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder))
 }
 
 func copyFile(destPath, srcPath string, h hash.Hash) error {

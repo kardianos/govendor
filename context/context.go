@@ -842,7 +842,7 @@ func (ctx *Context) copy() error {
 		} else {
 			h := sha1.New()
 			var checksum []byte
-			err = ctx.CopyPackage(op.Dest, op.Src, op.IgnoreFile, pkg.Tree, pkg.Gopath, h)
+			err = ctx.CopyPackage(op.Dest, op.Src, pkg.Gopath, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
 			if err == nil {
 				checksum = h.Sum(nil)
 				vpkg := ctx.VendorFilePackagePath(pkg.Canonical)

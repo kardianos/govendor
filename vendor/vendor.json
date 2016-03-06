@@ -3,7 +3,7 @@
 	"ignore": "",
 	"package": [
 		{
-			"checksumSHA1": "FgGYCKDHEvRdZBcNTJuKN0aYjmQ=",
+			"checksumSHA1": "MijxC6jMDFk7XCAzLpFHXLRu9sc=",
 			"path": "github.com/dchest/safefile",
 			"revision": "33aeb10e4bb6edb4016c53b6140fc9a603346e04",
 			"revisionTime": "2015-07-03T18:05:53+02:00"
