@@ -74,7 +74,7 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) ([]string, error) 
 	l := strings.Split(filename, "_")
 	tags := make([]string, 0)
 
-	if n := len(l); n > 0 && l[n-1] == "test" {
+	if n := len(l); n > 1 && l[n-1] == "test" {
 		l = l[:n-1]
 		tags = append(tags, "test")
 	}
