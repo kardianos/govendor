@@ -50,8 +50,18 @@ const (
 	OpDone                         // Operation has been completed.
 )
 
+type OperationType byte
+
+const (
+	OpCopy OperationType = iota
+	OpRemove
+	OpFetch
+)
+
 // Operation defines how packages should be moved.
 type Operation struct {
+	Type OperationType
+
 	Pkg *Package
 
 	// Source file path to move packages from.
@@ -612,6 +622,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		}
 	}
 	ctx.Operation = append(ctx.Operation, &Operation{
+		Type:       OpCopy,
 		Pkg:        pkg,
 		Src:        src,
 		Dest:       dest,
@@ -635,6 +646,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 		return nil
 	}
 	ctx.Operation = append(ctx.Operation, &Operation{
+		Type: OpRemove,
 		Pkg:  pkg,
 		Src:  pkg.Dir,
 		Dest: "",
@@ -661,7 +673,18 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted bool) error {
 	}
 	vp.Tree = pkg.Tree
 	vp.Origin = pkg.Origin
-	return fmt.Errorf("Not implemented.")
+	origin := vp.Origin
+	if len(vp.Origin) == 0 {
+		origin = vp.Path
+	}
+	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Type: OpFetch,
+		Pkg:  pkg,
+		Src:  origin,
+		Dest: dest,
+	})
+	return nil
 }
 
 // Check returns any conflicts when more then one package can be moved into
@@ -811,8 +834,26 @@ func (ctx *Context) copy() error {
 		return errors.New(buf.String())
 	}
 
-	// Move and possibly rewrite packages.
 	var err error
+	fetch, err := newFetcher()
+	if err != nil {
+		return err
+	}
+	for _, op := range ctx.Operation {
+		if op.State != OpReady {
+			continue
+		}
+
+		switch op.Type {
+		case OpFetch:
+			// Download packages, transform fetch op into a copy op.
+			err = fetch.op(op)
+		}
+		if err != nil {
+			return fmt.Errorf("Failed to fetch package %q: %v", op.Src, err)
+		}
+	}
+	// Move and possibly rewrite packages.
 	for _, op := range ctx.Operation {
 		if op.State != OpReady {
 			continue
@@ -824,9 +865,12 @@ func (ctx *Context) copy() error {
 		}
 		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
 		// Copy the package or remove.
-		if len(op.Dest) == 0 {
+		switch op.Type {
+		default:
+			panic("unknown operation type")
+		case OpRemove:
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
-		} else {
+		case OpCopy:
 			h := sha1.New()
 			var checksum []byte
 			err = ctx.CopyPackage(op.Dest, op.Src, pkg.Gopath, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
