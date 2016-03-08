@@ -74,7 +74,7 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) ([]string, error) 
 	l := strings.Split(filename, "_")
 	tags := make([]string, 0)
 
-	if n := len(l); n > 0 && l[n-1] == "test" {
+	if n := len(l); n > 1 && l[n-1] == "test" {
 		l = l[:n-1]
 		tags = append(tags, "test")
 	}
@@ -215,7 +215,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		}
 	}
 	if ic != nil {
-		// If it starts with the import text, assume it is the import comment and remove.
+		// If it starts with the import text, assume it is the import comment.
 		if index := strings.Index(ic.Text, " import "); index > 0 && index < 5 {
 			q := strings.TrimSpace(ic.Text[index+len(" import "):])
 			pf.ImportComment, err = strconv.Unquote(q)

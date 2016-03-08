@@ -141,6 +141,35 @@ func TestSimple(t *testing.T) {
 `)
 }
 
+func TestTest(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("bar.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("foo.go", "strings"),      // norm	al file
+		gt.File("test.go", "bytes"),       // normal file
+		gt.File("foo_test.go", "testing"), // test file
+	)
+	g.In("co1")
+	c := ctx(g)
+	c.VendorFile.Ignore = "test" // 	ignore test files
+	c.WriteVendorFile()
+	c = ctx(g)
+
+	g.Check(c.ModifyImport(pkg("co2/pk1"), AddUpdate))
+	g.Check(c.Alter())
+
+	list(g, c, "after", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/pk1"]
+ s  strings < ["co1/vendor/co2/pk1"]
+`)
+}
+
 func TestDuplicatePackage(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
