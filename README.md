@@ -4,8 +4,11 @@ Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
 
  * Copy existing dependencies from $GOPATH with `govendor add/update`.
  * If you ignore `vendor/*/`, restore dependencies with `govendor sync`.
- * Pull in new dependencies directly from remotes with `govendor fetch`.
+ * Pull in new dependencies or update existing dependencies directly from
+	remotes with `govendor fetch`.
  * Migrate from legacy systems with `govendor migrate`.
+ * Supports Linux, OS X, Windows, probably all others.
+ * Supports git, hg, bzr (must be installed an on the PATH).
 
  For an overview, see the [whitepaper](doc/whitepaper.md).
 
@@ -17,10 +20,25 @@ Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
 
 ### Quick Start
 ```
-$ cd "my project in GOPATH"
-$ govendor init
-$ govendor add +external
-$ govendor list
+# Setup your project.
+cd "my project in GOPATH"
+govendor init
+
+# Add existing GOPATH files to vendor.
+govendor add +external
+
+# View your work.
+govendor list
+
+# Look at what is using a package
+govendor list -v fmt
+
+# Specify a specific version or revision to fetch
+govendor fetch golang.org/x/net/context@a4bbce9fcae005b22ae5443f6af064d80a6f5a55
+govendor fetch golang.org/x/net/context@v1
+
+# Update a package to latest, given any prior version constraint
+govendor fetch golang.org/x/net/context
 ```
 
 ## Sub-commands
@@ -58,8 +76,8 @@ Packages can be specified by their "status".
 
 Status can be referenced by their initial letters.
 
-	 * "std" same as "s"
-	 * "external" same as "ext" same as "e"
+ * `+std` same as `+s`
+ * `+external` same as `+ext` same as `+e`
 	
 Status can be logically composed:
 

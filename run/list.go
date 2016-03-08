@@ -37,7 +37,11 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	if err != nil {
 		return MsgList, err
 	}
-	insertListToAllNot(&f.Status, normal)
+	if len(f.Import) == 0 {
+		insertListToAllNot(&f.Status, normal)
+	} else {
+		insertListToAllNot(&f.Status, all)
+	}
 
 	list, err := ctx.Status()
 	if err != nil {
