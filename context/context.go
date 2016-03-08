@@ -620,16 +620,6 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		Uncommitted: dirtyAndUncommitted,
 	})
 
-	mvSet := make(map[*Package]struct{}, 3)
-	ctx.makeSet(pkg, mvSet)
-
-	for r := range mvSet {
-		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
-		dprintf("RULE: %s -> %s\n", r.Local, to)
-		ctx.RewriteRule[r.Canonical] = to
-		ctx.RewriteRule[r.Local] = to
-	}
-
 	return nil
 }
 
@@ -655,13 +645,6 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	if vp != nil {
 		vp.Remove = true
 	}
-	mvSet := make(map[*Package]struct{}, 3)
-	ctx.makeSet(pkg, mvSet)
-
-	for r := range mvSet {
-		dprintf("RULE: %s -> %s\n", r.Local, r.Canonical)
-		ctx.RewriteRule[r.Local] = r.Canonical
-	}
 
 	return nil
 }
@@ -679,24 +662,6 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted bool) error {
 	vp.Tree = pkg.Tree
 	vp.Origin = pkg.Origin
 	return fmt.Errorf("Not implemented.")
-}
-
-func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
-	mvSet[pkg] = struct{}{}
-	for _, f := range pkg.Files {
-		for _, imp := range f.Imports {
-			next := ctx.Package[imp]
-			switch {
-			default:
-				if _, has := mvSet[next]; !has {
-					ctx.makeSet(next, mvSet)
-				}
-			case next == nil:
-			case next.Canonical == next.Local:
-			case next.Status.Location != LocationExternal:
-			}
-		}
-	}
 }
 
 // Check returns any conflicts when more then one package can be moved into
@@ -885,9 +850,5 @@ func (ctx *Context) copy() error {
 // Alter runs any requested package alterations.
 func (ctx *Context) Alter() error {
 	ctx.dirty = true
-	err := ctx.copy()
-	if err != nil {
-		return err
-	}
-	return ctx.rewrite()
+	return ctx.copy()
 }
