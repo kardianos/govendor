@@ -15,6 +15,14 @@ Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
  * The project must be within a $GOPATH.
  * If using go1.5, ensure you `set GO15VENDOREXPERIMENT=1`.
 
+### Quick Start
+```
+$ cd "my project in GOPATH"
+$ govendor init
+$ govendor add +external
+$ govendor list
+```
+
 ## Sub-commands
 ```
 	init     Create the "vendor" folder and the "vendor.json" file.
@@ -90,14 +98,6 @@ Commands that accept status and package-spec:
  * update
  * remove
  * fetch
-
-### Quick Start
-```
-$ cd "my project in GOPATH"
-$ govendor init
-$ govendor add +external
-$ govendor list
-```
 
 ## Ignoring build tags
 Ignoring build tags is opt-out and is designed to be the opposite of the build
