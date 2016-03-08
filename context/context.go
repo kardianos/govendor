@@ -440,9 +440,21 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	}
 	// If the import is already vendored, ensure we have the local path and not
 	// the canonical path.
+	//
+	// TODO (DT): I'm not sure the distinction between sourcePath and localImportPath are needed anymore.
+	// Was used when we still supported import path rewritting.
 	localImportPath := sourcePath
 	if vendPkg := ctx.VendorFilePackagePath(localImportPath); vendPkg != nil {
 		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Path)
+
+		// Modify the origin of the vendor file package to match the requested origin.
+		if len(ps.Origin) > 0 && mod != Remove {
+			if ps.Origin == ps.Path {
+				vendPkg.Origin = ""
+			} else {
+				vendPkg.Origin = ps.Origin
+			}
+		}
 	}
 
 	dprintf("AI: %s, L: %s, C: %s\n", sourcePath, localImportPath, canonicalImportPath)
@@ -667,9 +679,9 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	return nil
 }
 
-// TODO: modify function to fetch given package.
+// TODO (DT): modify function to fetch given package.
 func (ctx *Context) modifyFetch(pkg *Package) error {
-	return nil
+	return fmt.Errorf("Not implemented.")
 }
 
 func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
