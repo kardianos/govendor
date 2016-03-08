@@ -21,6 +21,8 @@ govendor {add, update, remove} [options] ( +status or import-path-filter )
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
+		-uncommitted allows copying a package with uncommitted changes, doesn't 
+		             update revision or checksum so it will always be out-of-date.
 		
 		The following may be replaced with something else in the future.
 		-short       if conflict, take short path 
@@ -32,9 +34,14 @@ govendor fetch [options] ( +status or package-spec )
 	Options:
 		-tree        copy package(s) and all sub-folders under each package
 		-insecure    allow downloading over insecure connection
-	
+
+govendor status
+	Shows any packages that are out of date and should be sync'ed.
+
 govendor sync
 	Ensures the contents of the vendor folder matches the vendor file.
+	Options:
+		-insecure    allow downloading over insecure connection
 
 govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
@@ -119,6 +126,8 @@ var helpAdd = `govendor add [options] ( +status or import-path-filter )
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
+		-uncommitted allows copying a package with uncommitted changes, doesn't 
+		             update revision or checksum so it will always be out-of-date.
 		
 		The following may be replaced with something else in the future.
 		-short       if conflict, take short path 
@@ -130,6 +139,8 @@ var helpUpdate = `govendor update [options] ( +status or import-path-filter )
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
+		-uncommitted allows copying a package with uncommitted changes, doesn't 
+		             update revision or checksum so it will always be out-of-date.
 		
 		The following may be replaced with something else in the future.
 		-short       if conflict, take short path 
@@ -154,6 +165,10 @@ var helpSync = `govendor sync
 	Ensures the contents of the vendor folder matches the vendor file.
 	Options:
 		-insecure    allow downloading over insecure connection
+`
+
+var helpStatus = `govendor status
+	Shows any packages that are out of date and should be sync'ed.
 `
 
 var helpMigrate = `govendor migrate [auto, godep, internal]

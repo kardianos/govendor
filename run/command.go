@@ -6,6 +6,7 @@ package run
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -84,4 +85,23 @@ func GoCmd(subcmd string, args []string) (HelpMessage, error) {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return MsgNone, cmd.Run()
+}
+
+func Status(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+	ctx, err := context.NewContextWD(context.RootVendor)
+	if err != nil {
+		return MsgStatus, err
+	}
+	outOfDate, err := ctx.VerifyVendor()
+	if err != nil {
+		return MsgStatus, err
+	}
+	if len(outOfDate) == 0 {
+		return MsgNone, nil
+	}
+	fmt.Fprintf(w, "The following packages are out-of-date:\n")
+	for _, pkg := range outOfDate {
+		fmt.Fprintf(w, "\t%s\n", pkg.Path)
+	}
+	return MsgNone, nil
 }

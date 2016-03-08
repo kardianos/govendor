@@ -66,6 +66,9 @@ type Operation struct {
 	IgnoreFile []string
 
 	State OperationState
+
+	// True if the operation should treat the package as uncommitted.
+	Uncommitted bool
 }
 
 // Conflict reports packages that are scheduled to conflict.
@@ -499,11 +502,11 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	dprintf("stage 2: begin!\n")
 	switch mod {
 	case Add:
-		return ctx.modifyAdd(pkg)
+		return ctx.modifyAdd(pkg, ps.Uncommitted)
 	case AddUpdate:
-		return ctx.modifyAdd(pkg)
+		return ctx.modifyAdd(pkg, ps.Uncommitted)
 	case Update:
-		return ctx.modifyAdd(pkg)
+		return ctx.modifyAdd(pkg, ps.Uncommitted)
 	case Remove:
 		return ctx.modifyRemove(pkg)
 	case Fetch:
@@ -547,7 +550,7 @@ func (ctx *Context) getIngoreFiles(src string) ([]string, error) {
 	return ignoreFile, nil
 }
 
-func (ctx *Context) modifyAdd(pkg *Package) error {
+func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 	var err error
 	src := pkg.OriginDir
 	dprintf("found import: %q\n", src)
@@ -571,12 +574,6 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 		return nil
 	}
 	dprintf("add op: %q\n", src)
-	ctx.Operation = append(ctx.Operation, &Operation{
-		Pkg:        pkg,
-		Src:        src,
-		Dest:       dest,
-		IgnoreFile: ignoreFile,
-	})
 
 	// Update vendor file with correct Local field.
 	vp := ctx.VendorFilePackagePath(pkg.Canonical)
@@ -598,15 +595,31 @@ func (ctx *Context) modifyAdd(pkg *Package) error {
 	if err != nil {
 		return err
 	}
+	dirtyAndUncommitted := false
 	if system != nil {
 		if system.Dirty {
-			return ErrDirtyPackage{pkg.Canonical}
-		}
-		vp.Revision = system.Revision
-		if system.RevisionTime != nil {
-			vp.RevisionTime = system.RevisionTime.Format(time.RFC3339)
+			if !uncommitted {
+				return ErrDirtyPackage{pkg.Canonical}
+			}
+			dirtyAndUncommitted = true
+			if len(vp.ChecksumSHA1) == 0 {
+				vp.ChecksumSHA1 = "uncommitted/version="
+			}
+		} else {
+			vp.Revision = system.Revision
+			if system.RevisionTime != nil {
+				vp.RevisionTime = system.RevisionTime.Format(time.RFC3339)
+			}
 		}
 	}
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Pkg:        pkg,
+		Src:        src,
+		Dest:       dest,
+		IgnoreFile: ignoreFile,
+
+		Uncommitted: dirtyAndUncommitted,
+	})
 
 	mvSet := make(map[*Package]struct{}, 3)
 	ctx.makeSet(pkg, mvSet)
@@ -843,7 +856,7 @@ func (ctx *Context) copy() error {
 			h := sha1.New()
 			var checksum []byte
 			err = ctx.CopyPackage(op.Dest, op.Src, pkg.Gopath, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
-			if err == nil {
+			if err == nil && !op.Uncommitted {
 				checksum = h.Sum(nil)
 				vpkg := ctx.VendorFilePackagePath(pkg.Canonical)
 				if vpkg != nil {

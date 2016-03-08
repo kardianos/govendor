@@ -37,6 +37,8 @@ func main() {
 		msgText = helpRemove
 	case run.MsgFetch:
 		msgText = helpFetch
+	case run.MsgStatus:
+		msgText = helpStatus
 	case run.MsgSync:
 		msgText = helpSync
 	case run.MsgMigrate:

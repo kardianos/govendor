@@ -22,6 +22,7 @@ const (
 	MsgUpdate
 	MsgRemove
 	MsgFetch
+	MsgStatus
 	MsgSync
 	MsgMigrate
 )
@@ -55,6 +56,8 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 		return Modify(w, appArgs[2:], mod, ask)
 	case "sync":
 		return Sync(w, appArgs[2:])
+	case "status":
+		return Status(w, appArgs[2:])
 	case "migrate":
 		return Migrate(appArgs[2:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":

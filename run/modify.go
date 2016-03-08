@@ -60,6 +60,7 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	short := listFlags.Bool("short", false, "choose the short path")
 	long := listFlags.Bool("long", false, "choose the long path")
 	tree := listFlags.Bool("tree", false, "copy all folders including and under selected folder")
+	uncommitted := listFlags.Bool("uncommitted", false, "allows adding uncommitted changes. Doesn't update revision or checksum")
 	err = listFlags.Parse(subCmdArgs)
 	if err != nil {
 		return msg, err
@@ -96,6 +97,9 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		if *tree {
 			ps.IncludeTree = true
 		}
+		if *uncommitted {
+			ps.Uncommitted = true
+		}
 		return ps
 	}
 
@@ -129,6 +133,9 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 			continue
 		}
 
+		if *uncommitted {
+			imp.Pkg.Uncommitted = true
+		}
 		err = ctx.ModifyImport(imp.Pkg, mod)
 		if err != nil {
 			return MsgNone, err

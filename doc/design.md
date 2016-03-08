@@ -97,22 +97,15 @@ If you don't want to check in dependencies, add "vendor/*/" in the .gitignore.
 ## In-progress, uncommitted flag
 
 Might support a new flag in add/update called "-uncommitted" which bypasses
-checks for commited and puts the fact that the version is uncommitted in
-the vendor-spec. When we add uncommitted changes, put in a bogus checksum (deadbeef).
-This way it indicates it is not up-to-date.
+checks for commited check. However it also doesn't update the revision field
+and it doesn't update the checksum field.
 
-Might need another sub-command to check for out of date or missing vendor packages.
-Maybe `govendor sync -n` (check what would be synced).
-
-### Probably don't do the following.
-
-Would need some type of status ("+outstanding" ?) check to look for any uncommitted packages.
-
-Also add a new flag like `govendor list -should-not +outstanding` which exits non-zero 
-if there are any non-committed changes present.
+When `govendor status` is ran, it will show that is package is out-of-date.
 
 ## A way to add/remove all at once.
 
 Thinking of issue #75, could add a `govendor addremove` command
 that fetches missing packages, adds external packages, and removes unused
 packages. I'm not sure if it is worth it or not though.
+
+I don't think this is worth it.

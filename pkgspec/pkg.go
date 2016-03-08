@@ -13,6 +13,8 @@ type Pkg struct {
 	MatchTree   bool
 	HasVersion  bool
 	Version     string
+
+	Uncommitted bool
 }
 
 func (pkg *Pkg) String() string {
