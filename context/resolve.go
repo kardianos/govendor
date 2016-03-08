@@ -242,6 +242,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	originDir := dir
 	inVendor := false
 	tree := false
+	origin := ""
 	if at > 0 {
 		canonical = canonical[at:]
 		inVendor = true
@@ -255,27 +256,10 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 				}
 			}
 		}
-		if vp := ctx.VendorFilePackagePath(canonical); vp != nil {
-			tree = vp.Tree
-		}
 	}
-	if status.Location == LocationUnknown && inVendor == false {
-		if vp := ctx.VendorFilePackageLocal(local); vp != nil {
-			// This will only be hit if the imported package is in the vendor
-			// file, present in GOPATH, but not in vendor folder.
-			status.Location = LocationExternal
-			inVendor = true
-			canonical = vp.Path
-			origin := vp.Origin
-			if len(origin) == 0 {
-				origin = canonical
-			}
-			od, _, err := ctx.findImportDir("", origin)
-			if err == nil {
-				originDir = od
-			}
-			tree = vp.Tree
-		}
+	if vp := ctx.VendorFilePackagePath(canonical); vp != nil {
+		tree = vp.Tree
+		origin = vp.Origin
 	}
 	if status.Location == LocationUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
 		status.Location = LocationLocal
@@ -283,6 +267,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	pkg := &Package{
 		OriginDir: originDir,
 		Dir:       dir,
+		Origin:    origin,
 		Canonical: canonical,
 		Local:     local,
 		Gopath:    gopath,
@@ -359,40 +344,11 @@ func (ctx *Context) determinePackageStatus() error {
 		if pkg.Status.Location != LocationUnknown {
 			continue
 		}
-		if vp := ctx.VendorFilePackageLocal(pkg.Local); vp != nil {
-			pkg.Status.Location = LocationVendor
-			pkg.inVendor = true
-			pkg.Canonical = vp.Path
-			continue
-		}
 		if strings.HasPrefix(pkg.Canonical, ctx.RootImportPath) {
 			pkg.Status.Location = LocationLocal
 			continue
 		}
 		pkg.Status.Location = LocationExternal
-	}
-
-	// Check all "external" packages for vendor.
-	for _, pkg := range ctx.Package {
-		if pkg.Status.Location != LocationExternal {
-			continue
-		}
-		root, err := findRoot(pkg.Dir, vendorFilename)
-		if err != nil {
-			// No vendor file found.
-			if _, is := err.(ErrMissingVendorFile); is {
-				continue
-			}
-			return err
-		}
-		vf, err := readVendorFile(filepath.Join(root, vendorFilename))
-		if err != nil {
-			return err
-		}
-		vpkg := vendorFileFindLocal(vf, root, pkg.Gopath, pkg.Local)
-		if vpkg != nil {
-			pkg.Canonical = vpkg.Path
-		}
 	}
 
 	// Determine any un-used internal vendor imports.

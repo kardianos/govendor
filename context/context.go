@@ -115,17 +115,17 @@ type Context struct {
 
 // Package maintains information pertaining to a package.
 type Package struct {
-	OriginDir  string
-	Dir        string
-	Canonical  string
-	Local      string
-	SourcePath string
-	Gopath     string // Inlcudes trailing "src".
-	Files      []*File
-	Status     Status
-	Tree       bool
-	inVendor   bool // Different then Status.Location, this is in *any* vendor tree.
-	inTree     bool
+	OriginDir string // Origin directory
+	Dir       string // Physical directory path of the package.
+	Origin    string // Origin path for remote
+	Canonical string
+	Local     string
+	Gopath    string // Inlcudes trailing "src".
+	Files     []*File
+	Status    Status
+	Tree      bool // Package is a tree of folder.
+	inVendor  bool // Different then Status.Location, this is in *any* vendor tree.
+	inTree    bool
 
 	ignoreFile []string
 
@@ -438,31 +438,11 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 			return err
 		}
 	}
-	// If the import is already vendored, ensure we have the local path and not
-	// the canonical path.
-	//
-	// TODO (DT): I'm not sure the distinction between sourcePath and localImportPath are needed anymore.
-	// Was used when we still supported import path rewritting.
-	localImportPath := sourcePath
-	if vendPkg := ctx.VendorFilePackagePath(localImportPath); vendPkg != nil {
-		localImportPath = path.Join(ctx.RootImportPath, ctx.RootToVendorFile, vendPkg.Path)
-
-		// Modify the origin of the vendor file package to match the requested origin.
-		if len(ps.Origin) > 0 && mod != Remove {
-			if ps.Origin == ps.Path {
-				vendPkg.Origin = ""
-			} else {
-				vendPkg.Origin = ps.Origin
-			}
-		}
-	}
-
-	dprintf("AI: %s, L: %s, C: %s\n", sourcePath, localImportPath, canonicalImportPath)
 
 	// Does the local import exist?
 	//   If so either update or just return.
 	//   If not find the disk path from the canonical path, copy locally and rewrite (if needed).
-	pkg, foundPkg := ctx.Package[localImportPath]
+	pkg, foundPkg := ctx.Package[sourcePath]
 	if !foundPkg {
 		err = ctx.addSingleImport("", canonicalImportPath)
 		if err != nil {
@@ -481,6 +461,13 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 		}
 		if !foundPkg {
 			panic(fmt.Sprintf("Package %q should be listed internally but is not.", canonicalImportPath))
+		}
+	}
+	if len(ps.Origin) > 0 {
+		if ps.Origin == ps.Path {
+			pkg.Origin = ""
+		} else {
+			pkg.Origin = ps.Origin
 		}
 	}
 
@@ -522,7 +509,7 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	case Remove:
 		return ctx.modifyRemove(pkg)
 	case Fetch:
-		return ctx.modifyFetch(pkg)
+		return ctx.modifyFetch(pkg, ps.Uncommitted)
 	default:
 		panic("mod switch: case not handled")
 	}
@@ -595,12 +582,12 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 			Path: pkg.Canonical,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
-
-		if pkg.Local != pkg.Canonical && pkg.inVendor {
-			vp.Origin = pkg.Local
-		}
 	}
 	vp.Tree = pkg.Tree
+	vp.Origin = pkg.Origin
+	if pkg.Canonical != pkg.Local && pkg.inVendor {
+		vp.Origin = pkg.Local
+	}
 
 	// Find the VCS information.
 	system, err := vcs.FindVcs(pkg.Gopath, src)
@@ -680,7 +667,17 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 }
 
 // TODO (DT): modify function to fetch given package.
-func (ctx *Context) modifyFetch(pkg *Package) error {
+func (ctx *Context) modifyFetch(pkg *Package, uncommitted bool) error {
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	if vp == nil {
+		vp = &vendorfile.Package{
+			Add:  true,
+			Path: pkg.Canonical,
+		}
+		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+	}
+	vp.Tree = pkg.Tree
+	vp.Origin = pkg.Origin
 	return fmt.Errorf("Not implemented.")
 }
 
