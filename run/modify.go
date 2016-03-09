@@ -56,6 +56,7 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	*/
 
 	listFlags := flag.NewFlagSet("mod", flag.ContinueOnError)
+	listFlags.SetOutput(nullWriter{})
 	dryrun := listFlags.Bool("n", false, "dry-run")
 	short := listFlags.Bool("short", false, "choose the short path")
 	long := listFlags.Bool("long", false, "choose the long path")

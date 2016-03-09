@@ -27,6 +27,8 @@ func main() {
 	case run.MsgNone:
 	case run.MsgFull:
 		msgText = helpFull
+	case run.MsgInit:
+		msgText = helpInit
 	case run.MsgList:
 		msgText = helpList
 	case run.MsgAdd:

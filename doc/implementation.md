@@ -35,20 +35,16 @@
 		over. Will also need to use checksum to determine which packages
 		need to be fetched. If no checksum is present, fetch package
 		and write new checksum.
- - [ ] Implement the fetch command when fetch specifies a revision.
+ - [x] Implement the fetch command when fetch specifies a revision.
+ - [ ] Recursive fetch.
+ - [ ] Use a persistent cache ($GOPATH/src-cache) to download into (fetch and sync).
  - [ ] Add fetching the version from version-spec. For git try to rely
 		on standard git command, but also might look into
 		"github.com/src-d/go-git" for inspecting versions remotely.
 
 ## Vendor package with outstanding changes
 
- - [ ] Add new field "uncommitted bool" to vendorfile.
- - [ ] Add new flag to add/update "-uncommitted" that allows copying
+ - [x] Add new flag to add/update "-uncommitted" that allows copying
 		uncommitted changes over. Still check for uncommitted changegs
 		and only apply `"uncommitted": true` to packages that actually do
 		have uncommitted changes.
- - [ ] Add a new status called "+(?something?)" (maybe "outstanding"?).
-		Reports all packages with uncommitted changes.
- - [ ] Create an example git hook, see what it takes to check for uncommitted
-		changes. Maybe add "-should-not" to `govendor list` that returns
-		non-zero if any results are returned.

@@ -17,6 +17,7 @@ type HelpMessage byte
 const (
 	MsgNone HelpMessage = iota
 	MsgFull
+	MsgInit
 	MsgList
 	MsgAdd
 	MsgUpdate
@@ -26,6 +27,12 @@ const (
 	MsgSync
 	MsgMigrate
 )
+
+type nullWriter struct{}
+
+func (nw nullWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
 
 // Run is isoloated from main and os.Args to help with testing.
 // Shouldn't directly print to console, just write through w.
@@ -37,7 +44,7 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	cmd := appArgs[1]
 	switch cmd {
 	case "init":
-		return Init()
+		return Init(w, appArgs[2:])
 	case "list":
 		return List(w, appArgs[2:])
 	case "add", "update", "remove", "fetch":
@@ -59,7 +66,7 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	case "status":
 		return Status(w, appArgs[2:])
 	case "migrate":
-		return Migrate(appArgs[2:])
+		return Migrate(w, appArgs[2:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
 		msg, err := Sync(w, nil)
 		if err != nil {

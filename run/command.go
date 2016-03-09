@@ -5,6 +5,7 @@
 package run
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -15,7 +16,13 @@ import (
 	"github.com/kardianos/govendor/migrate"
 )
 
-func Init() (HelpMessage, error) {
+func Init(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+	flags := flag.NewFlagSet("init", flag.ContinueOnError)
+	flags.SetOutput(nullWriter{})
+	err := flags.Parse(subCmdArgs)
+	if err != nil {
+		return MsgInit, err
+	}
 	ctx, err := context.NewContextWD(context.RootWD)
 	if err != nil {
 		return MsgNone, err
@@ -28,7 +35,7 @@ func Init() (HelpMessage, error) {
 	err = os.MkdirAll(filepath.Join(ctx.RootDir, ctx.VendorFolder), 0777)
 	return MsgNone, err
 }
-func Migrate(subCmdArgs []string) (HelpMessage, error) {
+func Migrate(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	from := migrate.Auto
 	if len(subCmdArgs) > 0 {
 		switch subCmdArgs[0] {
@@ -88,6 +95,12 @@ func GoCmd(subcmd string, args []string) (HelpMessage, error) {
 }
 
 func Status(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+	flags := flag.NewFlagSet("status", flag.ContinueOnError)
+	flags.SetOutput(nullWriter{})
+	err := flags.Parse(subCmdArgs)
+	if err != nil {
+		return MsgStatus, err
+	}
 	ctx, err := context.NewContextWD(context.RootVendor)
 	if err != nil {
 		return MsgStatus, err

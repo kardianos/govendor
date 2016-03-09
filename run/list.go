@@ -15,6 +15,7 @@ import (
 
 func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
+	listFlags.SetOutput(nullWriter{})
 	verbose := listFlags.Bool("v", false, "verbose")
 	noStatus := listFlags.Bool("no-status", false, "do not show the status")
 	err := listFlags.Parse(subCmdArgs)

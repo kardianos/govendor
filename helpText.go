@@ -4,96 +4,43 @@
 
 package main
 
-var helpFull = `govendor: copy go packages locally. Uses vendor folder.
-govendor init
-	Creates a vendor file if it does not exist.
+var helpFull = `govendor: copy go packages locally from GOPATH or remote. Uses vendor folder.
 
-govendor list [options] ( +status or import-path-filter )
-	List all dependencies and packages in folder tree.
-	Options:
-		-v           verbose listing, show dependencies of each package
-		-no-status   do not prefix status to list, package names only
+Sub-Commands
 
-govendor {add, update, remove} [options] ( +status or import-path-filter )
-	add    - Copy one or more packages into the vendor folder.
-	update - Update one or more packages from GOPATH into the vendor folder.
-	remove - Remove one or more packages from the vendor folder.
-	Options:
-		-n           dry run and print actions that would be taken
-		-tree        copy package(s) and all sub-folders under each package
-		-uncommitted allows copying a package with uncommitted changes, doesn't 
-		             update revision or checksum so it will always be out-of-date.
-		
-		The following may be replaced with something else in the future.
-		-short       if conflict, take short path 
-		-long        if conflict, take long path
-
-govendor fetch [options] ( +status or package-spec )
-	Fetches packages directly into the vendor folder.
-	package-sepc = <path>[::<origin>][{/...|/^}][@[<version-spec>]]
-	Options:
-		-tree        copy package(s) and all sub-folders under each package
-		-insecure    allow downloading over insecure connection
-
-govendor status
-	Shows any packages that are out of date and should be sync'ed.
-
-govendor sync
-	Ensures the contents of the vendor folder matches the vendor file.
-	Options:
-		-insecure    allow downloading over insecure connection
-
-govendor migrate [auto, godep, internal]
-	Change from a one schema to use the vendor folder. Default to auto detect.
-
-
-govendor [fmt, build, install, clean, test, vet, generate] ( +status or import-path-filter )
-	Run "go" commands using status filters.
-	$ govendor test +local
-
-Expanding "..."
-	A package import path may be expanded to other paths that
-	show up in "govendor list" be ending the "import-path" with "...".
-	NOTE: this uses the import tree from "vendor list" and NOT the file system.
-
-Flags
-	-n		print actions but do not run them
-	-short	chooses the shorter path in case of conflict
-	-long	chooses the longer path in case of conflict
+	init     Create the "vendor" folder and the "vendor.json" file.
+	list     List and filter existing dependencies and packages.
+	add      Add packages from $GOPATH.
+	update   Update packages from $GOPATH.
+	remove   Remove packages from the vendor folder.
+	fetch    Add new or update existing packages from remote repository.
+	sync     Pull in packages from remote respository to match vendor.json file.
+	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	
-"import-path-filter" arguements:
-	May be a literal individual package:
-		github.com/user/supercool
-		github.com/user/supercool/anotherpkg
+	go tool commands that are wrapped:
+	  "govendor sync" is called before these commands
+	  "+status" package selection may be used with them
+	fmt, build, install, clean, test, vet, generate
+
+Status Types	
+
+	+local    (l) packages in your project
+	+external (e) referenced packages in GOPATH but not in current project
+	+vendor   (v) packages in the vendor folder
+	+std      (s) packages in the standard library
+
+	+unused   (u) packages in the vendor folder, but unused
+	+missing  (m) referenced packages but not found
+
+	+program  (p) package is a main package
+
+	+outside  +external +missing
+	+all      +all packages
 	
-	Match on any exising Go package that the project uses under "supercool"
-		github.com/user/supercool/...
-		
-	Match the package "supercool" and also copy all sub-folders.
-	Will copy non-Go files and Go packages that aren't used.
-		github.com/user/supercool/^
+	Status can be referenced by their initial letters.
 	
-	Same as specifying:
-	-tree github.com/user/supercool
-
-Status list used in "+<status>" arguments:
-	external - package does not share root path
-	vendor - vendor folder; copied locally
-	unused - the package has been copied locally, but isn't used
-	local - shares the root path and is not a vendor package
-	missing - referenced but not found in GOROOT or GOPATH
-	std - standard library package
-	program - package is a main package
-	---
-	outside - external + missing
-	all - all of the above status
-
-Status can be referenced by their initial letters.
-	"st" == "std"
-	"e" == "external"
-
-Status can be joined together with boolean AND and OR
-	govendor list +vendor,program +e --> (vendor AND program) OR external
+Package specifier 
+	<path>[::<origin>][{/...|/^}][@[<version-spec>]]
 
 Ignoring files with build tags:
 	The "vendor.json" file contains a string field named "ignore".
@@ -103,11 +50,11 @@ Ignoring files with build tags:
 
 If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
 
-Examples:
-	$ govendor list -no-status +local
-	$ govendor list +vend,prog +local,program
-	$ govendor list +local,^prog
+`
 
+var helpInit = `govendor init
+	Create a vendor folder in the working directory and a vendor/vendor.json
+	metadata file.
 `
 
 var helpList = `govendor list [options]  ( +status or import-path-filter )
@@ -122,7 +69,7 @@ Examples:
 `
 
 var helpAdd = `govendor add [options] ( +status or import-path-filter )
-	Copy one or more packages into the vendor folder.
+	Copy one or more packages into the vendor folder from GOPATH.
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
@@ -135,7 +82,7 @@ var helpAdd = `govendor add [options] ( +status or import-path-filter )
 `
 
 var helpUpdate = `govendor update [options] ( +status or import-path-filter )
-	Update one or more packages from GOPATH into the vendor folder.
+	Update one or more packages from GOPATH into the vendor folder from GOPATH.
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
