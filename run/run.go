@@ -5,6 +5,7 @@
 package run
 
 import (
+	"flag"
 	"fmt"
 	"io"
 
@@ -41,12 +42,21 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 		return MsgFull, nil
 	}
 
-	cmd := appArgs[1]
+	flags := flag.NewFlagSet("govendor", flag.ContinueOnError)
+	flags.SetOutput(nullWriter{})
+	err := flags.Parse(appArgs[1:])
+	if err != nil {
+		return MsgFull, err
+	}
+
+	args := flags.Args()
+
+	cmd := args[0]
 	switch cmd {
 	case "init":
-		return Init(w, appArgs[2:])
+		return Init(w, args[1:])
 	case "list":
-		return List(w, appArgs[2:])
+		return List(w, args[1:])
 	case "add", "update", "remove", "fetch":
 		var mod context.Modify
 		switch cmd {
@@ -60,19 +70,19 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 			// TODO: enable a code path that fetches recursivly on missing status.
 			mod = context.Fetch
 		}
-		return Modify(w, appArgs[2:], mod, ask)
+		return Modify(w, args[1:], mod, ask)
 	case "sync":
-		return Sync(w, appArgs[2:])
+		return Sync(w, args[1:])
 	case "status":
-		return Status(w, appArgs[2:])
+		return Status(w, args[1:])
 	case "migrate":
-		return Migrate(w, appArgs[2:])
+		return Migrate(w, args[1:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
 		msg, err := Sync(w, nil)
 		if err != nil {
 			return msg, err
 		}
-		return GoCmd(cmd, appArgs[2:])
+		return GoCmd(cmd, args[1:])
 	default:
 		return MsgFull, fmt.Errorf("Unknown command %q", cmd)
 	}
