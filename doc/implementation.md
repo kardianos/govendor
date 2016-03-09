@@ -36,11 +36,13 @@
 		need to be fetched. If no checksum is present, fetch package
 		and write new checksum.
  - [x] Implement the fetch command when fetch specifies a revision.
- - [ ] Recursive fetch.
+ - [x] Recursive fetch.
  - [ ] Use a persistent cache ($GOPATH/src-cache) to download into (fetch and sync).
  - [ ] Add fetching the version from version-spec. For git try to rely
 		on standard git command, but also might look into
 		"github.com/src-d/go-git" for inspecting versions remotely.
+ - [ ] Respect fetched repos vendor files for versions and revisions.
+ - [ ] Handle version and revision conflicts.
 
 ## Vendor package with outstanding changes
 

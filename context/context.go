@@ -59,6 +59,8 @@ const (
 )
 
 // Operation defines how packages should be moved.
+//
+// TODO (DT): Remove Pkg field and change Src and Dest to *pkgspec.Pkg types.
 type Operation struct {
 	Type OperationType
 
@@ -441,7 +443,7 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	sourcePath = pathos.SlashToImportPath(sourcePath)
 	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
 	if err != nil {
-		if mod != Remove {
+		if mod != Remove && mod != Fetch {
 			return err
 		}
 		if _, is := err.(ErrNotInGOPATH); !is {
@@ -525,17 +527,18 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	}
 }
 
-func (ctx *Context) getIngoreFiles(src string) ([]string, error) {
-	var ignoreFile []string
+func (ctx *Context) getIngoreFiles(src string) (ignoreFile, imports []string, err error) {
 	srcDir, err := os.Open(src)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fl, err := srcDir.Readdir(-1)
 	srcDir.Close()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	importMap := make(map[string]struct{}, 12)
+	imports = make([]string, 0, 12)
 	for _, fi := range fl {
 		if fi.IsDir() {
 			continue
@@ -543,20 +546,32 @@ func (ctx *Context) getIngoreFiles(src string) ([]string, error) {
 		if fi.Name()[0] == '.' {
 			continue
 		}
-		tags, err := ctx.getFileTags(filepath.Join(src, fi.Name()), nil)
+		tags, fileImports, err := ctx.getFileTags(filepath.Join(src, fi.Name()), nil)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
+		ignoreItem := false
 		for _, tag := range tags {
 			for _, ignore := range ctx.ignoreTag {
 				if tag == ignore {
-					ignoreFile = append(ignoreFile, fi.Name())
+					ignoreItem = true
 				}
 			}
 		}
+		if ignoreItem {
+			ignoreFile = append(ignoreFile, fi.Name())
+		} else {
+			// Only add imports for non-ignored files.
+			for _, imp := range fileImports {
+				importMap[imp] = struct{}{}
+			}
+		}
 	}
-	return ignoreFile, nil
+	for imp := range importMap {
+		imports = append(imports, imp)
+	}
+	return ignoreFile, imports, nil
 }
 
 func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
@@ -572,7 +587,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		ignoreFile = cpkg.ignoreFile
 	} else {
 		var err error
-		ignoreFile, err = ctx.getIngoreFiles(src)
+		ignoreFile, _, err = ctx.getIngoreFiles(src)
 		if err != nil {
 			return err
 		}
@@ -661,7 +676,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	return nil
 }
 
-// TODO (DT): modify function to fetch given package.
+// modify function to fetch given package.
 func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, version string) error {
 	vp := ctx.VendorFilePackagePath(pkg.Canonical)
 	if vp == nil {
@@ -678,7 +693,8 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, vers
 		origin = vp.Path
 	}
 	ps := &pkgspec.Pkg{
-		Path:       origin,
+		Path:       pkg.Canonical,
+		Origin:     origin,
 		HasVersion: hasVersion,
 		Version:    version,
 	}
@@ -826,7 +842,8 @@ func (ctx *Context) ResolveAutoVendorFileOrigin(cc []*Conflict) []*Conflict {
 	return cc
 }
 
-func (ctx *Context) copy() error {
+// Alter runs any requested package alterations.
+func (ctx *Context) Alter() error {
 	// Ensure there are no conflicts at this time.
 	buf := &bytes.Buffer{}
 	for _, conflict := range ctx.Check() {
@@ -850,19 +867,30 @@ func (ctx *Context) copy() error {
 			err = ferr
 		}
 	}()
-	for _, op := range ctx.Operation {
-		if op.State != OpReady {
-			continue
-		}
+	for {
+		var nextOps []*Operation
+		for _, op := range ctx.Operation {
+			if op.State != OpReady {
+				continue
+			}
 
-		switch op.Type {
-		case OpFetch:
-			// Download packages, transform fetch op into a copy op.
-			err = fetch.op(op)
+			switch op.Type {
+			case OpFetch:
+				var ops []*Operation
+				// Download packages, transform fetch op into a copy op.
+				ops, err = fetch.op(op)
+				if len(ops) > 0 {
+					nextOps = append(nextOps, ops...)
+				}
+			}
+			if err != nil {
+				return fmt.Errorf("Failed to fetch package %q: %v", op.Pkg.Canonical, err)
+			}
 		}
-		if err != nil {
-			return fmt.Errorf("Failed to fetch package %q: %v", op.Src, err)
+		if len(nextOps) == 0 {
+			break
 		}
+		ctx.Operation = append(ctx.Operation, nextOps...)
 	}
 	// Move and possibly rewrite packages.
 	for _, op := range ctx.Operation {
@@ -880,8 +908,10 @@ func (ctx *Context) copy() error {
 		default:
 			panic("unknown operation type")
 		case OpRemove:
+			ctx.dirty = true
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
 		case OpCopy:
+			ctx.dirty = true
 			h := sha1.New()
 			var checksum []byte
 
@@ -900,13 +930,6 @@ func (ctx *Context) copy() error {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
 		}
 		op.State = OpDone
-		ctx.dirty = true
 	}
 	return nil
-}
-
-// Alter runs any requested package alterations.
-func (ctx *Context) Alter() error {
-	ctx.dirty = true
-	return ctx.copy()
 }

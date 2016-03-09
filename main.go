@@ -7,6 +7,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -17,6 +18,9 @@ import (
 func main() {
 	prompt := &cliprompt.Prompt{}
 	msg, err := run.Run(os.Stdout, os.Args, prompt)
+	if err == flag.ErrHelp {
+		err = nil
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}

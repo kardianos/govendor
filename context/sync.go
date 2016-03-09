@@ -230,7 +230,7 @@ outer:
 			continue
 		}
 		b.RepoRoot = rr.Root
-		// TODO (DT): shallow fetch.
+		// TODO (DT): clone into persistent cache.
 		err = rr.VCS.CreateAtRev(b.Root, rr.Repo, b.Revision)
 		if err != nil {
 			// Support failing a download and continuing with the rest.
@@ -264,7 +264,7 @@ outer:
 			src := filepath.Join(b.Root, from)
 
 			// Scan go files for files that should be ignored based on tags and filenames.
-			ignoreFiles, err := ctx.getIngoreFiles(src)
+			ignoreFiles, _, err := ctx.getIngoreFiles(src)
 			if err != nil {
 				return err
 			}

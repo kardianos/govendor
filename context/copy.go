@@ -118,7 +118,7 @@ fileLoop:
 			}
 			nextDestPath := filepath.Join(destPath, name)
 			nextSrcPath := filepath.Join(srcPath, name)
-			nextIgnoreFiles, err := ctx.getIngoreFiles(nextSrcPath)
+			nextIgnoreFiles, _, err := ctx.getIngoreFiles(nextSrcPath)
 			if err != nil {
 				return err
 			}

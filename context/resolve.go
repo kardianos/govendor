@@ -55,24 +55,23 @@ func (ctx *Context) loadPackage() error {
 	return ctx.determinePackageStatus()
 }
 
-func (ctx *Context) getFileTags(pathname string, f *ast.File) ([]string, error) {
+func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []string, err error) {
 	_, filenameExt := filepath.Split(pathname)
 
 	if strings.HasSuffix(pathname, ".go") == false {
-		return nil, nil
+		return nil, nil, nil
 	}
-	var err error
 	if f == nil {
 		f, err = parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	filename := filenameExt[:len(filenameExt)-3]
 
 	l := strings.Split(filename, "_")
-	tags := make([]string, 0)
+	tags = make([]string, 0, 6)
 
 	if n := len(l); n > 1 && l[n-1] == "test" {
 		l = l[:n-1]
@@ -102,7 +101,18 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) ([]string, error) 
 			}
 		}
 	}
-	return tags, nil
+	imports = make([]string, 0, len(f.Imports))
+
+	for i := range f.Imports {
+		imp := f.Imports[i].Path.Value
+		imp, err = strconv.Unquote(imp)
+		if err != nil {
+			return tags, imports, err
+		}
+		imports = append(imports, imp)
+	}
+
+	return tags, imports, nil
 }
 
 // addFileImports is called from loadPackage and resolveUnknown.
@@ -138,7 +148,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		f = &ast.File{}
 	}
 
-	tags, err := ctx.getFileTags(pathname, f)
+	tags, _, err := ctx.getFileTags(pathname, f)
 	if err != nil {
 		return err
 	}
