@@ -519,7 +519,7 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	case Remove:
 		return ctx.modifyRemove(pkg)
 	case Fetch:
-		return ctx.modifyFetch(pkg, ps.Uncommitted)
+		return ctx.modifyFetch(pkg, ps.Uncommitted, ps.HasVersion, ps.Version)
 	default:
 		panic("mod switch: case not handled")
 	}
@@ -662,7 +662,7 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 }
 
 // TODO (DT): modify function to fetch given package.
-func (ctx *Context) modifyFetch(pkg *Package, uncommitted bool) error {
+func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, version string) error {
 	vp := ctx.VendorFilePackagePath(pkg.Canonical)
 	if vp == nil {
 		vp = &vendorfile.Package{
@@ -677,11 +677,16 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted bool) error {
 	if len(vp.Origin) == 0 {
 		origin = vp.Path
 	}
+	ps := &pkgspec.Pkg{
+		Path:       origin,
+		HasVersion: hasVersion,
+		Version:    version,
+	}
 	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Type: OpFetch,
 		Pkg:  pkg,
-		Src:  origin,
+		Src:  ps.String(),
 		Dest: dest,
 	})
 	return nil
@@ -835,10 +840,16 @@ func (ctx *Context) copy() error {
 	}
 
 	var err error
-	fetch, err := newFetcher()
+	fetch, err := newFetcher(ctx)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		ferr := fetch.cleanUp()
+		if err == nil {
+			err = ferr
+		}
+	}()
 	for _, op := range ctx.Operation {
 		if op.State != OpReady {
 			continue
@@ -873,7 +884,10 @@ func (ctx *Context) copy() error {
 		case OpCopy:
 			h := sha1.New()
 			var checksum []byte
-			err = ctx.CopyPackage(op.Dest, op.Src, pkg.Gopath, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
+
+			root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Canonical)
+
+			err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
 			if err == nil && !op.Uncommitted {
 				checksum = h.Sum(nil)
 				vpkg := ctx.VendorFilePackagePath(pkg.Canonical)

@@ -146,7 +146,7 @@ fileLoop:
 		}
 	}
 
-	return licenseCopy(lookRoot, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder))
+	return licenseCopy(lookRoot, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkgPath)
 }
 
 func copyFile(destPath, srcPath string, h hash.Hash) error {

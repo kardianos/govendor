@@ -10,9 +10,6 @@ import (
 )
 
 // IsVersion returns true if the string is a version.
-//
-// TODO (DT): This will be used in the fetch command.
-// Later maybe integrate with vcs after determining remote vcs type.
 func isVersion(s string) bool {
 	hasPunct := false
 	onlyNumber := true

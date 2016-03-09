@@ -35,6 +35,59 @@ func FileTrimPrefix(s, prefix string) string {
 	return s
 }
 
+func FileHasSuffix(s, suffix string) bool {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		s = strings.ToLower(s)
+		suffix = strings.ToLower(suffix)
+	}
+	return strings.HasSuffix(s, suffix)
+}
+
+func FileTrimSuffix(s, suffix string) string {
+	if FileHasSuffix(s, suffix) {
+		return s[:len(s)-len(suffix)]
+	}
+	return s
+}
+
+var slashSep = filepath.Separator
+
+func TrimCommonSuffix(base, suffix string) (string, string) {
+	a, b := base, suffix
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		a = strings.ToLower(a)
+		b = strings.ToLower(b)
+	}
+	a = strings.TrimSuffix(strings.TrimSuffix(a, "\\"), "/")
+	b = strings.TrimSuffix(strings.TrimSuffix(b, "\\"), "/")
+	base = strings.TrimSuffix(strings.TrimSuffix(base, "\\"), "/")
+
+	ff := func(r rune) bool {
+		return r == '/' || r == '\\'
+	}
+	aa := strings.FieldsFunc(a, ff)
+	bb := strings.FieldsFunc(b, ff)
+
+	min := len(aa)
+	if min > len(bb) {
+		min = len(bb)
+	}
+	i := 1
+	for ; i <= min; i++ {
+		// fmt.Printf("(%d) end aa: %q, end bb: %q\n", i, aa[len(aa)-i], bb[len(bb)-i])
+		if aa[len(aa)-i] == bb[len(bb)-i] {
+			continue
+		}
+		break
+	}
+	baseParts := strings.FieldsFunc(base, ff)
+	// fmt.Printf("base parts: %q\n", baseParts)
+	base1 := FileTrimSuffix(base, strings.Join(baseParts[len(baseParts)-i+1:], string(slashSep)))
+	base1 = strings.TrimSuffix(strings.TrimSuffix(base1, "\\"), "/")
+	base2 := strings.Trim(base[len(base1):], `\/`)
+	return base1, base2
+}
+
 func FileStringEquals(s1, s2 string) bool {
 	if len(s1) == 0 {
 		return len(s2) == 0

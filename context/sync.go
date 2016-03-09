@@ -74,6 +74,9 @@ func getHash(root, fp string, h hash.Hash, skipper func(name string, isDir bool)
 
 	dir, err := os.Open(fp)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return fmt.Errorf("Failed to open dir %q: %v", fp, err)
 	}
 	filelist, err := dir.Readdir(-1)
