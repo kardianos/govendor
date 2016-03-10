@@ -36,7 +36,7 @@ func (l fileInfoSort) Swap(i, j int) {
 
 // CopyPackage copies the files from the srcPath to the destPath, destPath
 // folder and parents are are created if they don't already exist.
-func (ctx *Context) CopyPackage(destPath, srcPath, lookRoot, pkgPath string, ignoreFiles []string, tree bool, h hash.Hash) error {
+func (ctx *Context) CopyPackage(destPath, srcPath, lookRoot, pkgPath string, ignoreFiles []string, tree bool, h hash.Hash, beforeCopy func(deps []string) error) error {
 	if pathos.FileStringEquals(destPath, srcPath) {
 		return fmt.Errorf("Attempting to copy package to same location %q.", destPath)
 	}
@@ -118,11 +118,17 @@ fileLoop:
 			}
 			nextDestPath := filepath.Join(destPath, name)
 			nextSrcPath := filepath.Join(srcPath, name)
-			nextIgnoreFiles, _, err := ctx.getIngoreFiles(nextSrcPath)
+			nextIgnoreFiles, deps, err := ctx.getIngoreFiles(nextSrcPath)
 			if err != nil {
 				return err
 			}
-			err = ctx.CopyPackage(nextDestPath, nextSrcPath, lookRoot, path.Join(pkgPath, name), nextIgnoreFiles, true, h)
+			if beforeCopy != nil {
+				err = beforeCopy(deps)
+				if err != nil {
+					return err
+				}
+			}
+			err = ctx.CopyPackage(nextDestPath, nextSrcPath, lookRoot, path.Join(pkgPath, name), nextIgnoreFiles, true, h, beforeCopy)
 			if err != nil {
 				return err
 			}

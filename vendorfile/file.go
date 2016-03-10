@@ -48,6 +48,7 @@ type Package struct {
 	Revision     string
 	RevisionTime string
 	Version      string
+	VersionExact string
 	ChecksumSHA1 string
 	Comment      string
 }
@@ -61,6 +62,7 @@ var (
 	revisionNames     = []string{"revision", "Revision", "version", "Version"}
 	revisionTimeNames = []string{"revisionTime", "RevisionTime", "versionTime", "VersionTime"}
 	versionNames      = []string{"version"}
+	versionExactNames = []string{"versionExact"}
 	checksumSHA1Names = []string{"checksumSHA1"}
 	commentNames      = []string{"comment", "Comment"}
 )
@@ -182,6 +184,7 @@ func (vf *File) toFields() {
 		setField(&pkg.Revision, object, revisionNames)
 		setField(&pkg.RevisionTime, object, revisionTimeNames)
 		setField(&pkg.Version, object, versionNames)
+		setField(&pkg.VersionExact, object, versionExactNames)
 		setField(&pkg.ChecksumSHA1, object, checksumSHA1Names)
 		setField(&pkg.Comment, object, commentNames)
 	}
@@ -206,6 +209,7 @@ func (vf *File) toAll() {
 		setObject(pkg.Revision, obj, revisionNames, false)
 		setObject(pkg.RevisionTime, obj, revisionTimeNames, true)
 		setObject(pkg.Version, obj, versionNames, true)
+		setObject(pkg.VersionExact, obj, versionExactNames, true)
 		setObject(pkg.ChecksumSHA1, obj, checksumSHA1Names, true)
 		setObject(pkg.Comment, obj, commentNames, true)
 	}

@@ -612,7 +612,9 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
-	vp.Tree = pkg.Tree
+	if pkg.Tree {
+		vp.Tree = pkg.Tree
+	}
 	vp.Origin = pkg.Origin
 	if pkg.Canonical != pkg.Local && pkg.inVendor {
 		vp.Origin = pkg.Local
@@ -689,12 +691,15 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, vers
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
-	vp.Tree = pkg.Tree
+	if pkg.Tree {
+		vp.Tree = pkg.Tree
+	}
 	vp.Origin = pkg.Origin
 	origin := vp.Origin
 	if len(vp.Origin) == 0 {
 		origin = vp.Path
 	}
+	fmt.Printf("VP: %#v\n", *vp)
 	ps := &pkgspec.Pkg{
 		Path:       pkg.Canonical,
 		Origin:     origin,
@@ -909,7 +914,7 @@ func (ctx *Context) Alter() error {
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
 			op.State = OpDone
 		case OpCopy:
-			ctx.copyOperation(op)
+			ctx.copyOperation(op, nil)
 		}
 		if err != nil {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
@@ -918,7 +923,7 @@ func (ctx *Context) Alter() error {
 	return nil
 }
 
-func (ctx *Context) copyOperation(op *Operation) error {
+func (ctx *Context) copyOperation(op *Operation, beforeCopy func(deps []string) error) error {
 	var err error
 	pkg := op.Pkg
 	ctx.dirty = true
@@ -927,7 +932,7 @@ func (ctx *Context) copyOperation(op *Operation) error {
 
 	root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Canonical)
 
-	err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
+	err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h, beforeCopy)
 	if err == nil && !op.Uncommitted {
 		checksum = h.Sum(nil)
 		vpkg := ctx.VendorFilePackagePath(pkg.Canonical)

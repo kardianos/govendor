@@ -114,20 +114,20 @@ func (f filter) String() string {
 func (f filter) HasStatus(item context.StatusItem) bool {
 	return item.Status.MatchGroup(f.Status)
 }
-func (f filter) HasImport(item context.StatusItem) bool {
+func (f filter) FindImport(item context.StatusItem) *filterImport {
 	for _, imp := range f.Import {
 		if imp.Pkg.Path == item.Local || imp.Pkg.Path == item.Canonical {
 			imp.Added = true
-			return true
+			return imp
 		}
 		if imp.Pkg.MatchTree {
 			if strings.HasPrefix(item.Local, imp.Pkg.Path) || strings.HasPrefix(item.Canonical, imp.Pkg.Path) {
 				imp.Added = true
-				return true
+				return imp
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 func currentGoPath(ctx *context.Context) (string, error) {

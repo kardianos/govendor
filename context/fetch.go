@@ -107,7 +107,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 	switch {
 	case len(revision) == 0 && len(vpkg.Version) > 0:
-		// fmt.Printf("Get version %q@%s\n", vpkg.Path, vpkg.Revision)
+		fmt.Printf("Get version %q@%s\n", vpkg.Path, vpkg.Revision)
 		// Get a list of tags, match to version if possible.
 		var tagNames []string
 		tagNames, err = vcsCmd.Tags(repoRootDir)
@@ -123,19 +123,23 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		if result.Source == LabelNone {
 			return nextOps, fmt.Errorf("No label found for specified version %q from %s", vpkg.Version, ps.String())
 		}
+		vpkg.VersionExact = result.Text
+		fmt.Printf("\tFound exact version %q\n", vpkg.VersionExact)
 		err = vcsCmd.TagSync(repoRootDir, result.Text)
 		if err != nil {
 			return nextOps, err
 		}
 	case len(revision) > 0:
-		// fmt.Printf("Get specific revision %q@%s\n", vpkg.Path, revision)
+		fmt.Printf("Get specific revision %q@%s\n", vpkg.Path, revision)
 		// Get specific version.
+		vpkg.Version = ""
+		vpkg.VersionExact = ""
 		err = vcsCmd.RevisionSync(repoRootDir, revision)
 		if err != nil {
 			return nextOps, err
 		}
 	default:
-		// fmt.Printf("Get latest revision %q\n", vpkg.Path)
+		fmt.Printf("Get latest revision %q\n", vpkg.Path)
 		// Get latest version.
 		err = vcsCmd.TagSync(repoRootDir, "")
 		if err != nil {
@@ -150,47 +154,6 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	op.IgnoreFile, deps, err = f.Ctx.getIngoreFiles(op.Src)
 	if err != nil {
 		return nextOps, err
-	}
-
-	// Queue up any missing package deps.
-	for _, dep := range deps {
-		dep = strings.TrimSpace(dep)
-		if len(dep) == 0 {
-			continue
-		}
-		if f.HavePkg[dep] {
-			continue
-		}
-		if pkg := f.Ctx.Package[dep]; pkg != nil {
-			continue
-		}
-		var yes bool
-		yes, err = f.Ctx.isStdLib(dep)
-		if err != nil {
-			return nextOps, fmt.Errorf("Failed to check if in stdlib: %v", err)
-		}
-		if yes {
-			continue
-		}
-		f.HavePkg[dep] = true
-		dest := filepath.Join(f.Ctx.RootDir, f.Ctx.VendorFolder, dep)
-
-		// Update vendor file with correct Local field.
-		vp := f.Ctx.VendorFilePackagePath(dep)
-		if vp == nil {
-			vp = &vendorfile.Package{
-				Add:  true,
-				Path: dep,
-			}
-			f.Ctx.VendorFile.Package = append(f.Ctx.VendorFile.Package, vp)
-		}
-
-		nextOps = append(nextOps, &Operation{
-			Type: OpFetch,
-			Pkg:  &Package{Canonical: dep},
-			Src:  dep,
-			Dest: dest,
-		})
 	}
 
 	// Once downloaded, be sure to set the revision and revisionTime
@@ -210,5 +173,63 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		}
 	}
 
-	return nextOps, f.Ctx.copyOperation(op)
+	processDeps := func(deps []string) error {
+		// Queue up any missing package deps.
+		for _, dep := range deps {
+			dep = strings.TrimSpace(dep)
+			if len(dep) == 0 {
+				continue
+			}
+			if f.HavePkg[dep] {
+				continue
+			}
+			if pkg := f.Ctx.Package[dep]; pkg != nil {
+				continue
+			}
+			// Look for tree deps.
+			if op.Pkg.Tree && strings.HasPrefix(dep, op.Pkg.Canonical+"/") {
+				continue
+			}
+			var yes bool
+			yes, err = f.Ctx.isStdLib(dep)
+			if err != nil {
+				return fmt.Errorf("Failed to check if in stdlib: %v", err)
+			}
+			if yes {
+				continue
+			}
+			f.HavePkg[dep] = true
+			dest := filepath.Join(f.Ctx.RootDir, f.Ctx.VendorFolder, dep)
+
+			// Update vendor file with correct Local field.
+			vp := f.Ctx.VendorFilePackagePath(dep)
+			if vp == nil {
+				vp = &vendorfile.Package{
+					Add:  true,
+					Path: dep,
+				}
+				f.Ctx.VendorFile.Package = append(f.Ctx.VendorFile.Package, vp)
+			}
+
+			nextOps = append(nextOps, &Operation{
+				Type: OpFetch,
+				Pkg:  &Package{Canonical: dep},
+				Src:  dep,
+				Dest: dest,
+			})
+		}
+		return nil
+	}
+
+	err = processDeps(deps)
+	if err != nil {
+		return nextOps, err
+	}
+
+	err = f.Ctx.copyOperation(op, processDeps)
+	if err != nil {
+		return nextOps, err
+	}
+
+	return nextOps, nil
 }

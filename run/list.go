@@ -65,7 +65,7 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 		if f.HasStatus(item) == false {
 			continue
 		}
-		if len(f.Import) != 0 && f.HasImport(item) == false {
+		if len(f.Import) != 0 && f.FindImport(item) == nil {
 			continue
 		}
 

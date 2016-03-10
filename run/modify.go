@@ -121,8 +121,14 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 				return MsgNone, err
 			}
 		}
-		if f.HasImport(item) {
-			err = ctx.ModifyImport(addTree(item.Local), mod)
+		if imp := f.FindImport(item); imp != nil {
+			if *tree {
+				imp.Pkg.IncludeTree = true
+			}
+			if *uncommitted {
+				imp.Pkg.Uncommitted = true
+			}
+			err = ctx.ModifyImport(imp.Pkg, mod)
 			if err != nil {
 				return MsgNone, err
 			}
@@ -171,14 +177,19 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		return MsgNone, nil
 	}
 
-	// Write out vendor file and do change.
-	err = ctx.Alter()
-	if err != nil {
-		return MsgNone, err
-	}
+	// Write intent, make the changes, then record any checksums or recursive info.
 	err = ctx.WriteVendorFile()
 	if err != nil {
 		return MsgNone, err
+	}
+	// Write out vendor file and do change.
+	err = ctx.Alter()
+	vferr := ctx.WriteVendorFile()
+	if err != nil {
+		return MsgNone, err
+	}
+	if vferr != nil {
+		return MsgNone, vferr
 	}
 	return MsgNone, nil
 }
