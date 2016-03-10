@@ -350,8 +350,11 @@ func (ctx *Context) Sync() (err error) {
 			rem = append(rem, remoteFailure{Msg: "failed to get ignore files", Path: vp.Path, Err: err})
 			continue
 		}
+
+		root, _ := pathos.TrimCommonSuffix(src, vp.Path)
+
 		// Need to ensure we copy files from "b.Root/<import-path>" for the following command.
-		ctx.CopyPackage(dest, src, repoRootDir, vp.Path, ignoreFiles, vp.Tree, h)
+		ctx.CopyPackage(dest, src, root, vp.Path, ignoreFiles, vp.Tree, h)
 		checksum := h.Sum(nil)
 		h.Reset()
 		vp.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
