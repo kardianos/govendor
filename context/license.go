@@ -96,16 +96,16 @@ func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
 			}
 
 			srcPath := filepath.Join(folder, name)
+			trimTo := pathos.FileTrimPrefix(getLastVendorRoot(folder), root)
 
 			/*
 				Path: "golang.org/x/tools/go/vcs"
 				Root: "/tmp/govendor-cache280388238/1"
 				StartIn: "/tmp/govendor-cache280388238/1/go/vcs"
-
 				addTo: "golang.org/x/tools"
 				$PROJ/vendor + addTo + pathos.FileTrimPrefix(folder, root) + "LICENSE"
 			*/
-			destPath := filepath.Join(vendorRoot, addTo, pathos.FileTrimPrefix(getLastVendorRoot(folder), root), name)
+			destPath := filepath.Join(vendorRoot, addTo, trimTo, name)
 
 			// Only copy if file does not exist.
 			_, err := os.Stat(destPath)
@@ -118,8 +118,9 @@ func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
 				return err
 			}
 		}
-		if pathos.FileStringEquals(root, folder) {
-			// return nil
+
+		if len(folder) <= len(root) {
+			return nil
 		}
 
 		nextFolder := filepath.Clean(filepath.Join(folder, ".."))

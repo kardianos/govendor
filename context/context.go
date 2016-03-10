@@ -861,12 +861,6 @@ func (ctx *Context) Alter() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		ferr := fetch.cleanUp()
-		if err == nil {
-			err = ferr
-		}
-	}()
 	for {
 		var nextOps []*Operation
 		for _, op := range ctx.Operation {
@@ -910,26 +904,34 @@ func (ctx *Context) Alter() error {
 		case OpRemove:
 			ctx.dirty = true
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
+			op.State = OpDone
 		case OpCopy:
-			ctx.dirty = true
-			h := sha1.New()
-			var checksum []byte
-
-			root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Canonical)
-
-			err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
-			if err == nil && !op.Uncommitted {
-				checksum = h.Sum(nil)
-				vpkg := ctx.VendorFilePackagePath(pkg.Canonical)
-				if vpkg != nil {
-					vpkg.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
-				}
-			}
+			ctx.copyOperation(op)
 		}
 		if err != nil {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
 		}
-		op.State = OpDone
 	}
 	return nil
+}
+
+func (ctx *Context) copyOperation(op *Operation) error {
+	var err error
+	pkg := op.Pkg
+	ctx.dirty = true
+	h := sha1.New()
+	var checksum []byte
+
+	root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Canonical)
+
+	err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h)
+	if err == nil && !op.Uncommitted {
+		checksum = h.Sum(nil)
+		vpkg := ctx.VendorFilePackagePath(pkg.Canonical)
+		if vpkg != nil {
+			vpkg.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
+		}
+	}
+	op.State = OpDone
+	return err
 }

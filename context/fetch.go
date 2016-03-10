@@ -6,7 +6,6 @@ package context
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,28 +20,23 @@ import (
 )
 
 type fetcher struct {
-	Ctx      *Context
-	Bundles  []*syncBundle
-	TempRoot string
-
-	HavePkg map[string]bool
+	Ctx       *Context
+	CacheRoot string
+	HavePkg   map[string]bool
 }
 
 func newFetcher(ctx *Context) (*fetcher, error) {
-	tempRoot, err := ioutil.TempDir(os.TempDir(), "govendor-cache")
+	// GOPATH here includes the "src" dir, go up one level.
+	cacheRoot := filepath.Join(ctx.RootGopath, "..", ".cache", "govendor")
+	err := os.MkdirAll(cacheRoot, 0700)
 	if err != nil {
 		return nil, err
 	}
 	return &fetcher{
-		Ctx:      ctx,
-		Bundles:  make([]*syncBundle, 0, 9),
-		TempRoot: tempRoot,
-		HavePkg:  make(map[string]bool, 30),
+		Ctx:       ctx,
+		CacheRoot: cacheRoot,
+		HavePkg:   make(map[string]bool, 30),
 	}, nil
-}
-
-func (f *fetcher) cleanUp() error {
-	return os.RemoveAll(f.TempRoot)
 }
 
 // op fetches the repo locally if not already present.
@@ -65,68 +59,82 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 	f.HavePkg[ps.Path] = true
 
-	var b *syncBundle
-	for _, item := range f.Bundles {
-		// Must be from the same repo (space).
-		if item.RepoRoot != ps.Origin && !strings.HasPrefix(ps.Origin, item.RepoRoot+"/") {
-			continue
-		}
-		// Must be from the same revision/version (time).
-		if ps.HasVersion && ps.Version != item.Revision {
-			continue
-		}
-		b = item
-	}
-	if b == nil {
-		b = &syncBundle{
-			Packages: []*vendorfile.Package{vpkg},
-			Root:     filepath.Join(f.TempRoot, fmt.Sprintf("%d", len(f.Bundles))),
-		}
-		f.Bundles = append(f.Bundles, b)
+	// Don't check for bundle, rather check physical directory.
+	// If no repo in dir, clone.
+	// If there is a repo in dir, update to latest.
+	// Get any tags.
+	// If we have a specific revision, update to that revision.
 
-		err = os.MkdirAll(b.Root, 0700)
-		if err != nil {
-			return nextOps, err
-		}
-
+	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.Path))
+	vcsCmd, repoRoot, err := vcs.FromDir(pkgDir, f.CacheRoot)
+	repoRootDir := filepath.Join(f.CacheRoot, repoRoot)
+	if err != nil {
 		rr, err := vcs.RepoRootForImportPath(ps.Origin, false)
 		if err != nil {
 			return nextOps, err
 		}
-		b.RepoRoot = rr.Root
+		repoRoot = rr.Root
+		repoRootDir = filepath.Join(f.CacheRoot, repoRoot)
 
-		revision := ""
-		if ps.HasVersion {
-			switch {
-			case len(ps.Version) == 0:
-				vpkg.Version = ""
-			case isVersion(ps.Version):
-				vpkg.Version = ps.Version
-			default:
-				revision = ps.Version
-			}
+		err = rr.VCS.Create(pkgDir, rr.Repo)
+		if err != nil {
+			return nextOps, err
 		}
 
-		if len(revision) == 0 && len(vpkg.Version) > 0 {
-			// TODO (DT): resolve version to a revision.
-			// revision = ...
-			return nextOps, fmt.Errorf("fetching versions is not yet supported %s@%s", ps.Origin, vpkg.Version)
-		}
-
-		if len(revision) == 0 {
-			// No specified revision, no version.
-			err = rr.VCS.Create(b.Root, rr.Repo)
-		} else {
-			err = rr.VCS.CreateAtRev(b.Root, rr.Repo, revision)
-		}
+		vcsCmd = rr.VCS
+	} else {
+		err = vcsCmd.Download(repoRootDir)
 		if err != nil {
 			return nextOps, err
 		}
 	}
 
+	revision := ""
+	if ps.HasVersion {
+		switch {
+		case len(ps.Version) == 0:
+			vpkg.Version = ""
+		case isVersion(ps.Version):
+			vpkg.Version = ps.Version
+		default:
+			revision = ps.Version
+		}
+	}
+
+	switch {
+	case len(revision) == 0 && len(vpkg.Version) > 0:
+		// Get a list of tags, match to version if possible.
+		var tagNames []string
+		tagNames, err = vcsCmd.Tags(repoRootDir)
+		if err != nil {
+			return nextOps, err
+		}
+		labels := make([]Label, len(tagNames))
+		for i, tag := range tagNames {
+			labels[i].Source = LabelTag
+			labels[i].Text = tag
+		}
+		result := FindLabel(vpkg.Version, labels)
+		if result.Source == LabelNone {
+			return nextOps, fmt.Errorf("No label found for specified version %q from %s", vpkg.Version, ps.String())
+		}
+		err = vcsCmd.TagSync(repoRootDir, result.Text)
+		if err != nil {
+			return nextOps, err
+		}
+	case len(revision) > 0:
+		// Get specific version.
+		err = vcsCmd.TagSync(repoRootDir, revision)
+		if err != nil {
+			return nextOps, err
+		}
+	default:
+		// Already at latest version.
+	}
+
 	// set op.Src to download dir.
 	// /tmp/cache/1/[[github.com/kardianos/govendor]]context
-	op.Src = filepath.Join(b.Root, pathos.SlashToFilepath(strings.TrimPrefix(ps.Origin, b.RepoRoot)))
+	op.Src = pkgDir
 	var deps []string
 	op.IgnoreFile, deps, err = f.Ctx.getIngoreFiles(op.Src)
 	if err != nil {
@@ -177,7 +185,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// Once downloaded, be sure to set the revision and revisionTime
 	// in the vendor file package.
 	// Find the VCS information.
-	system, err := gvvcs.FindVcs(f.TempRoot, op.Src)
+	system, err := gvvcs.FindVcs(f.CacheRoot, op.Src)
 	if err != nil {
 		return nextOps, err
 	}
@@ -191,5 +199,5 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		}
 	}
 
-	return nextOps, nil
+	return nextOps, f.Ctx.copyOperation(op)
 }

@@ -16,6 +16,7 @@ func TestTrimCommonSuffix(t *testing.T) {
 	}{
 		{slash: '/', base: "/a/b/c", suffix: "/x/y/b/c", result: "/a", common: "b/c"},
 		{slash: '/', base: "/tmp/vendor_272718190/src/co2/go/pk1/", suffix: "co2/go/pk1", result: "/tmp/vendor_272718190/src", common: "co2/go/pk1"},
+		{slash: '/', base: "/home/daniel/code/go/src/.cache/govendor/github.com/raphael/goa", suffix: "github.com/raphael/goa", result: "/home/daniel/code/go/src/.cache/govendor", common: "github.com/raphael/goa"},
 		{slash: '\\', base: `d:\bob\alice\noob`, suffix: `c:\tmp\foo\alice\noob`, result: `d:\bob`, common: `alice\noob`},
 	}
 

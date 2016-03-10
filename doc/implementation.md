@@ -50,3 +50,13 @@
 		uncommitted changes over. Still check for uncommitted changegs
 		and only apply `"uncommitted": true` to packages that actually do
 		have uncommitted changes.
+
+## Update Migrations
+
+ - [ ] gb github.com/constabulary/gb
+ - [ ] govend https://github.com/govend/govend
+ - [ ] godep (ensure it is still working)
+ - [ ] gvt https://github.com/FiloSottile/gvt
+ - [ ] glock https://github.com/robfig/glock
+
+
