@@ -198,7 +198,7 @@ func (vcsCmd *VCSCmd) run1(dir string, cmdline string, keyval []string, verbose 
 	cmd := exec.Command(v.Cmd, args...)
 	cmd.Dir = dir
 	cmd.Env = envForDir(cmd.Dir)
-	if false {
+	if vcs.ShowCmd {
 		fmt.Printf("cd %s\n", dir)
 		fmt.Printf("%s %s\n", v.Cmd, strings.Join(args, " "))
 	}
@@ -258,7 +258,7 @@ func updateVcsCmd(cmd *vcs.Cmd) *VCSCmd {
 	switch cmd.Name {
 	case "Git":
 		cmd.TagSyncCmd = "reset --hard {tag}"
-		cmd.TagSyncDefault = "reset --hard master"
+		cmd.TagSyncDefault = "reset --hard origin/master"
 		cmd.DownloadCmd = "fetch"
 	case "Mercurial":
 	case "Bazaar":
@@ -270,6 +270,7 @@ func updateVcsCmd(cmd *vcs.Cmd) *VCSCmd {
 // Sync checks for outdated packages in the vendor folder and fetches the
 // correct revision from the remote.
 func (ctx *Context) Sync() (err error) {
+	// vcs.ShowCmd = true
 	outOfDate, err := ctx.VerifyVendor()
 	if err != nil {
 		return fmt.Errorf("Failed to verify checksums: %v", err)

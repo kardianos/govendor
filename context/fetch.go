@@ -42,6 +42,7 @@ func newFetcher(ctx *Context) (*fetcher, error) {
 // op fetches the repo locally if not already present.
 // Transform the fetch op into a copy op.
 func (f *fetcher) op(op *Operation) ([]*Operation, error) {
+	// vcs.ShowCmd = true
 	var nextOps []*Operation
 	vpkg := f.Ctx.VendorFilePackagePath(op.Pkg.Canonical)
 	if vpkg == nil {
@@ -106,6 +107,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 	switch {
 	case len(revision) == 0 && len(vpkg.Version) > 0:
+		// fmt.Printf("Get version %q@%s\n", vpkg.Path, vpkg.Revision)
 		// Get a list of tags, match to version if possible.
 		var tagNames []string
 		tagNames, err = vcsCmd.Tags(repoRootDir)
@@ -126,12 +128,14 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			return nextOps, err
 		}
 	case len(revision) > 0:
+		// fmt.Printf("Get specific revision %q@%s\n", vpkg.Path, revision)
 		// Get specific version.
 		err = vcsCmd.RevisionSync(repoRootDir, revision)
 		if err != nil {
 			return nextOps, err
 		}
 	default:
+		// fmt.Printf("Get latest revision %q\n", vpkg.Path)
 		// Get latest version.
 		err = vcsCmd.TagSync(repoRootDir, "")
 		if err != nil {
