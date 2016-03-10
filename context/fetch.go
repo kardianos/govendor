@@ -66,23 +66,26 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// If we have a specific revision, update to that revision.
 
 	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.Path))
-	vcsCmd, repoRoot, err := vcs.FromDir(pkgDir, f.CacheRoot)
+	sysVcsCmd, repoRoot, err := vcs.FromDir(pkgDir, f.CacheRoot)
+	var vcsCmd *VCSCmd
 	repoRootDir := filepath.Join(f.CacheRoot, repoRoot)
 	if err != nil {
 		rr, err := vcs.RepoRootForImportPath(ps.Origin, false)
 		if err != nil {
 			return nextOps, err
 		}
+
+		vcsCmd = updateVcsCmd(rr.VCS)
 		repoRoot = rr.Root
 		repoRootDir = filepath.Join(f.CacheRoot, repoRoot)
 
-		err = rr.VCS.Create(pkgDir, rr.Repo)
+		err = vcsCmd.Create(repoRootDir, rr.Repo)
 		if err != nil {
 			return nextOps, err
 		}
 
-		vcsCmd = rr.VCS
 	} else {
+		vcsCmd = updateVcsCmd(sysVcsCmd)
 		err = vcsCmd.Download(repoRootDir)
 		if err != nil {
 			return nextOps, err
@@ -124,12 +127,16 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		}
 	case len(revision) > 0:
 		// Get specific version.
-		err = vcsCmd.TagSync(repoRootDir, revision)
+		err = vcsCmd.RevisionSync(repoRootDir, revision)
 		if err != nil {
 			return nextOps, err
 		}
 	default:
-		// Already at latest version.
+		// Get latest version.
+		err = vcsCmd.TagSync(repoRootDir, "")
+		if err != nil {
+			return nextOps, err
+		}
 	}
 
 	// set op.Src to download dir.
