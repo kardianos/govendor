@@ -66,7 +66,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// Get any tags.
 	// If we have a specific revision, update to that revision.
 
-	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.Path))
+	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.Origin))
 	sysVcsCmd, repoRoot, err := vcs.FromDir(pkgDir, f.CacheRoot)
 	var vcsCmd *VCSCmd
 	repoRootDir := filepath.Join(f.CacheRoot, repoRoot)

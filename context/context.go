@@ -654,6 +654,11 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 }
 
 func (ctx *Context) modifyRemove(pkg *Package) error {
+	// Update vendor file with correct Local field.
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	if vp != nil {
+		vp.Remove = true
+	}
 	if len(pkg.Dir) == 0 {
 		return nil
 	}
@@ -670,12 +675,6 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 		Src:  pkg.Dir,
 		Dest: "",
 	})
-
-	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackagePath(pkg.Canonical)
-	if vp != nil {
-		vp.Remove = true
-	}
 
 	return nil
 }

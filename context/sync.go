@@ -297,7 +297,7 @@ func (ctx *Context) Sync() (err error) {
 		if len(vp.Origin) > 0 {
 			from = vp.Origin
 		}
-		pkgDir := filepath.Join(cacheRoot, vp.Path)
+		pkgDir := filepath.Join(cacheRoot, from)
 
 		// See if repo exists.
 		sysVcsCmd, repoRoot, err := vcs.FromDir(pkgDir, cacheRoot)
@@ -339,7 +339,6 @@ func (ctx *Context) Sync() (err error) {
 				continue
 			}
 		}
-		from = strings.Trim(pathos.FileTrimPrefix(repoRoot, from), "/")
 		dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(vp.Path))
 		// Path handling with single sub-packages and differing origins need to be properly handled.
 		src := pkgDir

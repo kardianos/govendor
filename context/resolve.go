@@ -389,5 +389,23 @@ func (ctx *Context) determinePackageStatus() error {
 			panic("determinePackageStatus loop limit")
 		}
 	}
+
+	// Add any packages in the vendor file but not in GOPATH or vendor dir.
+	for _, vp := range ctx.VendorFile.Package {
+		if vp.Remove {
+			continue
+		}
+		if _, found := ctx.Package[vp.Path]; found {
+			continue
+		}
+		err := ctx.addSingleImport("", vp.Path)
+		if err != nil {
+			return err
+		}
+		if pkg, found := ctx.Package[vp.Path]; found {
+			pkg.Origin = vp.Origin
+			pkg.inTree = vp.Tree
+		}
+	}
 	return nil
 }
