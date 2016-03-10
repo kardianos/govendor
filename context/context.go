@@ -451,6 +451,10 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 		}
 	}
 
+	if canonicalImportPath == "" {
+		canonicalImportPath = sourcePath
+	}
+
 	// Does the local import exist?
 	//   If so either update or just return.
 	//   If not find the disk path from the canonical path, copy locally and rewrite (if needed).
