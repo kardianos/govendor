@@ -38,10 +38,12 @@
  - [x] Implement the fetch command when fetch specifies a revision.
  - [x] Recursive fetch.
  - [x] Use a persistent cache ($GOPATH/src-cache) to download into (fetch and sync).
- - [ ] Add check bzr, hg, and svn commands.
- - [ ] Add fetching the version from version-spec. For git try to rely
+ - [x] Add fetching the version from version-spec. For git try to rely
 		on standard git command, but also might look into
 		"github.com/src-d/go-git" for inspecting versions remotely.
+ - [ ] Change fetch and sync to download into ORIGIN, not PATH.
+ - [ ] Record choosen version in vendor file.
+ - [ ] Add check bzr, hg, and svn commands.
  - [ ] Respect fetched repos vendor files for versions and revisions.
  - [ ] Handle version and revision conflicts.
 
@@ -60,4 +62,8 @@
  - [ ] gvt https://github.com/FiloSottile/gvt
  - [ ] glock https://github.com/robfig/glock
 
+## TODO
 
+ - [x] Read os.Stdin, split by space (strings.Fields) and append to args.
+ - [ ] Add "-imports" to "list" sub-command. Shows the direct dependencies of the selected packages (not the selected packages).
+ - [ ] Add version info to list output.

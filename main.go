@@ -7,9 +7,12 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/kardianos/govendor/cliprompt"
 	"github.com/kardianos/govendor/run"
@@ -17,7 +20,14 @@ import (
 
 func main() {
 	prompt := &cliprompt.Prompt{}
-	msg, err := run.Run(os.Stdout, os.Args, prompt)
+
+	allArgs := os.Args
+	stdin := &bytes.Buffer{}
+	if _, err := io.Copy(stdin, os.Stdin); err == nil {
+		stdinArgs := strings.Fields(stdin.String())
+		allArgs = append(allArgs, stdinArgs...)
+	}
+	msg, err := run.Run(os.Stdout, allArgs, prompt)
 	if err == flag.ErrHelp {
 		err = nil
 	}
