@@ -119,6 +119,9 @@ Commands that accept status and package-spec:
  * remove
  * fetch
 
+You may pass arguments to govendor through stdin if the last argument is a "-".
+For example `echo +vendor | govendor list -` will list all vendor packages.
+
 ## Ignoring build tags
 Ignoring build tags is opt-out and is designed to be the opposite of the build
 file directives which are opt-in when specified. Typically a developer will

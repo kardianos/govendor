@@ -22,11 +22,15 @@ func main() {
 	prompt := &cliprompt.Prompt{}
 
 	allArgs := os.Args
-	stdin := &bytes.Buffer{}
-	if _, err := io.Copy(stdin, os.Stdin); err == nil {
-		stdinArgs := strings.Fields(stdin.String())
-		allArgs = append(allArgs, stdinArgs...)
+
+	if allArgs[len(allArgs)-1] == "-" {
+		stdin := &bytes.Buffer{}
+		if _, err := io.Copy(stdin, os.Stdin); err == nil {
+			stdinArgs := strings.Fields(stdin.String())
+			allArgs = append(allArgs[:len(allArgs)-1], stdinArgs...)
+		}
 	}
+
 	msg, err := run.Run(os.Stdout, allArgs, prompt)
 	if err == flag.ErrHelp {
 		err = nil
