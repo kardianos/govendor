@@ -85,10 +85,10 @@ func tree(g *gt.GopathTest, c *Context, name, expected string) {
 	}
 }
 func statusItemString(li StatusItem) string {
-	if li.Local == li.Canonical {
-		return fmt.Sprintf("%s %s < %q", li.Status.String(), li.Canonical, li.ImportedBy)
+	if li.Local == li.Pkg.Path {
+		return fmt.Sprintf("%s %s < %q", li.Status.String(), li.Pkg.Path, li.ImportedBy)
 	}
-	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Canonical, li.ImportedBy)
+	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Pkg.Path, li.ImportedBy)
 }
 
 func vendorFile(g *gt.GopathTest, expected string) {

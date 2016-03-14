@@ -9,9 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/kardianos/govendor/context"
-	"github.com/kardianos/govendor/pkgspec"
 	"github.com/kardianos/govendor/prompt"
 )
 
@@ -58,6 +58,7 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	listFlags := flag.NewFlagSet("mod", flag.ContinueOnError)
 	listFlags.SetOutput(nullWriter{})
 	dryrun := listFlags.Bool("n", false, "dry-run")
+	verbose := listFlags.Bool("v", false, "verbose")
 	short := listFlags.Bool("short", false, "choose the short path")
 	long := listFlags.Bool("long", false, "choose the long path")
 	tree := listFlags.Bool("tree", false, "copy all folders including and under selected folder")
@@ -77,6 +78,9 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	if err != nil {
 		return checkNewContextError(err)
 	}
+	if *verbose {
+		ctx.Logger = w
+	}
 	cgp, err := currentGoPath(ctx)
 	if err != nil {
 		return msg, err
@@ -90,26 +94,68 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		return msg, err
 	}
 
-	addTree := func(s string) *pkgspec.Pkg {
-		ps, err := pkgspec.Parse("", s)
-		if err != nil {
-			panic("error parsing pkg path")
-		}
-		if *tree {
-			ps.IncludeTree = true
-		}
-		if *uncommitted {
-			ps.Uncommitted = true
-		}
-		return ps
+	added := make(map[string]bool, 10)
+	add := func(path string) {
+		added[path] = true
 	}
 
+	// Add explicit imports.
+	for _, imp := range f.Import {
+		if *uncommitted {
+			imp.Uncommitted = true
+		}
+		if *tree {
+			imp.IncludeTree = true
+		}
+		add(imp.Path)
+		err = ctx.ModifyImport(imp, mod)
+		if err != nil {
+			return MsgNone, err
+		}
+	}
+
+	// If add any matched from "...".
 	for _, item := range list {
-		if f.HasStatus(item) {
-			if mod == context.Add && ctx.VendorFilePackagePath(item.Canonical) != nil {
+		for _, imp := range f.Import {
+			if added[item.Pkg.Path] {
 				continue
 			}
-			err = ctx.ModifyImport(addTree(item.Local), mod)
+			if !imp.MatchTree {
+				continue
+			}
+			match := imp.Path + "/"
+			if !strings.HasPrefix(item.Pkg.Path, match) {
+				continue
+			}
+			if imp.HasVersion {
+				item.Pkg.HasVersion = true
+				item.Pkg.Version = imp.Version
+			}
+			add(item.Pkg.Path)
+			err = ctx.ModifyImport(item.Pkg, mod)
+			if err != nil {
+				return MsgNone, err
+			}
+		}
+	}
+
+	// Add packages from status.
+	for _, item := range list {
+		if f.HasStatus(item) {
+			if added[item.Pkg.Path] {
+				continue
+			}
+			if mod == context.Add && ctx.VendorFilePackagePath(item.Pkg.Path) != nil {
+				continue
+			}
+			if *tree {
+				item.Pkg.IncludeTree = true
+			}
+			if *uncommitted {
+				item.Pkg.Uncommitted = true
+			}
+			add(item.Pkg.Path)
+			err = ctx.ModifyImport(item.Pkg, mod)
 			if err != nil {
 				// Skip these errors if from status.
 				if _, is := err.(context.ErrTreeChildren); is {
@@ -120,32 +166,6 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 				}
 				return MsgNone, err
 			}
-		}
-		if imp := f.FindImport(item); imp != nil {
-			if *tree {
-				imp.Pkg.IncludeTree = true
-			}
-			if *uncommitted {
-				imp.Pkg.Uncommitted = true
-			}
-			err = ctx.ModifyImport(imp.Pkg, mod)
-			if err != nil {
-				return MsgNone, err
-			}
-		}
-	}
-	// If import path was not added from list, then add in here.
-	for _, imp := range f.Import {
-		if imp.Added {
-			continue
-		}
-
-		if *uncommitted {
-			imp.Pkg.Uncommitted = true
-		}
-		err = ctx.ModifyImport(imp.Pkg, mod)
-		if err != nil {
-			return MsgNone, err
 		}
 	}
 
@@ -165,13 +185,16 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 
 	if *dryrun {
 		for _, op := range ctx.Operation {
-			if len(op.Dest) == 0 {
+			switch op.Type {
+			case context.OpRemove:
 				fmt.Fprintf(w, "Remove %q\n", op.Src)
-			} else {
+			case context.OpCopy:
 				fmt.Fprintf(w, "Copy %q -> %q\n", op.Src, op.Dest)
 				for _, ignore := range op.IgnoreFile {
 					fmt.Fprintf(w, "\tIgnore %q\n", ignore)
 				}
+			case context.OpFetch:
+				fmt.Fprintf(w, "Fetch %q\n", op.Src)
 			}
 		}
 		return MsgNone, nil

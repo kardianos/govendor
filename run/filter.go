@@ -93,18 +93,9 @@ func parseStatusGroup(statusString string) (sg context.StatusGroup, err error) {
 	return
 }
 
-type filterImport struct {
-	Pkg   *pkgspec.Pkg
-	Added bool // Used to prevent imports from begin added twice.
-}
-
-func (f *filterImport) String() string {
-	return f.Pkg.String()
-}
-
 type filter struct {
 	Status context.StatusGroup
-	Import []*filterImport
+	Import []*pkgspec.Pkg
 }
 
 func (f filter) String() string {
@@ -114,15 +105,13 @@ func (f filter) String() string {
 func (f filter) HasStatus(item context.StatusItem) bool {
 	return item.Status.MatchGroup(f.Status)
 }
-func (f filter) FindImport(item context.StatusItem) *filterImport {
+func (f filter) FindImport(item context.StatusItem) *pkgspec.Pkg {
 	for _, imp := range f.Import {
-		if imp.Pkg.Path == item.Local || imp.Pkg.Path == item.Canonical {
-			imp.Added = true
+		if imp.Path == item.Local || imp.Path == item.Pkg.Path {
 			return imp
 		}
-		if imp.Pkg.MatchTree {
-			if strings.HasPrefix(item.Local, imp.Pkg.Path) || strings.HasPrefix(item.Canonical, imp.Pkg.Path) {
-				imp.Added = true
+		if imp.MatchTree {
+			if strings.HasPrefix(item.Local, imp.Path) || strings.HasPrefix(item.Pkg.Path, imp.Path) {
 				return imp
 			}
 		}
@@ -143,7 +132,7 @@ func currentGoPath(ctx *context.Context) (string, error) {
 
 func parseFilter(currentGoPath string, args []string) (filter, error) {
 	f := filter{
-		Import: make([]*filterImport, 0, len(args)),
+		Import: make([]*pkgspec.Pkg, 0, len(args)),
 	}
 	for _, a := range args {
 		if len(a) == 0 {
@@ -161,7 +150,7 @@ func parseFilter(currentGoPath string, args []string) (filter, error) {
 			if err != nil {
 				return f, err
 			}
-			f.Import = append(f.Import, &filterImport{Pkg: pkg})
+			f.Import = append(f.Import, pkg)
 		}
 	}
 	return f, nil

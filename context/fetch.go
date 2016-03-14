@@ -107,7 +107,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 	switch {
 	case len(revision) == 0 && len(vpkg.Version) > 0:
-		fmt.Printf("Get version %q@%s\n", vpkg.Path, vpkg.Revision)
+		fmt.Fprintf(f.Ctx, "Get version %q@%s\n", vpkg.Path, vpkg.Version)
 		// Get a list of tags, match to version if possible.
 		var tagNames []string
 		tagNames, err = vcsCmd.Tags(repoRootDir)
@@ -124,13 +124,13 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			return nextOps, fmt.Errorf("No label found for specified version %q from %s", vpkg.Version, ps.String())
 		}
 		vpkg.VersionExact = result.Text
-		fmt.Printf("\tFound exact version %q\n", vpkg.VersionExact)
+		fmt.Fprintf(f.Ctx, "\tFound exact version %q\n", vpkg.VersionExact)
 		err = vcsCmd.TagSync(repoRootDir, result.Text)
 		if err != nil {
 			return nextOps, err
 		}
 	case len(revision) > 0:
-		fmt.Printf("Get specific revision %q@%s\n", vpkg.Path, revision)
+		fmt.Fprintf(f.Ctx, "Get specific revision %q@%s\n", vpkg.Path, revision)
 		// Get specific version.
 		vpkg.Version = ""
 		vpkg.VersionExact = ""
@@ -139,7 +139,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			return nextOps, err
 		}
 	default:
-		fmt.Printf("Get latest revision %q\n", vpkg.Path)
+		fmt.Fprintf(f.Ctx, "Get latest revision %q\n", vpkg.Path)
 		// Get latest version.
 		err = vcsCmd.TagSync(repoRootDir, "")
 		if err != nil {
@@ -180,16 +180,24 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			if len(dep) == 0 {
 				continue
 			}
+
+			// Check for deps we already have.
 			if f.HavePkg[dep] {
 				continue
 			}
-			if pkg := f.Ctx.Package[dep]; pkg != nil {
+
+			hasDep := false
+			for _, test := range f.Ctx.Package {
+				if test.Canonical == dep {
+					hasDep = true
+					break
+				}
+			}
+			if hasDep {
 				continue
 			}
-			// Look for tree deps.
-			if op.Pkg.Tree && strings.HasPrefix(dep, op.Pkg.Canonical+"/") {
-				continue
-			}
+
+			// Look for std lib deps
 			var yes bool
 			yes, err = f.Ctx.isStdLib(dep)
 			if err != nil {
@@ -198,6 +206,31 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			if yes {
 				continue
 			}
+
+			// Look for tree deps.
+			if op.Pkg.Tree && strings.HasPrefix(dep, op.Pkg.Canonical+"/") {
+				continue
+			}
+			version := ""
+			hasVersion := false
+			revision := ""
+			for _, vv := range f.Ctx.VendorFile.Package {
+				if vv.Remove {
+					continue
+				}
+				if strings.HasPrefix(dep, vv.Path+"/") {
+					if len(vv.Version) > 0 {
+						version = vv.Version
+						hasVersion = true
+						revision = vv.Revision
+						break
+					}
+					if len(vv.Revision) > 0 {
+						revision = vv.Revision
+					}
+				}
+			}
+
 			f.HavePkg[dep] = true
 			dest := filepath.Join(f.Ctx.RootDir, f.Ctx.VendorFolder, dep)
 
@@ -205,16 +238,24 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			vp := f.Ctx.VendorFilePackagePath(dep)
 			if vp == nil {
 				vp = &vendorfile.Package{
-					Add:  true,
-					Path: dep,
+					Add:      true,
+					Path:     dep,
+					Revision: revision,
+					Version:  version,
 				}
 				f.Ctx.VendorFile.Package = append(f.Ctx.VendorFile.Package, vp)
+			}
+			if hasVersion {
+				vp.Version = version
+			}
+			if len(vp.Revision) == 0 {
+				vp.Revision = revision
 			}
 
 			nextOps = append(nextOps, &Operation{
 				Type: OpFetch,
 				Pkg:  &Package{Canonical: dep},
-				Src:  dep,
+				Src:  (&pkgspec.Pkg{Path: dep, Version: version, HasVersion: hasVersion}).String(),
 				Dest: dest,
 			})
 		}

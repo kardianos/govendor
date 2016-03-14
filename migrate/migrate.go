@@ -139,10 +139,10 @@ func (sysGodep) Migrate(root string) error {
 		ctx.Operation = append(ctx.Operation, &context.Operation{
 			Pkg:  pkg,
 			Src:  pkg.Dir,
-			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Canonical)),
+			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Pkg.Path)),
 		})
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
-		ctx.RewriteRule[item.Local] = item.Canonical
+		ctx.RewriteRule[item.Local] = item.Pkg.Path
 	}
 	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 
@@ -246,10 +246,10 @@ func (sysInternal) Migrate(root string) error {
 		ctx.Operation = append(ctx.Operation, &context.Operation{
 			Pkg:  pkg,
 			Src:  pkg.Dir,
-			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Canonical)),
+			Dest: filepath.Join(ctx.RootDir, "vendor", filepath.ToSlash(item.Pkg.Path)),
 		})
 		remove = append(remove, filepath.Join(ctx.RootGopath, filepath.ToSlash(item.Local)))
-		ctx.RewriteRule[item.Local] = item.Canonical
+		ctx.RewriteRule[item.Local] = item.Pkg.Path
 	}
 	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 	err = ctx.WriteVendorFile()

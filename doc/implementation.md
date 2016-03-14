@@ -42,8 +42,12 @@
 		on standard git command, but also might look into
 		"github.com/src-d/go-git" for inspecting versions remotely.
  - [x] Change fetch and sync to download into ORIGIN, not PATH.
- - [ ] Record choosen version in vendor file.
+ - [x] Record choosen version in vendor file.
+ - [x] When fetching dependencies, if it is a new package, see if there exists
+		another package in the same repo and use that revision and version.
+ - [ ] Add version info to list output.
  - [ ] Add check bzr, hg, and svn commands.
+ - [ ] Add svn to internal revision finder.
  - [ ] Respect fetched repos vendor files for versions and revisions.
  - [ ] Handle version and revision conflicts.
 
@@ -66,4 +70,4 @@
 
  - [x] Read os.Stdin, split by space (strings.Fields) and append to args.
  - [ ] Add "-imports" to "list" sub-command. Shows the direct dependencies of the selected packages (not the selected packages).
- - [ ] Add version info to list output.
+ - [ ] Re-add rewrite code for migrations.

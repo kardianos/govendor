@@ -67,7 +67,6 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 		case "remove":
 			mod = context.Remove
 		case "fetch":
-			// TODO: enable a code path that fetches recursivly on missing status.
 			mod = context.Fetch
 		}
 		return Modify(w, args[1:], mod, ask)

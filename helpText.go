@@ -106,6 +106,7 @@ var helpFetch = `govendor fetch [options] ( +status or package-spec )
 	Options:
 		-tree        copy package(s) and all sub-folders under each package
 		-insecure    allow downloading over insecure connection
+		-v           verbose mode
 `
 
 var helpSync = `govendor sync

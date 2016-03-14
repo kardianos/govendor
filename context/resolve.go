@@ -371,12 +371,7 @@ func (ctx *Context) determinePackageStatus() error {
 			}
 			if len(pkg.referenced) == 0 && pkg.Status.Location == LocationVendor {
 				altered = true
-				parentTrees := ctx.findPackageParentTree(pkg)
-				if len(parentTrees) > 0 {
-					pkg.Status.Presence = PresenceTree
-				} else {
-					pkg.Status.Presence = PresenceUnsued
-				}
+				pkg.Status.Presence = PresenceUnsued
 				for _, other := range ctx.Package {
 					delete(other.referenced, path)
 				}
@@ -387,6 +382,11 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 		if i == looplimit {
 			panic("determinePackageStatus loop limit")
+		}
+	}
+	for _, pkg := range ctx.Package {
+		if parentTrees := ctx.findPackageParentTree(pkg); len(parentTrees) > 0 {
+			pkg.Status.Presence = PresenceTree
 		}
 	}
 

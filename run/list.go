@@ -69,10 +69,10 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 			continue
 		}
 
-		if item.Local == item.Canonical {
-			fmt.Fprintf(w, formatSame, item.Status, item.Canonical)
+		if item.Local == item.Pkg.Path {
+			fmt.Fprintf(w, formatSame, item.Status, item.Pkg.Path)
 		} else {
-			fmt.Fprintf(w, formatDifferent, item.Status, item.Canonical, strings.TrimPrefix(item.Local, ctx.RootImportPath))
+			fmt.Fprintf(w, formatDifferent, item.Status, item.Pkg.Path, strings.TrimPrefix(item.Local, ctx.RootImportPath))
 		}
 		if *verbose {
 			for i, imp := range item.ImportedBy {
