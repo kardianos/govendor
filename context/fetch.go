@@ -75,6 +75,9 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		if err != nil {
 			return nextOps, err
 		}
+		if !f.Ctx.Insecure && !vcsIsSecure(rr.Repo) {
+			return nextOps, fmt.Errorf("repo remote not secure")
+		}
 
 		vcsCmd = updateVcsCmd(rr.VCS)
 		repoRoot = rr.Root

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -267,6 +268,23 @@ func updateVcsCmd(cmd *vcs.Cmd) *VCSCmd {
 	return &VCSCmd{Cmd: cmd}
 }
 
+var isSecureScheme = map[string]bool{
+	"https":   true,
+	"git+ssh": true,
+	"bzr+ssh": true,
+	"svn+ssh": true,
+	"ssh":     true,
+}
+
+func vcsIsSecure(repo string) bool {
+	u, err := url.Parse(repo)
+	if err != nil {
+		// If repo is not a URL, it's not secure.
+		return false
+	}
+	return isSecureScheme[u.Scheme]
+}
+
 // Sync checks for outdated packages in the vendor folder and fetches the
 // correct revision from the remote.
 func (ctx *Context) Sync() (err error) {
@@ -307,6 +325,10 @@ func (ctx *Context) Sync() (err error) {
 			rr, err := vcs.RepoRootForImportPath(from, false)
 			if err != nil {
 				rem = append(rem, remoteFailure{Msg: "failed to ping remote repo", Path: vp.Path, Err: err})
+				continue
+			}
+			if !ctx.Insecure && !vcsIsSecure(rr.Repo) {
+				rem = append(rem, remoteFailure{Msg: "repo remote not secure", Path: vp.Path, Err: nil})
 				continue
 			}
 

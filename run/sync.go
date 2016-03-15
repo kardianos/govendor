@@ -13,6 +13,7 @@ import (
 
 func Sync(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	flags := flag.NewFlagSet("sync", flag.ContinueOnError)
+	insecure := flags.Bool("insecure", false, "allow insecure network updates")
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
@@ -22,5 +23,6 @@ func Sync(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	if err != nil {
 		return MsgSync, err
 	}
+	ctx.Insecure = *insecure
 	return MsgNone, ctx.Sync()
 }

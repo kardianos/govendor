@@ -35,7 +35,8 @@ func dprintf(f string, v ...interface{}) {
 
 // Context represents the current project context.
 type Context struct {
-	Logger io.Writer // Write to the verbose log.
+	Logger   io.Writer // Write to the verbose log.
+	Insecure bool      // Allow insecure network operations
 
 	GopathList []string // List of GOPATHs in environment. Includes "src" dir.
 	Goroot     string   // The path to the standard library.
