@@ -310,7 +310,7 @@ func (ctx *Context) findPackageParentTree(ck *Package) []string {
 		// pkg.Canonical = github.com/usera/pkg, tree = true
 		// canonical = github.com/usera/pkg/dance
 		if strings.HasPrefix(canonical, pkg.Canonical) {
-			out = append(out, pkg.Canonical)
+			out = append(out, pkg.Local)
 		}
 	}
 	return out
@@ -364,6 +364,22 @@ func (ctx *Context) updatePackageReferences() {
 					other.referenced[pkg.Local] = pkg
 					continue
 				}
+			}
+		}
+	}
+
+	// Transfer all references from the child to the top parent.
+	for _, pkg := range ctx.Package {
+		if parentTrees := ctx.findPackageParentTree(pkg); len(parentTrees) > 0 {
+			if parentPkg := ctx.Package[parentTrees[0]]; parentPkg != nil {
+				for opath, opkg := range pkg.referenced {
+					// Do not transfer internal references.
+					if strings.HasPrefix(opkg.Canonical, parentPkg.Canonical+"/") {
+						continue
+					}
+					parentPkg.referenced[opath] = opkg
+				}
+				pkg.referenced = make(map[string]*Package, 0)
 			}
 		}
 	}

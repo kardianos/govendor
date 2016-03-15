@@ -540,8 +540,8 @@ func TestUnused(t *testing.T) {
 
 	list(g, c, "co1 after add", `
  vu co1/vendor/a [a] < []
- vu co1/vendor/co3/pk1 [co3/pk1] < []
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ vu co1/vendor/co3/pk1 [co3/pk1] < []
  l  co1/pk1 < []
  s  bytes < ["co1/vendor/co2/pk1"]
  s  encoding/csv < ["co1/vendor/a"]
@@ -588,10 +588,10 @@ func TestMissing(t *testing.T) {
 	g.Remove("co3/pk1")
 
 	list(g, c, "co1 after remove", `
-  m co3/pk1 < ["co1/pk1"]
  e  co2/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co2/pk1"]
+  m co3/pk1 < ["co1/pk1"]
 `)
 }
 
@@ -813,8 +813,8 @@ func TestTree(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add list", `
- vt co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ vt co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
  l  co1/pk1 < []
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
 `)

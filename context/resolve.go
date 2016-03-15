@@ -361,20 +361,62 @@ func (ctx *Context) determinePackageStatus() error {
 		pkg.Status.Location = LocationExternal
 	}
 
-	// Determine any un-used internal vendor imports.
 	ctx.updatePackageReferences()
+
+	// Mark sub-tree packages as "tree", but leave any existing bit (unused) on the
+	// parent most tree package.
+	for path, pkg := range ctx.Package {
+		if vp := ctx.VendorFilePackagePath(pkg.Canonical); vp != nil && vp.Tree {
+			// Remove internal tree references.
+			del := make([]string, 0, 6)
+			for opath, opkg := range pkg.referenced {
+				if strings.HasPrefix(opkg.Canonical, pkg.Canonical+"/") {
+					del = append(del, opath)
+				}
+			}
+			delete(pkg.referenced, pkg.Local) // remove any self reference
+			for _, d := range del {
+				delete(pkg.referenced, d)
+			}
+			continue
+		}
+		if parentTrees := ctx.findPackageParentTree(pkg); len(parentTrees) > 0 {
+			pkg.Status.Presence = PresenceTree
+
+			// Transfer all references from the child to the top parent.
+			if parentPkg := ctx.Package[parentTrees[0]]; parentPkg != nil {
+				for opath, opkg := range pkg.referenced {
+					// Do not transfer internal references.
+					if strings.HasPrefix(opkg.Canonical, parentPkg.Canonical+"/") {
+						continue
+					}
+					parentPkg.referenced[opath] = opkg
+				}
+				pkg.referenced = make(map[string]*Package, 0)
+				for _, opkg := range ctx.Package {
+					if _, has := opkg.referenced[path]; has {
+						opkg.referenced[parentPkg.Local] = parentPkg
+						delete(opkg.referenced, path)
+					}
+				}
+			}
+		}
+	}
+
+	// Determine any un-used internal vendor imports.
 	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for path, pkg := range ctx.Package {
-			if pkg.Status.Presence == PresenceUnsued || pkg.Status.Type == TypeProgram || pkg.Status.Presence == PresenceTree {
+			if pkg.Status.Presence == PresenceUnsued || pkg.Status.Presence == PresenceTree || pkg.Status.Type == TypeProgram {
 				continue
 			}
-			if len(pkg.referenced) == 0 && pkg.Status.Location == LocationVendor {
-				altered = true
-				pkg.Status.Presence = PresenceUnsued
-				for _, other := range ctx.Package {
-					delete(other.referenced, path)
-				}
+			if len(pkg.referenced) > 0 || pkg.Status.Location != LocationVendor {
+				continue
+			}
+			altered = true
+			pkg.Status.Presence = PresenceUnsued
+			for _, other := range ctx.Package {
+				delete(other.referenced, path)
 			}
 		}
 		if !altered {
@@ -382,11 +424,6 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 		if i == looplimit {
 			panic("determinePackageStatus loop limit")
-		}
-	}
-	for _, pkg := range ctx.Package {
-		if parentTrees := ctx.findPackageParentTree(pkg); len(parentTrees) > 0 {
-			pkg.Status.Presence = PresenceTree
 		}
 	}
 

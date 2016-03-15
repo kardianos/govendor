@@ -195,14 +195,8 @@ type statusItemSort []StatusItem
 func (li statusItemSort) Len() int      { return len(li) }
 func (li statusItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
 func (li statusItemSort) Less(i, j int) bool {
-	if li[i].Status.Presence != li[j].Status.Presence {
-		return li[i].Status.Presence > li[j].Status.Presence
-	}
 	if li[i].Status.Location != li[j].Status.Location {
 		return li[i].Status.Location > li[j].Status.Location
-	}
-	if li[i].Status != li[j].Status {
-		return li[i].Status.Type > li[j].Status.Type
 	}
 	return li[i].Local < li[j].Local
 }
