@@ -47,7 +47,7 @@
 		another package in the same repo and use that revision and version.
  - [x] Add version info to list output.
  - [ ] Add check bzr, hg, and svn commands.
- - [ ] Add svn to internal revision finder.
+ - [x] Add svn to internal revision finder.
  - [ ] Respect fetched repos vendor files for versions and revisions.
  - [ ] Handle version and revision conflicts.
 
