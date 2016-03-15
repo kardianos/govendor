@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/kardianos/govendor/context"
 )
@@ -49,10 +50,10 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 		return MsgNone, err
 	}
 
-	formatSame := "%[1]v %[2]s\n"
-	formatDifferent := "%[1]v %[2]s\n"
+	formatSame := "%[1]v %[2]s\t%[3]s\t%[4]s\n"
+	formatDifferent := "%[1]v %[2]s\t%[4]s\t%[5]s\n"
 	if *verbose {
-		formatDifferent = "%[1]v %[2]s ::%[3]s\n"
+		formatDifferent = "%[1]v %[2]s ::%[3]s\t%[4]s\t%[5]s\n"
 	}
 	if *noStatus {
 		formatSame = "%[2]s\n"
@@ -61,6 +62,8 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 			formatDifferent = "%[2]s ::%[3]s\n"
 		}
 	}
+	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	defer tw.Flush()
 	for _, item := range list {
 		if f.HasStatus(item) == false {
 			continue
@@ -70,16 +73,16 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 		}
 
 		if item.Local == item.Pkg.Path {
-			fmt.Fprintf(w, formatSame, item.Status, item.Pkg.Path)
+			fmt.Fprintf(tw, formatSame, item.Status, item.Pkg.Path, item.Pkg.Version, item.VersionExact)
 		} else {
-			fmt.Fprintf(w, formatDifferent, item.Status, item.Pkg.Path, strings.TrimPrefix(item.Local, ctx.RootImportPath))
+			fmt.Fprintf(tw, formatDifferent, item.Status, item.Pkg.Path, strings.TrimPrefix(item.Local, ctx.RootImportPath), item.Pkg.Version, item.VersionExact)
 		}
 		if *verbose {
 			for i, imp := range item.ImportedBy {
 				if i != len(item.ImportedBy)-1 {
-					fmt.Fprintf(w, "    ├── %s\n", imp)
+					fmt.Fprintf(tw, "    ├── %s\n", imp)
 				} else {
-					fmt.Fprintf(w, "    └── %s\n", imp)
+					fmt.Fprintf(tw, "    └── %s\n", imp)
 				}
 			}
 		}

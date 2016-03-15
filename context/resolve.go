@@ -63,8 +63,8 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 	}
 	if f == nil {
 		f, err = parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
-		if err != nil {
-			return nil, nil, err
+		if f == nil {
+			return nil, nil, nil
 		}
 	}
 
@@ -107,7 +107,8 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 		imp := f.Imports[i].Path.Value
 		imp, err = strconv.Unquote(imp)
 		if err != nil {
-			return tags, imports, err
+			// Best errort
+			continue
 		}
 		imports = append(imports, imp)
 	}
@@ -145,7 +146,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	// Ignore error here and continue on best effort.
 	f, _ := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 	if f == nil {
-		f = &ast.File{}
+		return nil
 	}
 
 	tags, _, err := ctx.getFileTags(pathname, f)
@@ -197,7 +198,8 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		imp := f.Imports[i].Path.Value
 		imp, err = strconv.Unquote(imp)
 		if err != nil {
-			return err
+			// Best effort only.
+			continue
 		}
 		if strings.HasPrefix(imp, "./") {
 			imp = path.Join(importPath, imp)

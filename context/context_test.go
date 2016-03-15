@@ -47,7 +47,15 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 		output.WriteString(statusItemString(item))
 		output.WriteRune('\n')
 	}
-	if strings.TrimSpace(output.String()) != strings.TrimSpace(expected) {
+	// Remove any space padding on the start/end of each line.
+	trimLines := func(s string) string {
+		lines := strings.Split(strings.TrimSpace(s), "\n")
+		for i := range lines {
+			lines[i] = strings.TrimSpace(lines[i])
+		}
+		return strings.Join(lines, "\n")
+	}
+	if trimLines(output.String()) != trimLines(expected) {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
 	}
 }

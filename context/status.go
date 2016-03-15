@@ -177,10 +177,11 @@ const (
 
 // ListItem represents a package in the current project.
 type StatusItem struct {
-	Status     Status
-	Pkg        *pkgspec.Pkg
-	Local      string
-	ImportedBy []string
+	Status       Status
+	Pkg          *pkgspec.Pkg
+	VersionExact string
+	Local        string
+	ImportedBy   []string
 }
 
 func (li StatusItem) String() string {
@@ -214,15 +215,18 @@ func (ctx *Context) Status() ([]StatusItem, error) {
 	list := make([]StatusItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
 		version := ""
+		versionExact := ""
 		if vp := ctx.VendorFilePackagePath(pkg.Canonical); vp != nil {
 			version = vp.Version
+			versionExact = vp.VersionExact
 		}
 		// TODO (DT): assign Pkg directly from pkg.
 		li := StatusItem{
-			Status:     pkg.Status,
-			Pkg:        &pkgspec.Pkg{Path: pkg.Canonical, IncludeTree: pkg.Tree, Origin: pkg.Origin, Version: version},
-			Local:      pkg.Local,
-			ImportedBy: make([]string, 0, len(pkg.referenced)),
+			Status:       pkg.Status,
+			Pkg:          &pkgspec.Pkg{Path: pkg.Canonical, IncludeTree: pkg.Tree, Origin: pkg.Origin, Version: version},
+			Local:        pkg.Local,
+			VersionExact: versionExact,
+			ImportedBy:   make([]string, 0, len(pkg.referenced)),
 		}
 		for _, ref := range pkg.referenced {
 			li.ImportedBy = append(li.ImportedBy, ref.Local)

@@ -172,7 +172,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 			goroot = strings.TrimPrefix(line, gorootLookFor)
 			goroot, err = strconv.Unquote(goroot)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Failed to unquote GOROOT: %v", err)
 			}
 			break
 		}

@@ -45,7 +45,7 @@
  - [x] Record choosen version in vendor file.
  - [x] When fetching dependencies, if it is a new package, see if there exists
 		another package in the same repo and use that revision and version.
- - [ ] Add version info to list output.
+ - [x] Add version info to list output.
  - [ ] Add check bzr, hg, and svn commands.
  - [ ] Add svn to internal revision finder.
  - [ ] Respect fetched repos vendor files for versions and revisions.
@@ -70,4 +70,5 @@
 
  - [x] Read os.Stdin, split by space (strings.Fields) and append to args.
  - [ ] Add "-imports" to "list" sub-command. Shows the direct dependencies of the selected packages (not the selected packages).
+		`govendor list +local -imports +vendor` outputs all the vendor packages directly imported into local packages.
  - [ ] Re-add rewrite code for migrations.
