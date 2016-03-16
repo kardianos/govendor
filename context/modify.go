@@ -313,6 +313,20 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		Uncommitted: dirtyAndUncommitted,
 	})
 
+	if !ctx.rewriteImports {
+		return nil
+	}
+
+	mvSet := make(map[*Package]struct{}, 3)
+	ctx.makeSet(pkg, mvSet)
+
+	for r := range mvSet {
+		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
+		dprintf("RULE: %s -> %s\n", r.Local, to)
+		ctx.RewriteRule[r.Canonical] = to
+		ctx.RewriteRule[r.Local] = to
+	}
+
 	return nil
 }
 
@@ -338,6 +352,18 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 		Src:  pkg.Dir,
 		Dest: "",
 	})
+
+	if !ctx.rewriteImports {
+		return nil
+	}
+
+	mvSet := make(map[*Package]struct{}, 3)
+	ctx.makeSet(pkg, mvSet)
+
+	for r := range mvSet {
+		dprintf("RULE: %s -> %s\n", r.Local, r.Canonical)
+		ctx.RewriteRule[r.Local] = r.Canonical
+	}
 
 	return nil
 }
@@ -582,6 +608,9 @@ func (ctx *Context) Alter() error {
 		if err != nil {
 			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
 		}
+	}
+	if ctx.rewriteImports {
+		return ctx.rewrite()
 	}
 	return nil
 }
