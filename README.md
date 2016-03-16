@@ -48,7 +48,7 @@ govendor fetch golang.org/x/net/context
 	add      Add packages from $GOPATH.
 	update   Update packages from $GOPATH.
 	remove   Remove packages from the vendor folder.
-	fetch    Add new or update existing packages from remote repository.
+	fetch    (beta) Add new or update existing packages from remote repository.
 	sync     Pull in packages from remote respository to match vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	
