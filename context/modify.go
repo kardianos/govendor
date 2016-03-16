@@ -1,0 +1,637 @@
+// Copyright 2015 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package context gathers the status of packages and stores it in Context.
+// A new Context needs to be pointed to the root of the project and any
+// project owned vendor file.
+package context
+
+import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"math"
+	"path"
+	"path/filepath"
+	"time"
+
+	"github.com/kardianos/govendor/internal/pathos"
+	os "github.com/kardianos/govendor/internal/vos"
+	"github.com/kardianos/govendor/pkgspec"
+	"github.com/kardianos/govendor/vcs"
+	"github.com/kardianos/govendor/vendorfile"
+)
+
+// OperationState is the state of the given package move operation.
+type OperationState byte
+
+const (
+	OpReady  OperationState = iota // Operation is ready to go.
+	OpIgnore                       // Operation should be ignored.
+	OpDone                         // Operation has been completed.
+)
+
+type OperationType byte
+
+const (
+	OpCopy OperationType = iota
+	OpRemove
+	OpFetch
+)
+
+// Operation defines how packages should be moved.
+//
+// TODO (DT): Remove Pkg field and change Src and Dest to *pkgspec.Pkg types.
+type Operation struct {
+	Type OperationType
+
+	Pkg *Package
+
+	// Source file path to move packages from.
+	// Must not be empty.
+	Src string
+
+	// Destination file path to move package to.
+	// If Dest if empty the package is removed.
+	Dest string
+
+	// Files to ignore for operation.
+	IgnoreFile []string
+
+	State OperationState
+
+	// True if the operation should treat the package as uncommitted.
+	Uncommitted bool
+}
+
+// Conflict reports packages that are scheduled to conflict.
+type Conflict struct {
+	Canonical string
+	Local     string
+	Operation []*Operation
+	OpIndex   int
+	Resolved  bool
+}
+
+// Modify is the type of modifcation to do.
+type Modify byte
+
+const (
+	AddUpdate Modify = iota // Add or update the import.
+	Add                     // Only add, error if it already exists.
+	Update                  // Only update, error if it doesn't currently exist.
+	Remove                  // Remove from vendor path.
+	Fetch                   // Get directly from remote repository.
+)
+
+// AddImport adds the package to the context. The vendorFolder is where the
+// package should be added to relative to the project root.
+func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
+	var err error
+	if !ctx.loaded || ctx.dirty {
+		err = ctx.loadPackage()
+		if err != nil {
+			return err
+		}
+	}
+	sourcePath := ps.Path
+	tree := ps.IncludeTree
+
+	// Determine canonical and local import paths.
+	sourcePath = pathos.SlashToImportPath(sourcePath)
+	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
+	if err != nil {
+		if mod != Remove && mod != Fetch {
+			return err
+		}
+		if _, is := err.(ErrNotInGOPATH); !is {
+			return err
+		}
+	}
+
+	if canonicalImportPath == "" {
+		canonicalImportPath = sourcePath
+	}
+
+	// Does the local import exist?
+	//   If so either update or just return.
+	//   If not find the disk path from the canonical path, copy locally and rewrite (if needed).
+	pkg, foundPkg := ctx.Package[sourcePath]
+	if !foundPkg {
+		err = ctx.addSingleImport("", canonicalImportPath)
+		if err != nil {
+			return err
+		}
+		pkg, foundPkg = ctx.Package[canonicalImportPath]
+		// Find by canonical path if stored by different local path.
+		if !foundPkg {
+			for _, p := range ctx.Package {
+				if canonicalImportPath == p.Canonical {
+					foundPkg = true
+					pkg = p
+					break
+				}
+			}
+		}
+		if !foundPkg {
+			panic(fmt.Sprintf("Package %q should be listed internally but is not.", canonicalImportPath))
+		}
+	}
+	if len(ps.Origin) > 0 {
+		if ps.Origin == ps.Path {
+			pkg.Origin = ""
+		} else {
+			pkg.Origin = ps.Origin
+		}
+	}
+
+	// Do not support setting "tree" on Remove.
+	if tree && mod != Remove {
+		pkg.Tree = true
+	}
+
+	// A restriction where packages cannot live inside a tree package.
+	if mod != Remove {
+		if pkg.Tree {
+			children := ctx.findPackageChild(pkg)
+			if len(children) > 0 {
+				return ErrTreeChildren{path: pkg.Canonical, children: children}
+			}
+		}
+		treeParents := ctx.findPackageParentTree(pkg)
+		if len(treeParents) > 0 {
+			return ErrTreeParents{path: pkg.Canonical, parents: treeParents}
+		}
+	}
+
+	// TODO (DT): figure out how to upgrade a non-tree package to a tree package with correct checks.
+	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(canonicalImportPath)))
+	if err != nil {
+		return err
+	}
+	if mod == Add && localExists {
+		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, canonicalImportPath)}
+	}
+	dprintf("stage 2: begin!\n")
+	switch mod {
+	case Add:
+		return ctx.modifyAdd(pkg, ps.Uncommitted)
+	case AddUpdate:
+		return ctx.modifyAdd(pkg, ps.Uncommitted)
+	case Update:
+		return ctx.modifyAdd(pkg, ps.Uncommitted)
+	case Remove:
+		return ctx.modifyRemove(pkg)
+	case Fetch:
+		return ctx.modifyFetch(pkg, ps.Uncommitted, ps.HasVersion, ps.Version)
+	default:
+		panic("mod switch: case not handled")
+	}
+}
+
+func (ctx *Context) getIngoreFiles(src string) (ignoreFile, imports []string, err error) {
+	srcDir, err := os.Open(src)
+	if err != nil {
+		return nil, nil, err
+	}
+	fl, err := srcDir.Readdir(-1)
+	srcDir.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	importMap := make(map[string]struct{}, 12)
+	imports = make([]string, 0, 12)
+	for _, fi := range fl {
+		if fi.IsDir() {
+			continue
+		}
+		if fi.Name()[0] == '.' {
+			continue
+		}
+		tags, fileImports, err := ctx.getFileTags(filepath.Join(src, fi.Name()), nil)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		ignoreItem := false
+		for _, tag := range tags {
+			for _, ignore := range ctx.ignoreTag {
+				if tag == ignore {
+					ignoreItem = true
+				}
+			}
+		}
+		if ignoreItem {
+			ignoreFile = append(ignoreFile, fi.Name())
+		} else {
+			// Only add imports for non-ignored files.
+			for _, imp := range fileImports {
+				importMap[imp] = struct{}{}
+			}
+		}
+	}
+	for imp := range importMap {
+		imports = append(imports, imp)
+	}
+	return ignoreFile, imports, nil
+}
+
+func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
+	var err error
+	src := pkg.OriginDir
+	dprintf("found import: %q\n", src)
+	// If the canonical package is also the local package, then the package
+	// isn't copied locally already and has already been checked for tags.
+	// If it has been vendored the source still needs to be examined.
+	// Examine here and add to the operations list.
+	var ignoreFile []string
+	if cpkg, found := ctx.Package[pkg.Canonical]; found {
+		ignoreFile = cpkg.ignoreFile
+	} else {
+		var err error
+		ignoreFile, _, err = ctx.getIngoreFiles(src)
+		if err != nil {
+			return err
+		}
+	}
+	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
+	// TODO: This might cause other issues or might be hiding the underlying issues. Examine in depth later.
+	if pathos.FileStringEquals(src, dest) {
+		return nil
+	}
+	dprintf("add op: %q\n", src)
+
+	// Update vendor file with correct Local field.
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	if vp == nil {
+		vp = &vendorfile.Package{
+			Add:  true,
+			Path: pkg.Canonical,
+		}
+		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+	}
+	if pkg.Tree {
+		vp.Tree = pkg.Tree
+	}
+	vp.Origin = pkg.Origin
+	if pkg.Canonical != pkg.Local && pkg.inVendor {
+		vp.Origin = pkg.Local
+	}
+
+	// Find the VCS information.
+	system, err := vcs.FindVcs(pkg.Gopath, src)
+	if err != nil {
+		return err
+	}
+	dirtyAndUncommitted := false
+	if system != nil {
+		if system.Dirty {
+			if !uncommitted {
+				return ErrDirtyPackage{pkg.Canonical}
+			}
+			dirtyAndUncommitted = true
+			if len(vp.ChecksumSHA1) == 0 {
+				vp.ChecksumSHA1 = "uncommitted/version="
+			}
+		} else {
+			vp.Revision = system.Revision
+			if system.RevisionTime != nil {
+				vp.RevisionTime = system.RevisionTime.Format(time.RFC3339)
+			}
+		}
+	}
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Type:       OpCopy,
+		Pkg:        pkg,
+		Src:        src,
+		Dest:       dest,
+		IgnoreFile: ignoreFile,
+
+		Uncommitted: dirtyAndUncommitted,
+	})
+
+	if !ctx.rewriteImports {
+		return nil
+	}
+
+	mvSet := make(map[*Package]struct{}, 3)
+	ctx.makeSet(pkg, mvSet)
+
+	for r := range mvSet {
+		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
+		dprintf("RULE: %s -> %s\n", r.Local, to)
+		ctx.RewriteRule[r.Canonical] = to
+		ctx.RewriteRule[r.Local] = to
+	}
+
+	return nil
+}
+
+func (ctx *Context) modifyRemove(pkg *Package) error {
+	// Update vendor file with correct Local field.
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	if vp != nil {
+		vp.Remove = true
+	}
+	if len(pkg.Dir) == 0 {
+		return nil
+	}
+	// Protect non-project paths from being removed.
+	if pathos.FileHasPrefix(pkg.Dir, ctx.RootDir) == false {
+		return nil
+	}
+	if pkg.Status.Location == LocationLocal {
+		return nil
+	}
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Type: OpRemove,
+		Pkg:  pkg,
+		Src:  pkg.Dir,
+		Dest: "",
+	})
+
+	if !ctx.rewriteImports {
+		return nil
+	}
+
+	mvSet := make(map[*Package]struct{}, 3)
+	ctx.makeSet(pkg, mvSet)
+
+	for r := range mvSet {
+		dprintf("RULE: %s -> %s\n", r.Local, r.Canonical)
+		ctx.RewriteRule[r.Local] = r.Canonical
+	}
+
+	return nil
+}
+
+// modify function to fetch given package.
+func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, version string) error {
+	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	if vp == nil {
+		vp = &vendorfile.Package{
+			Add:  true,
+			Path: pkg.Canonical,
+		}
+		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
+	}
+	if hasVersion {
+		vp.Version = version
+	}
+	if pkg.Tree {
+		vp.Tree = pkg.Tree
+	}
+	vp.Origin = pkg.Origin
+	origin := vp.Origin
+	if len(vp.Origin) == 0 {
+		origin = vp.Path
+	}
+	ps := &pkgspec.Pkg{
+		Path:       pkg.Canonical,
+		Origin:     origin,
+		HasVersion: hasVersion,
+		Version:    version,
+	}
+	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
+	ctx.Operation = append(ctx.Operation, &Operation{
+		Type: OpFetch,
+		Pkg:  pkg,
+		Src:  ps.String(),
+		Dest: dest,
+	})
+	return nil
+}
+
+// Check returns any conflicts when more then one package can be moved into
+// the same path.
+func (ctx *Context) Check() []*Conflict {
+	// Find duplicate packages that have been marked for moving.
+	findDups := make(map[string][]*Operation, 3) // map[canonical][]local
+	for _, op := range ctx.Operation {
+		if op.State != OpReady {
+			continue
+		}
+		findDups[op.Pkg.Canonical] = append(findDups[op.Pkg.Canonical], op)
+	}
+
+	var ret []*Conflict
+	for canonical, lop := range findDups {
+		if len(lop) == 1 {
+			continue
+		}
+		destDir := path.Join(ctx.RootImportPath, ctx.VendorFolder, canonical)
+		ret = append(ret, &Conflict{
+			Canonical: canonical,
+			Local:     destDir,
+			Operation: lop,
+		})
+	}
+	return ret
+}
+
+// ResolveApply applies the conflict resolution selected. It chooses the
+// Operation listed in the OpIndex field.
+func (ctx *Context) ResloveApply(cc []*Conflict) {
+	for _, c := range cc {
+		if c.Resolved == false {
+			continue
+		}
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+			if i == c.OpIndex {
+				if vp := ctx.VendorFilePackagePath(c.Canonical); vp != nil {
+					vp.Origin = c.Local
+				}
+				continue
+			}
+			op.State = OpIgnore
+		}
+	}
+}
+
+// ResolveAutoLongestPath finds the longest local path in each conflict
+// and set it to be used.
+func ResolveAutoLongestPath(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		longestLen := 0
+		longestIndex := 0
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if len(op.Pkg.Local) > longestLen {
+				longestLen = len(op.Pkg.Local)
+				longestIndex = i
+			}
+		}
+		c.OpIndex = longestIndex
+		c.Resolved = true
+	}
+	return cc
+}
+
+// ResolveAutoShortestPath finds the shortest local path in each conflict
+// and set it to be used.
+func ResolveAutoShortestPath(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		shortestLen := math.MaxInt32
+		shortestIndex := 0
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if len(op.Pkg.Local) < shortestLen {
+				shortestLen = len(op.Pkg.Local)
+				shortestIndex = i
+			}
+		}
+		c.OpIndex = shortestIndex
+		c.Resolved = true
+	}
+	return cc
+}
+
+// ResolveAutoVendorFileOrigin resolves conflicts based on the vendor file
+// if possible.
+func (ctx *Context) ResolveAutoVendorFileOrigin(cc []*Conflict) []*Conflict {
+	for _, c := range cc {
+		if c.Resolved {
+			continue
+		}
+		vp := ctx.VendorFilePackagePath(c.Canonical)
+		if vp == nil {
+			continue
+		}
+		// If this was just added, we still can't rely on it.
+		// We still need to ask user.
+		if vp.Add {
+			continue
+		}
+		lookFor := vp.Path
+		if len(vp.Origin) != 0 {
+			lookFor = vp.Origin
+		}
+		for i, op := range c.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			if op.Pkg.Local == lookFor {
+				c.OpIndex = i
+				c.Resolved = true
+				break
+			}
+		}
+	}
+	return cc
+}
+
+// Alter runs any requested package alterations.
+func (ctx *Context) Alter() error {
+	// Ensure there are no conflicts at this time.
+	buf := &bytes.Buffer{}
+	for _, conflict := range ctx.Check() {
+		buf.WriteString(fmt.Sprintf("Different Canonical Packages for %s\n", conflict.Canonical))
+		for _, op := range conflict.Operation {
+			buf.WriteString(fmt.Sprintf("\t%s\n", op.Pkg.Local))
+		}
+	}
+	if buf.Len() != 0 {
+		return errors.New(buf.String())
+	}
+
+	var err error
+	fetch, err := newFetcher(ctx)
+	if err != nil {
+		return err
+	}
+	for {
+		var nextOps []*Operation
+		for _, op := range ctx.Operation {
+			if op.State != OpReady {
+				continue
+			}
+
+			switch op.Type {
+			case OpFetch:
+				var ops []*Operation
+				// Download packages, transform fetch op into a copy op.
+				ops, err = fetch.op(op)
+				if len(ops) > 0 {
+					nextOps = append(nextOps, ops...)
+				}
+			}
+			if err != nil {
+				return fmt.Errorf("Failed to fetch package %q: %v", op.Pkg.Canonical, err)
+			}
+		}
+		if len(nextOps) == 0 {
+			break
+		}
+		ctx.Operation = append(ctx.Operation, nextOps...)
+	}
+	// Move and possibly rewrite packages.
+	for _, op := range ctx.Operation {
+		if op.State != OpReady {
+			continue
+		}
+		pkg := op.Pkg
+
+		if pathos.FileStringEquals(op.Dest, op.Src) {
+			panic("For package " + pkg.Local + " attempt to copy to same location: " + op.Src)
+		}
+		dprintf("MV: %s (%q -> %q)\n", pkg.Local, op.Src, op.Dest)
+		// Copy the package or remove.
+		switch op.Type {
+		default:
+			panic("unknown operation type")
+		case OpRemove:
+			ctx.dirty = true
+			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
+			op.State = OpDone
+		case OpCopy:
+			ctx.copyOperation(op, nil)
+		}
+		if err != nil {
+			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
+		}
+	}
+	if ctx.rewriteImports {
+		return ctx.rewrite()
+	}
+	return nil
+}
+
+func (ctx *Context) copyOperation(op *Operation, beforeCopy func(deps []string) error) error {
+	var err error
+	pkg := op.Pkg
+	ctx.dirty = true
+	h := sha1.New()
+	var checksum []byte
+
+	root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Canonical)
+
+	err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h, beforeCopy)
+	if err == nil && !op.Uncommitted {
+		checksum = h.Sum(nil)
+		vpkg := ctx.VendorFilePackagePath(pkg.Canonical)
+		if vpkg != nil {
+			vpkg.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
+		}
+	}
+	op.State = OpDone
+	return err
+}

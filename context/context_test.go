@@ -16,6 +16,7 @@ import (
 
 	. "github.com/kardianos/govendor/context"
 	"github.com/kardianos/govendor/internal/gt"
+	"github.com/kardianos/govendor/pkgspec"
 )
 
 var relVendorFile = filepath.Join("vendor", "vendor.json")
@@ -28,6 +29,14 @@ func ctx(g *gt.GopathTest) *Context {
 	return c
 }
 
+func pkg(s string) *pkgspec.Pkg {
+	ps, err := pkgspec.Parse("", s)
+	if err != nil {
+		panic("unable to parse import package")
+	}
+	return ps
+}
+
 func list(g *gt.GopathTest, c *Context, name, expected string) {
 	list, err := c.Status()
 	if err != nil {
@@ -38,8 +47,28 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 		output.WriteString(statusItemString(item))
 		output.WriteRune('\n')
 	}
-	if strings.TrimSpace(output.String()) != strings.TrimSpace(expected) {
+	// Remove any space padding on the start/end of each line.
+	trimLines := func(s string) string {
+		lines := strings.Split(strings.TrimSpace(s), "\n")
+		for i := range lines {
+			lines[i] = strings.TrimSpace(lines[i])
+		}
+		return strings.Join(lines, "\n")
+	}
+	if trimLines(output.String()) != trimLines(expected) {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
+	}
+}
+
+func verifyChecksum(g *gt.GopathTest, c *Context, name string) {
+	list, err := c.VerifyVendor()
+	g.Check(err)
+	if len(list) != 0 {
+		names := make([]string, len(list))
+		for i := range list {
+			names[i] = list[i].Path
+		}
+		g.Errorf("(%s) Failed to verify checksum %q", name, names)
 	}
 }
 
@@ -64,10 +93,10 @@ func tree(g *gt.GopathTest, c *Context, name, expected string) {
 	}
 }
 func statusItemString(li StatusItem) string {
-	if li.Local == li.Canonical {
-		return fmt.Sprintf("%s %s < %q", li.Status.String(), li.Canonical, li.ImportedBy)
+	if li.Local == li.Pkg.Path {
+		return fmt.Sprintf("%s %s < %q", li.Status.String(), li.Pkg.Path, li.ImportedBy)
 	}
-	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Canonical, li.ImportedBy)
+	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Pkg.Path, li.ImportedBy)
 }
 
 func vendorFile(g *gt.GopathTest, expected string) {
@@ -120,6 +149,35 @@ func TestSimple(t *testing.T) {
 `)
 }
 
+func TestTest(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("bar.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("foo.go", "strings"),      // norm	al file
+		gt.File("test.go", "bytes"),       // normal file
+		gt.File("foo_test.go", "testing"), // test file
+	)
+	g.In("co1")
+	c := ctx(g)
+	c.VendorFile.Ignore = "test" // 	ignore test files
+	c.WriteVendorFile()
+	c = ctx(g)
+
+	g.Check(c.ModifyImport(pkg("co2/pk1"), AddUpdate))
+	g.Check(c.Alter())
+
+	list(g, c, "after", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/pk1"]
+ s  strings < ["co1/vendor/co2/pk1"]
+`)
+}
+
 func TestDuplicatePackage(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
@@ -141,7 +199,7 @@ func TestDuplicatePackage(t *testing.T) {
 		if item.Status.Location != LocationExternal {
 			continue
 		}
-		g.Check(c.ModifyImport(item.Local, AddUpdate))
+		g.Check(c.ModifyImport(pkg(item.Local), AddUpdate))
 	}
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -151,6 +209,7 @@ func TestDuplicatePackage(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "1wArEyRQSnOYA1LDiCNvZxF4sm8=",
 			"path": "co3/pk3",
 			"revision": ""
 		}
@@ -180,7 +239,7 @@ func TestDuplicatePackage(t *testing.T) {
 		if item.Status.Location != LocationExternal {
 			continue
 		}
-		g.Check(c.ModifyImport(item.Local, AddUpdate))
+		g.Check(c.ModifyImport(pkg(item.Local), AddUpdate))
 	}
 	c.ResloveApply(ResolveAutoLongestPath(c.Check())) // Automaically resolve conflicts.
 	g.Check(c.Alter())
@@ -190,10 +249,12 @@ func TestDuplicatePackage(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "KrGLRMVV0FyxFX0FI4NavEDVJlY=",
 			"path": "co2/pk2",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "1wArEyRQSnOYA1LDiCNvZxF4sm8=",
 			"origin": "co1/vendor/co3/pk3",
 			"path": "co3/pk3",
 			"revision": ""
@@ -201,6 +262,7 @@ func TestDuplicatePackage(t *testing.T) {
 	]
 }
 `)
+	verifyChecksum(g, c, "after add")
 
 	expected := `
  v  co1/vendor/co2/pk2 [co2/pk2] < ["co1/pk1"]
@@ -214,7 +276,7 @@ func TestDuplicatePackage(t *testing.T) {
 	list(g, c, "co1 list 2", expected)
 
 	// Now remove one import.
-	g.Check(c.ModifyImport("co3/pk3", Remove))
+	g.Check(c.ModifyImport(pkg("co3/pk3"), Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `
@@ -238,7 +300,7 @@ func TestVendorProgram(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/main", AddUpdate))
+	g.Check(c.ModifyImport(pkg("co2/main"), AddUpdate))
 
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -267,7 +329,7 @@ func TestImportSimple(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx(g)
-	g.Check(c.ModifyImport("co2/pk1", AddUpdate))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), AddUpdate))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	expected := `
@@ -287,15 +349,17 @@ func TestImportSimple(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
 			"path": "co2/pk1",
 			"revision": ""
 		}
 	]
 }
 `)
+	verifyChecksum(g, c, "new")
 
 	// Now remove an import.
-	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `
@@ -323,8 +387,8 @@ func TestUpdate(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx(g)
-	g.Check(c.ModifyImport("co2/pk1", Add))
-	g.Check(c.ModifyImport("co2/pk1/pk2", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1/pk2"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -341,23 +405,26 @@ func TestUpdate(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
 			"path": "co2/pk1",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "n1nb7gB6rHnnWwN+27InTig/ePo=",
 			"path": "co2/pk1/pk2",
 			"revision": ""
 		}
 	]
 }
 `)
+	verifyChecksum(g, c, "co1 after add")
 
 	g.Setup("co2/pk1/pk2",
 		gt.File("a.go", "strings", "encoding/csv"),
 	)
 
 	// Update an import.
-	g.Check(c.ModifyImport("co2/pk1/pk2", Update))
+	g.Check(c.ModifyImport(pkg("co2/pk1/pk2"), Update))
 	ct := 0
 	for _, op := range c.Operation {
 		if op.State == OpDone {
@@ -381,7 +448,7 @@ func TestUpdate(t *testing.T) {
 `)
 
 	// Now remove an import.
-	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 	list(g, c, "co1 remove", `
@@ -420,8 +487,8 @@ func TestVendor(t *testing.T) {
  s  strings < ["co2/vendor/a"]
 `)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
-	g.Check(c.ModifyImport("co2/vendor/a", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co2/vendor/a"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -438,17 +505,20 @@ func TestVendor(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "auzf5l1iVWjiCTOwR9TuaFF2Db8=",
 			"origin": "co2/vendor/a",
 			"path": "a",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "Ejt2NhWYzgcLKV1gpBW3Py9aF5w=",
 			"path": "co2/pk1",
 			"revision": ""
 		}
 	]
 }
 `)
+	verifyChecksum(g, c, "co1 after add")
 }
 
 func TestUnused(t *testing.T) {
@@ -471,15 +541,15 @@ func TestUnused(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
-	g.Check(c.ModifyImport("co3/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co3/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add", `
  vu co1/vendor/a [a] < []
- vu co1/vendor/co3/pk1 [co3/pk1] < []
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ vu co1/vendor/co3/pk1 [co3/pk1] < []
  l  co1/pk1 < []
  s  bytes < ["co1/vendor/co2/pk1"]
  s  encoding/csv < ["co1/vendor/a"]
@@ -504,8 +574,8 @@ func TestMissing(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
-	g.Check(c.ModifyImport("co3/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co3/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -526,10 +596,10 @@ func TestMissing(t *testing.T) {
 	g.Remove("co3/pk1")
 
 	list(g, c, "co1 after remove", `
-  m co3/pk1 < ["co1/pk1"]
  e  co2/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
  s  bytes < ["co2/pk1"]
+  m co3/pk1 < ["co1/pk1"]
 `)
 }
 
@@ -550,7 +620,7 @@ func TestVendorFile(t *testing.T) {
 
 	g.In("co2")
 	c := ctx(g)
-	g.Check(c.ModifyImport("a", Add))
+	g.Check(c.ModifyImport(pkg("a"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -568,8 +638,8 @@ func TestVendorFile(t *testing.T) {
  s  strings < ["co2/vendor/a"]
 `)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
-	g.Check(c.ModifyImport("co2/vendor/a", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co2/vendor/a"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -586,17 +656,20 @@ func TestVendorFile(t *testing.T) {
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "auzf5l1iVWjiCTOwR9TuaFF2Db8=",
 			"origin": "co2/vendor/a",
 			"path": "a",
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "Ejt2NhWYzgcLKV1gpBW3Py9aF5w=",
 			"path": "co2/pk1",
 			"revision": ""
 		}
 	]
 }
 `)
+	verifyChecksum(g, c, "co1 after add")
 }
 
 func TestTagList(t *testing.T) {
@@ -644,12 +717,12 @@ func TestTagAdd(t *testing.T) {
 	c := ctx(g)
 	c.IgnoreBuild("test appengine")
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	// Test update after add. Update should behave the same.
-	g.Check(c.ModifyImport("co2/pk1", Update))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Update))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -682,7 +755,7 @@ func TestRemove(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -695,7 +768,7 @@ func TestRemove(t *testing.T) {
 		g.Fatal(err)
 	}
 
-	g.Check(c.ModifyImport("co2/pk1", Remove))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -718,7 +791,7 @@ func TestAddMissing(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	err := c.ModifyImport("co2/pk1", Add)
+	err := c.ModifyImport(pkg("co2/pk1"), Add)
 	if _, is := err.(ErrNotInGOPATH); !is {
 		t.Fatalf("Expected not in GOPATH error. Got %v", err)
 	}
@@ -743,13 +816,13 @@ func TestTree(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/pk1/^", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1/^"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	list(g, c, "co1 after add list", `
- vt co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ vt co1/vendor/co2/pk1/go_code [co2/pk1/go_code] < []
  l  co1/pk1 < []
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
 `)
@@ -761,7 +834,22 @@ func TestTree(t *testing.T) {
 /vendor/vendor.json
 `)
 
-	g.Check(c.ModifyImport("co2/pk1", Remove))
+	vendorFile(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "2pIxVvLJ4iUMSmTWHwnAINQwI6A=",
+			"path": "co2/pk1",
+			"revision": "",
+			"tree": true
+		}
+	]
+}
+`)
+	verifyChecksum(g, c, "add tree")
+
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -788,7 +876,7 @@ func TestBadImport(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -815,7 +903,7 @@ func TestLicenseSimple(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co2/go/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/go/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -826,7 +914,7 @@ func TestLicenseSimple(t *testing.T) {
 /vendor/vendor.json
 `)
 
-	g.Check(c.ModifyImport("co2/go/pk1", Remove))
+	g.Check(c.ModifyImport(pkg("co2/go/pk1"), Remove))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -854,7 +942,7 @@ func TestLicenseNested(t *testing.T) {
 	g.In("co2")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport("co3/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co3/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -867,8 +955,8 @@ func TestLicenseNested(t *testing.T) {
 	g.In("co1")
 	c = ctx(g)
 
-	g.Check(c.ModifyImport("co2/pk1", Add))
-	g.Check(c.ModifyImport("co2/vendor/co3/pk1", Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co2/vendor/co3/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 

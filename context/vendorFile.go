@@ -37,7 +37,22 @@ func (ctx *Context) WriteVendorFile() (err error) {
 	if err != nil {
 		return
 	}
+
+	next := make([]*vendorfile.Package, 0, len(ctx.VendorFile.Package))
+	for i := range ctx.VendorFile.Package {
+		vp := *ctx.VendorFile.Package[i]
+		if vp.Remove {
+			continue
+		}
+		vp.Add = false
+		next = append(next, &vp)
+	}
+
 	err = safefile.WriteFile(ctx.VendorFilePath, buf.Bytes(), perm)
+	if err == nil {
+		ctx.VendorFile.Package = next
+	}
+
 	return
 }
 

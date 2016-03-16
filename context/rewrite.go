@@ -182,3 +182,21 @@ func (ctx *Context) rewrite() error {
 	}
 	return nil
 }
+
+func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
+	mvSet[pkg] = struct{}{}
+	for _, f := range pkg.Files {
+		for _, imp := range f.Imports {
+			next := ctx.Package[imp]
+			switch {
+			default:
+				if _, has := mvSet[next]; !has {
+					ctx.makeSet(next, mvSet)
+				}
+			case next == nil:
+			case next.Canonical == next.Local:
+			case next.Status.Location != LocationExternal:
+			}
+		}
+	}
+}

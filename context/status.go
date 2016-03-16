@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+
+	"github.com/kardianos/govendor/pkgspec"
 )
 
 type (
@@ -175,17 +177,18 @@ const (
 
 // ListItem represents a package in the current project.
 type StatusItem struct {
-	Status     Status
-	Canonical  string
-	Local      string
-	ImportedBy []string
+	Status       Status
+	Pkg          *pkgspec.Pkg
+	VersionExact string
+	Local        string
+	ImportedBy   []string
 }
 
 func (li StatusItem) String() string {
-	if li.Local == li.Canonical {
-		return fmt.Sprintf("%s %s < %q", li.Status, li.Canonical, li.ImportedBy)
+	if li.Local == li.Pkg.Path {
+		return fmt.Sprintf("%s %s < %q", li.Status, li.Pkg.Path, li.ImportedBy)
 	}
-	return fmt.Sprintf("%s %s [%s] < %q", li.Status, li.Local, li.Canonical, li.ImportedBy)
+	return fmt.Sprintf("%s %s [%s] < %q", li.Status, li.Local, li.Pkg.Path, li.ImportedBy)
 }
 
 type statusItemSort []StatusItem
@@ -193,14 +196,8 @@ type statusItemSort []StatusItem
 func (li statusItemSort) Len() int      { return len(li) }
 func (li statusItemSort) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
 func (li statusItemSort) Less(i, j int) bool {
-	if li[i].Status.Presence != li[j].Status.Presence {
-		return li[i].Status.Presence > li[j].Status.Presence
-	}
 	if li[i].Status.Location != li[j].Status.Location {
 		return li[i].Status.Location > li[j].Status.Location
-	}
-	if li[i].Status != li[j].Status {
-		return li[i].Status.Type > li[j].Status.Type
 	}
 	return li[i].Local < li[j].Local
 }
@@ -217,11 +214,19 @@ func (ctx *Context) Status() ([]StatusItem, error) {
 	ctx.updatePackageReferences()
 	list := make([]StatusItem, 0, len(ctx.Package))
 	for _, pkg := range ctx.Package {
+		version := ""
+		versionExact := ""
+		if vp := ctx.VendorFilePackagePath(pkg.Canonical); vp != nil {
+			version = vp.Version
+			versionExact = vp.VersionExact
+		}
+		// TODO (DT): assign Pkg directly from pkg.
 		li := StatusItem{
-			Status:     pkg.Status,
-			Canonical:  pkg.Canonical,
-			Local:      pkg.Local,
-			ImportedBy: make([]string, 0, len(pkg.referenced)),
+			Status:       pkg.Status,
+			Pkg:          &pkgspec.Pkg{Path: pkg.Canonical, IncludeTree: pkg.Tree, Origin: pkg.Origin, Version: version},
+			Local:        pkg.Local,
+			VersionExact: versionExact,
+			ImportedBy:   make([]string, 0, len(pkg.referenced)),
 		}
 		for _, ref := range pkg.referenced {
 			li.ImportedBy = append(li.ImportedBy, ref.Local)

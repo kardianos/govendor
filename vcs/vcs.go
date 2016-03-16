@@ -29,6 +29,7 @@ type Vcs interface {
 var vcsRegistry = []Vcs{
 	VcsGit{},
 	VcsHg{},
+	VcsSvn{},
 	VcsBzr{},
 }
 var registerSync = sync.Mutex{}

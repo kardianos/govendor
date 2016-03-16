@@ -9,16 +9,6 @@ temporary file in the same directory, writes to it, and then renames the
 temporary file to the original name when calling Commit.
 
 
-Stable version
---------------
-
-**A stable version of this package with commercial support is available
-through StableLib: <https://stablelib.com/v1/safefile/>**
-
-
-Development version
--------------------
-
 ### Installation
 
 ```
@@ -27,7 +17,7 @@ $ go get github.com/dchest/safefile
 
 ### Documentation
 
- <https://stablelib.com/doc/v1/safefile/>
+ <https://godoc.org/github.com/dchest/safefile>
 
 ### Example
 

@@ -69,7 +69,8 @@ func isLicenseFile(name string) bool {
 // licenseCopy starts the search in the parent of "startIn" folder.
 // Looks in all sub-folders until root is reached. The root itself is not
 // searched.
-func licenseCopy(root, startIn, vendorRoot string) error {
+func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
+	addTo, _ := pathos.TrimCommonSuffix(pathos.SlashToFilepath(pkgPath), startIn)
 	folder := filepath.Clean(filepath.Join(startIn, ".."))
 	for i := 0; i <= looplimit; i++ {
 		dir, err := os.Open(folder)
@@ -95,7 +96,16 @@ func licenseCopy(root, startIn, vendorRoot string) error {
 			}
 
 			srcPath := filepath.Join(folder, name)
-			destPath := filepath.Join(vendorRoot, pathos.FileTrimPrefix(getLastVendorRoot(folder), root), name)
+			trimTo := pathos.FileTrimPrefix(getLastVendorRoot(folder), root)
+
+			/*
+				Path: "golang.org/x/tools/go/vcs"
+				Root: "/tmp/govendor-cache280388238/1"
+				StartIn: "/tmp/govendor-cache280388238/1/go/vcs"
+				addTo: "golang.org/x/tools"
+				$PROJ/vendor + addTo + pathos.FileTrimPrefix(folder, root) + "LICENSE"
+			*/
+			destPath := filepath.Join(vendorRoot, addTo, trimTo, name)
 
 			// Only copy if file does not exist.
 			_, err := os.Stat(destPath)
@@ -103,18 +113,19 @@ func licenseCopy(root, startIn, vendorRoot string) error {
 				continue
 			}
 
-			err = copyFile(destPath, srcPath)
+			err = copyFile(destPath, srcPath, nil)
 			if err != nil {
 				return err
 			}
 		}
 
+		if len(folder) <= len(root) {
+			return nil
+		}
+
 		nextFolder := filepath.Clean(filepath.Join(folder, ".."))
 
 		if nextFolder == folder {
-			return nil
-		}
-		if pathos.FileStringEquals(root, nextFolder) {
 			return nil
 		}
 		folder = nextFolder

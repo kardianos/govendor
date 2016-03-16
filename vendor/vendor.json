@@ -3,9 +3,22 @@
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "6VGFARaK8zd23IAiDf7a+gglC8k=",
 			"path": "github.com/dchest/safefile",
-			"revision": "33aeb10e4bb6edb4016c53b6140fc9a603346e04",
-			"revisionTime": "2015-07-03T18:05:53+02:00"
+			"revision": "855e8d98f1852d48dde521e0522408d1fe7e836a",
+			"revisionTime": "2015-10-22T12:31:44+02:00"
+		},
+		{
+			"checksumSHA1": "PuNlB3GBL80NhPt6ULoM+GFBXaQ=",
+			"path": "golang.org/x/crypto/ssh/terminal",
+			"revision": "5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3",
+			"revisionTime": "2016-02-25T15:07:55+01:00"
+		},
+		{
+			"checksumSHA1": "oLJR4yo+KxojmI5PqkeZFtRUmpY=",
+			"path": "golang.org/x/tools/go/vcs",
+			"revision": "093d7650abf0a26882924de03a6c840a00356572",
+			"revisionTime": "2016-03-09T21:59:58Z"
 		}
 	]
 }

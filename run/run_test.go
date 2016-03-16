@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package run
 
 import (
 	"bytes"
@@ -11,20 +11,49 @@ import (
 	"testing"
 
 	"github.com/kardianos/govendor/internal/gt"
+	"github.com/kardianos/govendor/prompt"
 )
+
+type testPrompt struct{}
+
+func (p *testPrompt) Ask(q *prompt.Question) (prompt.Response, error) {
+	var opt *prompt.Option
+	for i := range q.Options {
+		if opt == nil {
+			opt = &q.Options[i]
+			continue
+		}
+		item := &q.Options[i]
+		if len(item.Key().(string)) > len(opt.Key().(string)) {
+			opt = item
+		}
+	}
+	if opt != nil {
+		opt.Choosen = true
+	}
+	return prompt.RespAnswer, nil
+}
 
 func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	os.Setenv("GO15VENDOREXPERIMENT", "1")
 	output := &bytes.Buffer{}
 	args := append([]string{"testing"}, strings.Split(argLine, " ")...)
-	msg, err := run(output, args)
+	msg, err := Run(output, args, &testPrompt{})
 	if err != nil {
 		g.Fatalf("(%s) Error: %v", name, err)
 	}
 	if msg != MsgNone {
 		g.Fatalf("(%s) Printed help", name)
 	}
-	if strings.TrimSpace(output.String()) != strings.TrimSpace(expectedOutput) {
+	// Remove any space padding on the start/end of each line.
+	trimLines := func(s string) string {
+		lines := strings.Split(strings.TrimSpace(s), "\n")
+		for i := range lines {
+			lines[i] = strings.TrimSpace(lines[i])
+		}
+		return strings.Join(lines, "\n")
+	}
+	if trimLines(output.String()) != trimLines(expectedOutput) {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
 	}
 }

@@ -15,6 +15,26 @@ import (
 	"github.com/kardianos/govendor/vendorfile"
 )
 
+// Import path is in GOROOT or is a special package.
+func (ctx *Context) isStdLib(importPath string) (yes bool, err error) {
+	if importPath == "builtin" || importPath == "unsafe" || importPath == "C" {
+		yes = true
+		return
+	}
+
+	dir := filepath.Join(ctx.Goroot, importPath)
+	fi, _ := os.Stat(dir)
+	if fi == nil {
+		return
+	}
+	if fi.IsDir() == false {
+		return
+	}
+
+	yes, err = hasGoFileInFolder(dir)
+	return
+}
+
 // findImportDir finds the absolute directory. If rel is empty vendor folders
 // are not looked in.
 func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath string, err error) {

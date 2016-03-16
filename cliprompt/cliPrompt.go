@@ -1,0 +1,163 @@
+package cliprompt
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/kardianos/govendor/prompt"
+
+	"golang.org/x/crypto/ssh/terminal"
+)
+
+type rw struct {
+	io.Reader
+	io.Writer
+}
+
+type Prompt struct{}
+
+// Ask the user a question based on the CLI.
+// TODO (DT): Currently can't handle fetching empty responses do to cancel method.
+func (p *Prompt) Ask(q *prompt.Question) (prompt.Response, error) {
+	fd := 0
+	termState, err := terminal.MakeRaw(fd)
+	if err != nil {
+		return prompt.RespCancel, err
+	}
+	defer terminal.Restore(fd, termState)
+
+	termRW := rw{Reader: os.Stdin, Writer: os.Stdout}
+	term := terminal.NewTerminal(termRW, "")
+
+	if len(q.Error) > 0 {
+		fmt.Fprintf(termRW, "%s\n\n", q.Error)
+	}
+
+	switch q.Type {
+	default:
+		panic("Uknown question type")
+	case prompt.TypeSelectMultiple:
+		return prompt.RespCancel, fmt.Errorf("Selecting multiple isn't currently supported")
+	case prompt.TypeSelectOne:
+		return getSingle(term, q)
+	}
+}
+
+func getSingle(term *terminal.Terminal, q *prompt.Question) (prompt.Response, error) {
+	if len(q.Options) == 1 && q.Options[0].Other() {
+		opt := &q.Options[0]
+		opt.Choosen = true
+		return setOther(term, q, opt)
+	}
+
+	choosen := q.AnswerSingle(false)
+	if choosen == nil {
+		return setOption(term, q)
+	}
+	resp, err := setOther(term, q, choosen)
+	if err != nil {
+		return prompt.RespCancel, err
+	}
+	if resp == prompt.RespCancel {
+		choosen.Choosen = false
+		return setOption(term, q)
+	}
+	return resp, nil
+}
+
+func setOther(term *terminal.Terminal, q *prompt.Question, opt *prompt.Option) (prompt.Response, error) {
+	var blankCount = 0
+	var internalMessage = ""
+	for {
+		// Write out messages
+		if len(internalMessage) > 0 {
+			fmt.Fprintf(term, "%s\n\n", internalMessage)
+		}
+		if len(q.Prompt) > 0 {
+			fmt.Fprintf(term, "%s\n", q.Prompt)
+		}
+		if len(opt.Validation()) > 0 {
+			fmt.Fprintf(term, "  ** %s\n", opt.Validation())
+		}
+		// Reset message.
+		internalMessage = ""
+		term.SetPrompt(" > ")
+		ln, err := term.ReadLine()
+		if err != nil {
+			return prompt.RespCancel, err
+		}
+		if len(ln) == 0 && blankCount > 0 {
+			return prompt.RespCancel, nil
+		}
+		if len(ln) == 0 {
+			internalMessage = "Press enter again to cancel"
+			blankCount++
+			continue
+		}
+		blankCount = 0
+		opt.Value = strings.TrimSpace(ln)
+		return prompt.RespAnswer, nil
+	}
+}
+
+func setOption(term *terminal.Terminal, q *prompt.Question) (prompt.Response, error) {
+	var blankCount = 0
+	var internalMessage = ""
+	for {
+		// Write out messages
+		if len(internalMessage) > 0 {
+			fmt.Fprintf(term, "%s\n\n", internalMessage)
+		}
+		if len(q.Prompt) > 0 {
+			fmt.Fprintf(term, "%s\n", q.Prompt)
+		}
+		for index, opt := range q.Options {
+			fmt.Fprintf(term, " (%d) %s\n", index+1, opt.Prompt())
+			if len(opt.Validation()) > 0 {
+				fmt.Fprintf(term, "  ** %s\n", opt.Validation())
+			}
+		}
+		// Reset message.
+		internalMessage = ""
+		term.SetPrompt(" # ")
+		ln, err := term.ReadLine()
+		if err != nil {
+			return prompt.RespCancel, err
+		}
+		if len(ln) == 0 && blankCount > 0 {
+			return prompt.RespCancel, nil
+		}
+		if len(ln) == 0 {
+			internalMessage = "Press enter again to cancel"
+			blankCount++
+			continue
+		}
+		blankCount = 0
+		choice, err := strconv.ParseInt(ln, 10, 32)
+		if err != nil {
+			internalMessage = "Not a valid number"
+			continue
+		}
+		index := int(choice - 1)
+		if index < 0 || index >= len(q.Options) {
+			internalMessage = "Not a valid choice."
+			continue
+		}
+		opt := &q.Options[index]
+		opt.Choosen = true
+		if opt.Other() {
+			res, err := setOther(term, q, opt)
+			if err != nil {
+				return prompt.RespCancel, err
+			}
+			if res == prompt.RespCancel {
+				opt.Choosen = false
+				continue
+			}
+		}
+		return prompt.RespAnswer, nil
+	}
+}

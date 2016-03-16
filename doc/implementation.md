@@ -4,48 +4,70 @@
 
 ## Fetch and sync sub-commands
 
-For current work and status see the
-[fetch branch](https://github.com/kardianos/govendor/blob/fetch/doc/implementation.md).
-
- - [ ] Factor out govendor/run.go into govendor/runner package.
- - [ ] Create a package interface to ask questions and get answers.
- - [ ] In govendor main package, add in a CLI interface to ask questions and get answers.
- - [ ] Stub out fetch and sync sub-commands.
- - [ ] Update parsing package-spec to include:
+ - [x] Factor out govendor/run.go into govendor/runner package.
+ - [x] Create a package interface to ask questions and get answers.
+  * Ask multiple choice question.
+  * Choice can also be "other".
+  * Can validate other option.
+  * If only other and no multiple choice, simply prompt.
+ - [x] In govendor main package, add in a CLI interface to ask questions and get answers.
+ - [x] Stub out fetch and sync sub-commands.
+ - [x] Update parsing package-spec to include:
   * version-spec
   * origin
- - [ ] Add fields to the vendorfile package:
+ - [x] Add fields to the vendorfile package:
   * version
-  * checksumSHA256
- - [ ] Have add and update start populating checksum field. Add tests.
- - [ ] Add a label matcher function, return 0 or 1 labels. Add tests. 
+  * checksumSHA1
+ - [x] Have "add" and "update" start populating checksum field. Add tests.
+ - [x] Add a label matcher function, return 0 or 1 labels. Add tests. 
 		Each potential label should have: Source {branch, tag}, Name string.
 		Do not integrate yet.
- - [ ] Add a function to decide if a version is a label or revision.
+ - [x] Add a function to decide if a version is a label or revision.
 		A revision will either be a valid base64 string or a number without
 		any letters and greater then 100. A version will be anything else.
 		A revision might be a short hash or long hash.
- - [ ] Implement the sync command (sync only looks at revision field).
+ - [x] Move existing commands to use the pkg-spec parser.
+ - [x] Add common code to verify package's checksum, report package or folder trees that are not valid.
+ - [x] Implement the sync command (sync only looks at revision field).
 		Might be able to use
 		https://godoc.org/golang.org/x/tools/go/vcs#Cmd.CreateAtRev .
 		Will need to download into a separate directory then copy packages
 		over. Will also need to use checksum to determine which packages
 		need to be fetched. If no checksum is present, fetch package
 		and write new checksum.
- - [ ] Implement the fetch command when fetch specifies a revision.
- - [ ] Add fetching the version from version-spec. For git try to rely
+ - [x] Implement the fetch command when fetch specifies a revision.
+ - [x] Recursive fetch.
+ - [x] Use a persistent cache ($GOPATH/src-cache) to download into (fetch and sync).
+ - [x] Add fetching the version from version-spec. For git try to rely
 		on standard git command, but also might look into
 		"github.com/src-d/go-git" for inspecting versions remotely.
+ - [x] Change fetch and sync to download into ORIGIN, not PATH.
+ - [x] Record choosen version in vendor file.
+ - [x] When fetching dependencies, if it is a new package, see if there exists
+		another package in the same repo and use that revision and version.
+ - [x] Add version info to list output.
+ - [x] Add svn to internal revision finder.
+ - [ ] Respect fetched repos vendor files for versions and revisions.
+ - [ ] Handle version and revision conflicts.
 
 ## Vendor package with outstanding changes
 
- - [ ] Add new field "uncommitted bool" to vendorfile.
- - [ ] Add new flag to add/update "-uncommitted" that allows copying
+ - [x] Add new flag to add/update "-uncommitted" that allows copying
 		uncommitted changes over. Still check for uncommitted changegs
 		and only apply `"uncommitted": true` to packages that actually do
 		have uncommitted changes.
- - [ ] Add a new status called "+(?something?)" (maybe "outstanding"?).
-		Reports all packages with uncommitted changes.
- - [ ] Create an example git hook, see what it takes to check for uncommitted
-		changes. Maybe add "-should-not" to `govendor list` that returns
-		non-zero if any results are returned.
+
+## Update Migrations
+
+ - [x] Re-add rewrite code for migrations.
+ - [ ] gb github.com/constabulary/gb
+ - [ ] govend https://github.com/govend/govend
+ - [ ] godep (ensure it is still working)
+ - [ ] gvt https://github.com/FiloSottile/gvt
+ - [ ] glock https://github.com/robfig/glock
+
+## TODO
+
+ - [x] Read os.Stdin, split by space (strings.Fields) and append to args.
+ - [ ] Add "-imports" to "list" sub-command. Shows the direct dependencies of the selected packages (not the selected packages).
+		`govendor list +local -imports +vendor` outputs all the vendor packages directly imported into local packages.
