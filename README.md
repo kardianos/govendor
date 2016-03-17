@@ -1,6 +1,8 @@
 # The Vendor Tool for Go
 `go get -u github.com/kardianos/govendor`
 
+New users please read the [FAQ](doc/faq.md)
+
 Read the [whitepaper](doc/whitepaper.md)
 
 Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
@@ -18,7 +20,7 @@ Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
  * The project must be within a $GOPATH.
  * If using go1.5, ensure you `set GO15VENDOREXPERIMENT=1`.
 
-### Quick Start
+### Quick Start, also see the [FAQ](doc/faq.md)
 ```
 # Setup your project.
 cd "my project in GOPATH"
