@@ -13,8 +13,9 @@ Sub-Commands
 	add      Add packages from $GOPATH.
 	update   Update packages from $GOPATH.
 	remove   Remove packages from the vendor folder.
-	fetch    Add new or update existing packages from remote repository.
-	sync     Pull in packages from remote respository to match vendor.json file.
+	status   Lists any missing or modified (according to checksum) packages.
+	fetch    (beta) Add new or update existing packages from remote repository.
+	sync     (beta) Pull in packages from remote respository to match vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	
 	go tool commands that are wrapped:
