@@ -12,6 +12,10 @@ A: Run `govendor add +external`
 #### Q: I have copied dependencies into "vendor". I want to update from $GOPATH.
 A: Run `govendor update +vendor`
 
+#### Q: I'm getting missing packages from `appengine` but I don't care about `appengine`. How do I ignore these pacakges?
+A: Edit the `vendor/vendor.json` file. Update the "ignore" field to include "appengine".
+If you are already ignoring tests, it will look like: `"ignore": "test appengine",`
+
 #### Q: I have modified a package in $GOPATH and I want to try the changes in vendor without committing them.
 A: Run `govendor update -uncommitted <updated-package-import-path>`
 
