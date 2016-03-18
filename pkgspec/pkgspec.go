@@ -29,10 +29,13 @@ var (
 // Parse a package spec according to:
 // package-sepc = <path>[{/...|/^}][::<origin>][@[<version-spec>]]
 func Parse(currentGoPath, s string) (*Pkg, error) {
-	s = strings.TrimSpace(s)
+	// Clean up the import path before
+	s = strings.Trim(s, `/\ \t`)
 	if len(s) == 0 {
 		return nil, ErrEmptyPath
 	}
+	s = strings.Replace(s, `\`, `/`, -1)
+
 	originIndex := strings.Index(s, originMatch)
 	versionIndex := strings.LastIndex(s, versionMatch)
 
@@ -73,6 +76,8 @@ func Parse(currentGoPath, s string) (*Pkg, error) {
 		pkg.Path = strings.TrimSuffix(pkg.Path, TreeIncludeSuffix)
 	}
 	if strings.HasPrefix(pkg.Path, ".") && len(currentGoPath) != 0 {
+		currentGoPath = strings.Replace(currentGoPath, `\`, `/`, -1)
+		currentGoPath = strings.TrimPrefix(currentGoPath, "/")
 		pkg.Path = path.Join(currentGoPath, pkg.Path)
 	}
 

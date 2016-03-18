@@ -9,21 +9,23 @@ import "testing"
 func TestParse(t *testing.T) {
 	list := []struct {
 		Spec string
+		Str  string
 		Pkg  *Pkg
 		Err  error
 		WD   string
 	}{
-		{"abc/def", &Pkg{Path: "abc/def"}, nil, ""},
-		{"", nil, ErrEmptyPath, ""},
-		{"::", nil, ErrEmptyPath, ""},
-		{"::foo", nil, ErrEmptyPath, ""},
-		{"abc/def::", nil, ErrEmptyOrigin, ""},
-		{"abc/def::foo/bar/vendor/abc/def", nil, nil, ""},
-		{"abc/def::foo/bar/vendor/abc/def@", nil, nil, ""},
-		{"abc/def::foo/bar/vendor/abc/def@v1.2.3", &Pkg{Path: "abc/def", Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}, nil, ""},
-		{"abc/def@", &Pkg{Path: "abc/def", HasVersion: true}, nil, ""},
-		{"abc/def@v1.2.3", &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, nil, ""},
-		{"./def@v1.2.3", &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, nil, "abc/"},
+		{Spec: "abc/def", Pkg: &Pkg{Path: "abc/def"}},
+		{Spec: "", Err: ErrEmptyPath},
+		{Spec: "::", Err: ErrEmptyPath},
+		{Spec: "::foo", Err: ErrEmptyPath},
+		{Spec: "abc/def::", Err: ErrEmptyOrigin},
+		{Spec: "abc/def::foo/bar/vendor/abc/def"},
+		{Spec: "abc/def::foo/bar/vendor/abc/def@"},
+		{Spec: "abc/def::foo/bar/vendor/abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}},
+		{Spec: "abc/def@", Pkg: &Pkg{Path: "abc/def", HasVersion: true}},
+		{Spec: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}},
+		{Spec: "./def@v1.2.3", Str: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, WD: "abc/"},
+		{Spec: "abc\\def\\", Str: "abc/def", Pkg: &Pkg{Path: "abc/def"}},
 	}
 
 	for _, item := range list {
@@ -43,9 +45,13 @@ func TestParse(t *testing.T) {
 			t.Errorf("For %q, got nil pkg", item.Spec)
 			continue
 		}
-		str := pkg.String()
-		if len(item.WD) == 0 && str != item.Spec {
-			t.Errorf("For %q, round tripped to %q", item.Spec, str)
+		pkgStr := pkg.String()
+		specStr := item.Spec
+		if len(item.Str) > 0 {
+			specStr = item.Str
+		}
+		if pkgStr != specStr {
+			t.Errorf("For %q, round tripped to %q", specStr, pkgStr)
 			continue
 		}
 		if item.Pkg != nil {
