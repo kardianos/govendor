@@ -108,8 +108,12 @@ func (ctx *Context) rewrite() error {
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
 		f, err := parser.ParseFile(fileset, fileInfo.Path, nil, parser.ParseComments)
-		if err != nil {
-			return err
+		if f == nil {
+			return nil
+		}
+		// Files with package name "documentation" should be ignored, per go build tool.
+		if f.Name.Name == "documentation" {
+			return nil
 		}
 
 		dprintf("RW:: File: %s\n", fileInfo.Path)

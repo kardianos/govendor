@@ -67,6 +67,10 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 			return nil, nil, nil
 		}
 	}
+	// Files with package name "documentation" should be ignored, per go build tool.
+	if f.Name.Name == "documentation" {
+		return nil, nil, nil
+	}
 
 	filename := filenameExt[:len(filenameExt)-3]
 
@@ -146,6 +150,11 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	// Ignore error here and continue on best effort.
 	f, _ := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 	if f == nil {
+		return nil
+	}
+
+	// Files with package name "documentation" should be ignored, per go build tool.
+	if f.Name.Name == "documentation" {
 		return nil
 	}
 
