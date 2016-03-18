@@ -682,6 +682,44 @@ func TestVendorFile(t *testing.T) {
 	verifyChecksum(g, c, "co1 after add")
 }
 
+func TestTestdata(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("b.go", "encoding/csv"),
+	)
+	g.Setup("co2/pk1/testdata",
+		gt.File("file-a"),
+	)
+	g.Setup("co2/pk1/testdata/sub",
+		gt.File("file-b"),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 list", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  encoding/csv < ["co1/vendor/co2/pk1"]
+`)
+
+	tree(g, c, "co1 after add testdata", `
+/pk1/a.go
+/vendor/co2/pk1/b.go
+/vendor/co2/pk1/testdata/file-a
+/vendor/co2/pk1/testdata/sub/file-b
+/vendor/vendor.json
+`)
+}
+
 func TestTagList(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
@@ -723,6 +761,9 @@ func TestTagAdd(t *testing.T) {
 		gt.File("a_test.go", "bytes", "testing"),
 		gt.FileBuild("b.go", "appengine", "encoding/csv"),
 	)
+	g.Setup("co2/pk1/testdata",
+		gt.File("file-a"),
+	)
 	g.In("co1")
 	c := ctx(g)
 	c.IgnoreBuild("test appengine")
@@ -750,6 +791,13 @@ func TestTagAdd(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(checkPathBase, "b.go")); err == nil {
 		t.Error("b.go should not be copied into vendor folder")
 	}
+
+	tree(g, c, "co1 after add co2", `
+/pk1/a.go
+/pk1/a_test.go
+/vendor/co2/pk1/a.go
+/vendor/vendor.json
+`)
 }
 
 func TestRemove(t *testing.T) {

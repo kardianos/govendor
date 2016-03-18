@@ -51,12 +51,10 @@ func (ctx *Context) CopyPackage(destPath, srcPath, lookRoot, pkgPath string, ign
 		return err
 	}
 	ignoreTest := false
-	if tree {
-		for _, ignore := range ctx.ignoreTag {
-			if ignore == "test" {
-				ignoreTest = true
-				break
-			}
+	for _, ignore := range ctx.ignoreTag {
+		if ignore == "test" {
+			ignoreTest = true
+			break
 		}
 	}
 
@@ -105,22 +103,26 @@ fileLoop:
 			continue
 		}
 		if fi.IsDir() {
-			if !tree {
+			isTestdata := name == "testdata"
+			if !tree && !isTestdata {
 				continue
 			}
 			if name[0] == '_' {
 				continue
 			}
 			if ignoreTest {
-				if strings.HasSuffix(name, "_test") || name == "testdata" {
+				if strings.HasSuffix(name, "_test") || isTestdata {
 					continue
 				}
 			}
 			nextDestPath := filepath.Join(destPath, name)
 			nextSrcPath := filepath.Join(srcPath, name)
-			nextIgnoreFiles, deps, err := ctx.getIngoreFiles(nextSrcPath)
-			if err != nil {
-				return err
+			var nextIgnoreFiles, deps []string
+			if !isTestdata && !strings.Contains(pkgPath, "/testdata/") {
+				nextIgnoreFiles, deps, err = ctx.getIngoreFiles(nextSrcPath)
+				if err != nil {
+					return err
+				}
 			}
 			if beforeCopy != nil {
 				err = beforeCopy(deps)
