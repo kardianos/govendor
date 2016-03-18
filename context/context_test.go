@@ -213,7 +213,8 @@ func TestDuplicatePackage(t *testing.T) {
 			"path": "co3/pk3",
 			"revision": ""
 		}
-	]
+	],
+	"rootPath": "co2"
 }
 `)
 
@@ -259,7 +260,8 @@ func TestDuplicatePackage(t *testing.T) {
 			"path": "co3/pk3",
 			"revision": ""
 		}
-	]
+	],
+	"rootPath": "co1"
 }
 `)
 	verifyChecksum(g, c, "after add")
@@ -353,7 +355,8 @@ func TestImportSimple(t *testing.T) {
 			"path": "co2/pk1",
 			"revision": ""
 		}
-	]
+	],
+	"rootPath": "co1"
 }
 `)
 	verifyChecksum(g, c, "new")
@@ -414,7 +417,8 @@ func TestUpdate(t *testing.T) {
 			"path": "co2/pk1/pk2",
 			"revision": ""
 		}
-	]
+	],
+	"rootPath": "co1"
 }
 `)
 	verifyChecksum(g, c, "co1 after add")
@@ -515,7 +519,8 @@ func TestVendor(t *testing.T) {
 			"path": "co2/pk1",
 			"revision": ""
 		}
-	]
+	],
+	"rootPath": "co1"
 }
 `)
 	verifyChecksum(g, c, "co1 after add")
@@ -670,7 +675,8 @@ func TestVendorFile(t *testing.T) {
 			"path": "co2/pk1",
 			"revision": ""
 		}
-	]
+	],
+	"rootPath": "co1"
 }
 `)
 	verifyChecksum(g, c, "co1 after add")
@@ -848,7 +854,8 @@ func TestTree(t *testing.T) {
 			"revision": "",
 			"tree": true
 		}
-	]
+	],
+	"rootPath": "co1"
 }
 `)
 	verifyChecksum(g, c, "add tree")

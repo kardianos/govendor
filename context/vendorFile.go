@@ -23,6 +23,8 @@ func (ctx *Context) WriteVendorFile() (err error) {
 		perm = fi.Mode()
 	}
 
+	ctx.VendorFile.RootPath = ctx.RootImportPath
+
 	buf := &bytes.Buffer{}
 	err = ctx.VendorFile.Marshal(buf)
 	if err != nil {

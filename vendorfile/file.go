@@ -20,6 +20,8 @@ const Name = "vendor.json"
 
 // File is the structure of the vendor file.
 type File struct {
+	RootPath string // Import path of vendor folder
+
 	Comment string
 
 	Ignore string
@@ -54,6 +56,7 @@ type Package struct {
 }
 
 var (
+	rootPathNames     = []string{"rootPath"}
 	packageNames      = []string{"package", "Package"}
 	ignoreNames       = []string{"ignore"}
 	originNames       = []string{"origin"}
@@ -163,6 +166,7 @@ func (vf *File) getRawPackageList() []interface{} {
 
 // toFields moves values from "all" to the field values.
 func (vf *File) toFields() {
+	setField(&vf.RootPath, vf.all, rootPathNames)
 	setField(&vf.Comment, vf.all, commentNames)
 	setField(&vf.Ignore, vf.all, ignoreNames)
 
@@ -194,6 +198,7 @@ func (vf *File) toFields() {
 func (vf *File) toAll() {
 	delete(vf.all, "Tool")
 
+	setObject(vf.RootPath, vf.all, rootPathNames, true)
 	setObject(vf.Comment, vf.all, commentNames, false)
 	setObject(vf.Ignore, vf.all, ignoreNames, false)
 
