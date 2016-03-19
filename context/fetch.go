@@ -85,14 +85,14 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 		err = vcsCmd.Create(repoRootDir, rr.Repo)
 		if err != nil {
-			return nextOps, err
+			return nextOps, fmt.Errorf("failed to create repo %q in %q %v", rr.Repo, repoRootDir, err)
 		}
 
 	} else {
 		vcsCmd = updateVcsCmd(sysVcsCmd)
 		err = vcsCmd.Download(repoRootDir)
 		if err != nil {
-			return nextOps, err
+			return nextOps, fmt.Errorf("failed to download repo into %q %v", repoRootDir, err)
 		}
 	}
 
@@ -115,7 +115,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		var tagNames []string
 		tagNames, err = vcsCmd.Tags(repoRootDir)
 		if err != nil {
-			return nextOps, err
+			return nextOps, fmt.Errorf("failed to fetch tags %v", err)
 		}
 		labels := make([]Label, len(tagNames))
 		for i, tag := range tagNames {
@@ -130,7 +130,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		fmt.Fprintf(f.Ctx, "\tFound exact version %q\n", vpkg.VersionExact)
 		err = vcsCmd.TagSync(repoRootDir, result.Text)
 		if err != nil {
-			return nextOps, err
+			return nextOps, fmt.Errorf("failed to sync repo to tag %q %v", result.Text, err)
 		}
 	case len(revision) > 0:
 		fmt.Fprintf(f.Ctx, "Get specific revision %q@%s\n", vpkg.Path, revision)
@@ -139,14 +139,14 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		vpkg.VersionExact = ""
 		err = vcsCmd.RevisionSync(repoRootDir, revision)
 		if err != nil {
-			return nextOps, err
+			return nextOps, fmt.Errorf("failed to sync repo to revision %q %v", revision, err)
 		}
 	default:
 		fmt.Fprintf(f.Ctx, "Get latest revision %q\n", vpkg.Path)
 		// Get latest version.
 		err = vcsCmd.TagSync(repoRootDir, "")
 		if err != nil {
-			return nextOps, err
+			return nextOps, fmt.Errorf("failed to sync to latest revision %v", err)
 		}
 	}
 
@@ -156,7 +156,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	var deps []string
 	op.IgnoreFile, deps, err = f.Ctx.getIngoreFiles(op.Src)
 	if err != nil {
-		return nextOps, err
+		return nextOps, fmt.Errorf("failed to get ignore files and deps from %q %v", op.Src, err)
 	}
 
 	// Once downloaded, be sure to set the revision and revisionTime
@@ -164,7 +164,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// Find the VCS information.
 	system, err := gvvcs.FindVcs(f.CacheRoot, op.Src)
 	if err != nil {
-		return nextOps, err
+		return nextOps, fmt.Errorf("failed to find vcs in %q %v", op.Src, err)
 	}
 	if system != nil {
 		if system.Dirty {

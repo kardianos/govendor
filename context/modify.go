@@ -646,5 +646,8 @@ func (ctx *Context) copyOperation(op *Operation, beforeCopy func(deps []string) 
 		}
 	}
 	op.State = OpDone
-	return err
+	if err != nil {
+		return fmt.Errorf("copy failed. dest: %q, src: %q, pkgPath %q, err %v", op.Dest, op.Src, root, err)
+	}
+	return nil
 }
