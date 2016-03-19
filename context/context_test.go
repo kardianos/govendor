@@ -617,7 +617,7 @@ func TestVendorFile(t *testing.T) {
 	defer g.Clean()
 
 	g.Setup("co1/pk1",
-		gt.File("a.go", "co2/pk1"),
+		gt.File("a.go", "co2/pk1", "co3/pk1"),
 		gt.File("b.go", "bytes"),
 	)
 	g.Setup("a",
@@ -625,6 +625,9 @@ func TestVendorFile(t *testing.T) {
 	)
 	g.Setup("co2/pk1",
 		gt.File("a.go", "a"),
+	)
+	g.Setup("co3/pk1",
+		gt.File("a.go", "bytes"),
 	)
 
 	g.In("co2")
@@ -642,21 +645,26 @@ func TestVendorFile(t *testing.T) {
 	list(g, c, "co1 list", `
  e  co2/pk1 < ["co1/pk1"]
  e  co2/vendor/a [a] < ["co2/pk1"]
+ e  co3/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
- s  bytes < ["co1/pk1"]
+ s  bytes < ["co1/pk1" "co3/pk1"]
  s  strings < ["co2/vendor/a"]
 `)
 
+	// Write before and after, try to tickle any bugs.
+	g.Check(c.WriteVendorFile())
 	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
 	g.Check(c.ModifyImport(pkg("co2/vendor/a"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
+	g.Check(c.WriteVendorFile())
 
-	list(g, c, "co1 after add", `
+	list(g, c, "co1 after co2 add", `
  v  co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ e  co3/pk1 < ["co1/pk1"]
  l  co1/pk1 < []
- s  bytes < ["co1/pk1"]
+ s  bytes < ["co1/pk1" "co3/pk1"]
  s  strings < ["co1/vendor/a"]
 `)
 
@@ -679,7 +687,51 @@ func TestVendorFile(t *testing.T) {
 	"rootPath": "co1"
 }
 `)
-	verifyChecksum(g, c, "co1 after add")
+	verifyChecksum(g, c, "co1 after co2 add")
+
+	// Write before and after, try to tickle any bugs.
+	// Add another package. Had some issues with adding to an existing vendor file
+	// with existing packages.
+	g.Check(c.WriteVendorFile())
+	g.Check(c.ModifyImport(pkg("co3/pk1"), Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "co1 after co3 add", `
+ v  co1/vendor/a [a] < ["co1/vendor/co2/pk1"]
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ v  co1/vendor/co3/pk1 [co3/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1" "co1/vendor/co3/pk1"]
+ s  strings < ["co1/vendor/a"]
+`)
+
+	vendorFile(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "auzf5l1iVWjiCTOwR9TuaFF2Db8=",
+			"origin": "co2/vendor/a",
+			"path": "a",
+			"revision": ""
+		},
+		{
+			"checksumSHA1": "Ejt2NhWYzgcLKV1gpBW3Py9aF5w=",
+			"path": "co2/pk1",
+			"revision": ""
+		},
+		{
+			"checksumSHA1": "Y7kuSBw+31U5RgCTp4XAMsWwr5Y=",
+			"path": "co3/pk1",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+	verifyChecksum(g, c, "co1 after co3 add")
 }
 
 func TestTestdata(t *testing.T) {

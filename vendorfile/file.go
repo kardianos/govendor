@@ -10,6 +10,7 @@ package vendorfile
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"sort"
@@ -34,8 +35,7 @@ type File struct {
 
 // Package represents each package.
 type Package struct {
-	// index of the package in the file as read.
-	index int
+	field map[string]interface{}
 
 	// If delete is set to true the package will not be written to the vendor file.
 	Remove bool
@@ -53,6 +53,38 @@ type Package struct {
 	VersionExact string
 	ChecksumSHA1 string
 	Comment      string
+}
+
+// The following stringer functions are useful for debugging.
+
+type packageList []*Package
+
+func (list packageList) String() string {
+	buf := &bytes.Buffer{}
+	for _, item := range list {
+		buf.WriteString("\t")
+		buf.WriteString(fmt.Sprintf("(%v) ", item.field))
+		if item.Remove {
+			buf.WriteString(" X ")
+		}
+		buf.WriteString(item.Path)
+		buf.WriteRune('\n')
+	}
+	buf.WriteRune('\n')
+	return buf.String()
+}
+
+func allString(all map[string]interface{}) string {
+	obj, _ := all["package"]
+	buf := &bytes.Buffer{}
+	for _, itemObj := range obj.([]interface{}) {
+		item := itemObj.(map[string]interface{})
+		buf.WriteString("\t")
+		buf.WriteString(item["path"].(string))
+		buf.WriteRune('\n')
+	}
+	buf.WriteRune('\n')
+	return buf.String()
 }
 
 var (
@@ -181,7 +213,7 @@ func (vf *File) toFields() {
 		}
 		pkg := &Package{}
 		vf.Package[index] = pkg
-		pkg.index = index
+		pkg.field = object
 		setField(&pkg.Origin, object, originNames)
 		setField(&pkg.Path, object, pathNames)
 		setField(&pkg.Tree, object, treeNames)
@@ -204,48 +236,58 @@ func (vf *File) toAll() {
 
 	rawPackageList := vf.getRawPackageList()
 
-	setPkgFields := func(pkg *Package, obj map[string]interface{}) {
+	setPkgFields := func(pkg *Package) {
 		if pkg.Origin == pkg.Path {
 			pkg.Origin = ""
 		}
-		setObject(pkg.Origin, obj, originNames, true)
-		setObject(pkg.Path, obj, pathNames, false)
-		setObject(pkg.Tree, obj, treeNames, true)
-		setObject(pkg.Revision, obj, revisionNames, false)
-		setObject(pkg.RevisionTime, obj, revisionTimeNames, true)
-		setObject(pkg.Version, obj, versionNames, true)
-		setObject(pkg.VersionExact, obj, versionExactNames, true)
-		setObject(pkg.ChecksumSHA1, obj, checksumSHA1Names, true)
-		setObject(pkg.Comment, obj, commentNames, true)
+		if pkg.field == nil {
+			pkg.field = make(map[string]interface{}, 10)
+		}
+		setObject(pkg.Origin, pkg.field, originNames, true)
+		setObject(pkg.Path, pkg.field, pathNames, false)
+		setObject(pkg.Tree, pkg.field, treeNames, true)
+		setObject(pkg.Revision, pkg.field, revisionNames, false)
+		setObject(pkg.RevisionTime, pkg.field, revisionTimeNames, true)
+		setObject(pkg.Version, pkg.field, versionNames, true)
+		setObject(pkg.VersionExact, pkg.field, versionExactNames, true)
+		setObject(pkg.ChecksumSHA1, pkg.field, checksumSHA1Names, true)
+		setObject(pkg.Comment, pkg.field, commentNames, true)
 	}
 
-	deleteCount := 0
-	for _, pkg := range vf.Package {
+	for i := len(vf.Package) - 1; i >= 0; i-- {
+		pkg := vf.Package[i]
 		switch {
 		case pkg.Remove:
-			rawPackageList[pkg.index] = nil
-			deleteCount++
+			for index, rawObj := range rawPackageList {
+				raw, is := rawObj.(map[string]interface{})
+				if !is {
+					continue
+				}
+				same := true
+				for key, value := range pkg.field {
+					if raw[key] != value {
+						same = false
+						break
+					}
+				}
+				if same {
+					rawPackageList[index] = nil
+				}
+			}
 		case pkg.Add:
-			obj := make(map[string]interface{}, 5)
-			rawPackageList = append(rawPackageList, obj)
-
-			setPkgFields(pkg, obj)
+			setPkgFields(pkg)
+			rawPackageList = append(rawPackageList, pkg.field)
 		default:
-			var obj map[string]interface{}
-			rawObj := rawPackageList[pkg.index]
-			if rawObj == nil {
-				obj = make(map[string]interface{}, 5)
-			} else {
-				obj = rawObj.(map[string]interface{})
+			if pkg.field == nil {
+				pkg.field = make(map[string]interface{}, 10)
 			}
 
-			delete(obj, "local")
-			delete(obj, "Local")
-			setPkgFields(pkg, obj)
+			delete(pkg.field, "local")
+			delete(pkg.field, "Local")
+			setPkgFields(pkg)
 		}
 	}
-
-	nextRawPackageList := make([]interface{}, 0, len(rawPackageList)-deleteCount)
+	nextRawPackageList := make([]interface{}, 0, len(rawPackageList))
 	for _, raw := range rawPackageList {
 		if raw == nil {
 			continue
@@ -264,7 +306,6 @@ func (vf *File) Marshal(w io.Writer) error {
 	vf.toAll()
 
 	rawList := vf.getRawPackageList()
-
 	sort.Sort(vendorPackageSort(rawList))
 
 	jb, err := json.Marshal(vf.all)
