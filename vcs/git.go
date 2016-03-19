@@ -30,7 +30,7 @@ func (VcsGit) Find(dir string) (*VcsInfo, error) {
 	// Get info.
 	info := &VcsInfo{}
 
-	cmd := exec.Command("git", "diff", "--quiet")
+	cmd := exec.Command("git", "status", "--short")
 	cmd.Dir = dir
 	err = cmd.Run()
 	if err != nil {
