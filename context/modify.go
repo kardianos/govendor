@@ -42,6 +42,19 @@ const (
 	OpFetch
 )
 
+func (t OperationType) String() string {
+	switch t {
+	default:
+		panic("unknown operation type")
+	case OpCopy:
+		return "copy"
+	case OpRemove:
+		return "remove"
+	case OpFetch:
+		return "fetch"
+	}
+}
+
 // Operation defines how packages should be moved.
 //
 // TODO (DT): Remove Pkg field and change Src and Dest to *pkgspec.Pkg types.
@@ -606,7 +619,7 @@ func (ctx *Context) Alter() error {
 			ctx.copyOperation(op, nil)
 		}
 		if err != nil {
-			return fmt.Errorf("Failed to copy package %q -> %q: %v", op.Src, op.Dest, err)
+			return fmt.Errorf("Failed to %v package %q -> %q: %v", op.Type, op.Src, op.Dest, err)
 		}
 	}
 	if ctx.rewriteImports {

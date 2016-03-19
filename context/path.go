@@ -204,6 +204,9 @@ func RemovePackage(path, root string, tree bool) error {
 	// Ensure the path is empty of files.
 	dir, err := os.Open(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 
