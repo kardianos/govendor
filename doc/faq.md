@@ -6,6 +6,9 @@ A: Run `govendor test +local`
 #### Q: How do I build install all my vendor packages?
 A: Run `govendor install +vendor,^program`
 
+#### Q: How do I pull all my dependencies from network remotes?
+A: Run `govendor fetch +out`
+
 #### Q: I have a working program with dependencies in $GOPATH. I want to vendor now.
 A: Run `govendor add +external`
 
@@ -27,3 +30,9 @@ fetch from "myfork" but place package in "normal".
 #### Q: Have have C files or HTML resources in sub-folders. How do I ensure they are copied as well?
 A: Run either `govendor fetch github.com/dep/pkg/^` or `govendor add github.com/dep/pkg/^`.
 This is the same as using the `-tree` argument.
+
+#### Q: How do I prevent vendor source from being checked in?
+A: Add `vendor/*/` to your ignore file.
+
+#### Q: How do populate the vendor folder if it has not been checked in?
+A: Run `govendor sync`
