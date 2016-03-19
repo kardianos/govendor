@@ -13,7 +13,7 @@ Sub-Commands
 	add      Add packages from $GOPATH.
 	update   Update packages from $GOPATH.
 	remove   Remove packages from the vendor folder.
-	status   Lists any missing or modified (according to checksum) packages.
+	status   Lists any packages missing, out-of-date, or modified locally.
 	fetch    (beta) Add new or update existing packages from remote repository.
 	sync     (beta) Pull in packages from remote respository to match vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
@@ -117,7 +117,8 @@ var helpSync = `govendor sync
 `
 
 var helpStatus = `govendor status
-	Shows any packages that are out of date and should be sync'ed.
+	Shows any packages that are missing, out-of-date, or modified locally (according to the
+	checksum) and should be sync'ed.
 `
 
 var helpMigrate = `govendor migrate [auto, godep, internal]

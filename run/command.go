@@ -112,7 +112,7 @@ func Status(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	if len(outOfDate) == 0 {
 		return MsgNone, nil
 	}
-	fmt.Fprintf(w, "The following packages are out-of-date:\n")
+	fmt.Fprintf(w, "The following packages are missing or modified locally:\n")
 	for _, pkg := range outOfDate {
 		fmt.Fprintf(w, "\t%s\n", pkg.Path)
 	}
