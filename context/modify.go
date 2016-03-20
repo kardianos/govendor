@@ -134,7 +134,7 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	//   If not find the disk path from the canonical path, copy locally and rewrite (if needed).
 	pkg, foundPkg := ctx.Package[sourcePath]
 	if !foundPkg {
-		err = ctx.addSingleImport("", canonicalImportPath)
+		err = ctx.addSingleImport("", canonicalImportPath, tree)
 		if err != nil {
 			return err
 		}
@@ -148,6 +148,9 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 					break
 				}
 			}
+		}
+		if !foundPkg && ps.MatchTree {
+			return nil
 		}
 		if !foundPkg {
 			panic(fmt.Sprintf("Package %q should be listed internally but is not.", canonicalImportPath))

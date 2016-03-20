@@ -5,7 +5,6 @@
 package context
 
 import (
-	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -84,14 +83,7 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 			continue
 		}
 
-		hasGo, err := hasGoFileInFolder(dir)
-		if err != nil {
-			return "", "", err
-		}
-		if hasGo {
-			return dir, gopath, nil
-		}
-		return "", "", ErrNotInGOPATH{fmt.Sprintf("Import: %q relative: %q", importPath, relative)}
+		return dir, gopath, nil
 	}
 	return "", "", ErrNotInGOPATH{importPath}
 }

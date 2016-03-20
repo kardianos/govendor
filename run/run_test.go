@@ -6,13 +6,17 @@ package run
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/kardianos/govendor/internal/gt"
 	"github.com/kardianos/govendor/prompt"
 )
+
+var relVendorFile = filepath.Join("vendor", "vendor.json")
 
 type testPrompt struct{}
 
@@ -55,6 +59,16 @@ func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	}
 	if trimLines(output.String()) != trimLines(expectedOutput) {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
+	}
+}
+
+func vendorFile(g *gt.GopathTest, expected string) {
+	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), relVendorFile))
+	if err != nil {
+		g.Fatal(err)
+	}
+	if strings.TrimSpace(string(buf)) != strings.TrimSpace(expected) {
+		g.Fatal("Got: ", string(buf))
 	}
 }
 
@@ -120,7 +134,7 @@ func TestDuplicatePackage(t *testing.T) {
 `)
 }
 
-func TestEllipsis(t *testing.T) {
+func TestEllipsisSimple(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -147,4 +161,78 @@ func TestEllipsis(t *testing.T) {
  v  co2/pk1/pk2
  l  co1/pk1
 `)
+}
+
+func TestEllipsisRootEmpty(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co2/pk1/pk2"),
+		gt.File("b.go", "co2/pk1", "bytes"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1/pk2",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	Vendor(g, "co1 init", "init", "")
+	Vendor(g, "", "list", `
+ e  co2/pk1
+ e  co2/pk1/pk2
+ l  co1/pk1
+`)
+	Vendor(g, "co1 add ext", "add co2/...", "")
+	Vendor(g, "co1 list", "list", `
+ v  co2/pk1
+ v  co2/pk1/pk2
+ l  co1/pk1
+`)
+}
+
+func TestTreeRootEmpty(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co2/pk1/pk2"),
+		gt.File("b.go", "co2/pk1", "bytes"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co2/pk1/pk2",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	Vendor(g, "co1 init", "init", "")
+	Vendor(g, "", "list", `
+ e  co2/pk1
+ e  co2/pk1/pk2
+ l  co1/pk1
+`)
+	Vendor(g, "co1 add ext", "add co2/^", "")
+	vendorFile(g, `
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "LEK/OLgG216wx+DABfa4rfD6j14=",
+			"path": "co2",
+			"revision": "",
+			"tree": true
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+	Vendor(g, "co1 list", "list", `
+ vt co2/pk1
+ vt co2/pk1/pk2
+ v  co2
+ l  co1/pk1
+	`)
 }

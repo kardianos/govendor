@@ -52,6 +52,38 @@ func (ctx *Context) loadPackage() error {
 	if err != nil {
 		return err
 	}
+
+	// Load packages in vendor file but not found in package list.
+	// This will be packages without go code in it.
+	for _, vp := range ctx.VendorFile.Package {
+		hasPkg := false
+		for _, pkg := range ctx.Package {
+			if pkg.Canonical == vp.Path {
+				hasPkg = true
+				break
+			}
+		}
+		if hasPkg {
+			continue
+		}
+		err = ctx.addSingleImport("", vp.Path, vp.Tree)
+		if err != nil {
+			return err
+		}
+		if !vp.Tree {
+			continue
+		}
+		for _, pkg := range ctx.Package {
+			if pkg.Canonical == vp.Path {
+				pkg.inVendor = true
+			}
+			if strings.HasPrefix(pkg.Canonical, vp.Path+"/") {
+				pkg.Status.Presence = PresenceTree
+			}
+		}
+	}
+
+	// Finally, set any unset status.
 	return ctx.determinePackageStatus()
 }
 
@@ -214,7 +246,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-		err = ctx.addSingleImport(pkg.Dir, imp)
+		err = ctx.addSingleImport(pkg.Dir, imp, pkg.Tree)
 		if err != nil {
 			return err
 		}
@@ -300,7 +332,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	return pkg
 }
 
-func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
+func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
 	if _, found := ctx.Package[imp]; found {
 		return nil
 	}
@@ -326,6 +358,14 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string) error {
 		ctx.setPackage(dir, imp, imp, ctx.Goroot, Status{
 			Type:     TypePackage,
 			Location: LocationStandard,
+			Presence: PresenceFound,
+		})
+		return nil
+	}
+	if tree {
+		ctx.setPackage(dir, imp, imp, ctx.RootGopath, Status{
+			Type:     TypePackage,
+			Location: LocationVendor,
 			Presence: PresenceFound,
 		})
 		return nil
@@ -391,6 +431,7 @@ func (ctx *Context) determinePackageStatus() error {
 			}
 			continue
 		}
+
 		if parentTrees := ctx.findPackageParentTree(pkg); len(parentTrees) > 0 {
 			pkg.Status.Presence = PresenceTree
 
@@ -446,7 +487,7 @@ func (ctx *Context) determinePackageStatus() error {
 		if _, found := ctx.Package[vp.Path]; found {
 			continue
 		}
-		err := ctx.addSingleImport("", vp.Path)
+		err := ctx.addSingleImport("", vp.Path, vp.Tree)
 		if err != nil {
 			return err
 		}
