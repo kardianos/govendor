@@ -7,11 +7,9 @@ package context
 import (
 	"io"
 	"path/filepath"
-	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
 	os "github.com/kardianos/govendor/internal/vos"
-	"github.com/kardianos/govendor/vendorfile"
 )
 
 // Import path is in GOROOT or is a special package.
@@ -116,56 +114,6 @@ func findRoot(folder, vendorPath string) (root string, err error) {
 		folder = nextFolder
 	}
 	panic("findRoot loop limit")
-}
-
-// findCanonicalPath determines the correct local import path (from GOPATH)
-// and from any nested internal vendor files. It returns a string relative to
-// the root "internal" folder.
-func (ctx *Context) findCanonicalPath(importPath string) (string, error) {
-	// "crypto/tls" -> "path/to/mypkg/internal/crypto/tls"
-	// "yours/internal/yourpkg" -> "path/to/mypkg/internal/yourpkg" (IIF yourpkg is a vendor package)
-	// "yours/internal/myinternal" -> "path/to/mypkg/internal/yours/internal/myinternal" (IIF myinternal is not a vendor package)
-	// "github.com/kardianos/osext" -> "patn/to/mypkg/internal/github.com/kardianos/osext"
-
-	dir, gopath, err := ctx.findImportDir("", importPath)
-	if err != nil {
-		return "", err
-	}
-	rel := filepath.Join(ctx.VendorFileToFolder, vendorFilename)
-	root, err := findRoot(dir, rel)
-	if err != nil {
-		// No vendor file found. Return origional.
-		if _, is := err.(ErrMissingVendorFile); is {
-			return importPath, nil
-		}
-		return "", err
-	}
-	vf, err := readVendorFile(filepath.Join(root, rel))
-	if err != nil {
-		return "", err
-	}
-	vpkg := vendorFileFindLocal(vf, root, gopath, importPath)
-	if vpkg != nil {
-		return vpkg.Path, nil
-	}
-
-	// Vendor file exists, but the package is not a vendor package.
-	return importPath, nil
-}
-
-func vendorFileFindLocal(vf *vendorfile.File, root, gopath, importPath string) *vendorfile.Package {
-	local := pathos.SlashToImportPath(pathos.FileTrimPrefix(root, gopath)) // "/co1" = /file/src/co1, /file/src
-	local = strings.TrimPrefix(strings.TrimPrefix(importPath, local), "/")
-	for _, pkg := range vf.Package {
-		if pkg.Remove {
-			continue
-		}
-		if pkg.Path == local {
-			return pkg
-		}
-	}
-
-	return nil
 }
 
 func hasGoFileInFolder(folder string) (bool, error) {

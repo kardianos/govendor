@@ -110,39 +110,35 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 			return err
 		}
 	}
-	sourcePath := ps.Path
+	sourcePath := ps.PathOrigin()
 	tree := ps.IncludeTree
 
-	// Determine canonical and local import paths.
-	sourcePath = pathos.SlashToImportPath(sourcePath)
-	canonicalImportPath, err := ctx.findCanonicalPath(sourcePath)
-	if err != nil {
-		if mod != Remove && mod != Fetch {
+	// Determine if we can find the source path from an add or update.
+	switch mod {
+	case Add, Update, AddUpdate:
+		_, _, err = ctx.findImportDir("", sourcePath)
+		if err != nil {
 			return err
 		}
-		if _, is := err.(ErrNotInGOPATH); !is {
-			return err
-		}
-	}
-
-	if canonicalImportPath == "" {
-		canonicalImportPath = sourcePath
 	}
 
 	// Does the local import exist?
 	//   If so either update or just return.
 	//   If not find the disk path from the canonical path, copy locally and rewrite (if needed).
+	var pkg *Package
 	pkg, foundPkg := ctx.Package[sourcePath]
 	if !foundPkg {
-		err = ctx.addSingleImport("", canonicalImportPath, tree)
+		err = ctx.addSingleImport(ctx.RootDir, sourcePath, tree)
 		if err != nil {
 			return err
 		}
-		pkg, foundPkg = ctx.Package[canonicalImportPath]
+		var foundPkg bool
+		pkg, foundPkg = ctx.Package[sourcePath]
 		// Find by canonical path if stored by different local path.
+		var didFind *Package
 		if !foundPkg {
 			for _, p := range ctx.Package {
-				if canonicalImportPath == p.Canonical {
+				if sourcePath == p.Path {
 					foundPkg = true
 					pkg = p
 					break
@@ -153,43 +149,37 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 			return nil
 		}
 		if !foundPkg {
-			panic(fmt.Sprintf("Package %q should be listed internally but is not.", canonicalImportPath))
+			panic(fmt.Sprintf("Package %q should be listed internally but is not. Did find %q.", sourcePath, didFind))
 		}
 	}
-	if len(ps.Origin) > 0 {
-		if ps.Origin == ps.Path {
-			pkg.Origin = ""
-		} else {
-			pkg.Origin = ps.Origin
-		}
-	}
+	pkg.Origin = sourcePath
 
 	// Do not support setting "tree" on Remove.
 	if tree && mod != Remove {
-		pkg.Tree = true
+		pkg.IncludeTree = true
 	}
 
 	// A restriction where packages cannot live inside a tree package.
 	if mod != Remove {
-		if pkg.Tree {
+		if pkg.IncludeTree {
 			children := ctx.findPackageChild(pkg)
 			if len(children) > 0 {
-				return ErrTreeChildren{path: pkg.Canonical, children: children}
+				return ErrTreeChildren{path: pkg.Path, children: children}
 			}
 		}
 		treeParents := ctx.findPackageParentTree(pkg)
 		if len(treeParents) > 0 {
-			return ErrTreeParents{path: pkg.Canonical, parents: treeParents}
+			return ErrTreeParents{path: pkg.Path, parents: treeParents}
 		}
 	}
 
 	// TODO (DT): figure out how to upgrade a non-tree package to a tree package with correct checks.
-	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(canonicalImportPath)))
+	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(sourcePath)))
 	if err != nil {
 		return err
 	}
 	if mod == Add && localExists {
-		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, canonicalImportPath)}
+		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, sourcePath)}
 	}
 	dprintf("stage 2: begin!\n")
 	switch mod {
@@ -264,7 +254,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 	// If it has been vendored the source still needs to be examined.
 	// Examine here and add to the operations list.
 	var ignoreFile []string
-	if cpkg, found := ctx.Package[pkg.Canonical]; found {
+	if cpkg, found := ctx.Package[pkg.Path]; found {
 		ignoreFile = cpkg.ignoreFile
 	} else {
 		var err error
@@ -273,7 +263,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 			return err
 		}
 	}
-	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
+	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Path))
 	// TODO: This might cause other issues or might be hiding the underlying issues. Examine in depth later.
 	if pathos.FileStringEquals(src, dest) {
 		return nil
@@ -281,19 +271,19 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 	dprintf("add op: %q\n", src)
 
 	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Path)
 	if vp == nil {
 		vp = &vendorfile.Package{
 			Add:  true,
-			Path: pkg.Canonical,
+			Path: pkg.Path,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
-	if pkg.Tree {
-		vp.Tree = pkg.Tree
+	if pkg.IncludeTree {
+		vp.Tree = pkg.IncludeTree
 	}
 	vp.Origin = pkg.Origin
-	if pkg.Canonical != pkg.Local && pkg.inVendor {
+	if pkg.Path != pkg.Local && pkg.inVendor {
 		vp.Origin = pkg.Local
 	}
 
@@ -306,7 +296,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 	if system != nil {
 		if system.Dirty {
 			if !uncommitted {
-				return ErrDirtyPackage{pkg.Canonical}
+				return ErrDirtyPackage{pkg.Path}
 			}
 			dirtyAndUncommitted = true
 			if len(vp.ChecksumSHA1) == 0 {
@@ -337,9 +327,9 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 	ctx.makeSet(pkg, mvSet)
 
 	for r := range mvSet {
-		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Canonical)
+		to := path.Join(ctx.RootImportPath, ctx.VendorFolder, r.Path)
 		dprintf("RULE: %s -> %s\n", r.Local, to)
-		ctx.RewriteRule[r.Canonical] = to
+		ctx.RewriteRule[r.Path] = to
 		ctx.RewriteRule[r.Local] = to
 	}
 
@@ -348,7 +338,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 
 func (ctx *Context) modifyRemove(pkg *Package) error {
 	// Update vendor file with correct Local field.
-	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Path)
 	if vp != nil {
 		vp.Remove = true
 	}
@@ -377,8 +367,8 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 	ctx.makeSet(pkg, mvSet)
 
 	for r := range mvSet {
-		dprintf("RULE: %s -> %s\n", r.Local, r.Canonical)
-		ctx.RewriteRule[r.Local] = r.Canonical
+		dprintf("RULE: %s -> %s\n", r.Local, r.Path)
+		ctx.RewriteRule[r.Local] = r.Path
 	}
 
 	return nil
@@ -386,19 +376,19 @@ func (ctx *Context) modifyRemove(pkg *Package) error {
 
 // modify function to fetch given package.
 func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, version string) error {
-	vp := ctx.VendorFilePackagePath(pkg.Canonical)
+	vp := ctx.VendorFilePackagePath(pkg.Path)
 	if vp == nil {
 		vp = &vendorfile.Package{
 			Add:  true,
-			Path: pkg.Canonical,
+			Path: pkg.Path,
 		}
 		ctx.VendorFile.Package = append(ctx.VendorFile.Package, vp)
 	}
 	if hasVersion {
 		vp.Version = version
 	}
-	if pkg.Tree {
-		vp.Tree = pkg.Tree
+	if pkg.IncludeTree {
+		vp.Tree = pkg.IncludeTree
 	}
 	vp.Origin = pkg.Origin
 	origin := vp.Origin
@@ -406,12 +396,12 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, vers
 		origin = vp.Path
 	}
 	ps := &pkgspec.Pkg{
-		Path:       pkg.Canonical,
+		Path:       pkg.Path,
 		Origin:     origin,
 		HasVersion: hasVersion,
 		Version:    version,
 	}
-	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Canonical))
+	dest := filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(pkg.Path))
 	ctx.Operation = append(ctx.Operation, &Operation{
 		Type: OpFetch,
 		Pkg:  pkg,
@@ -430,7 +420,7 @@ func (ctx *Context) Check() []*Conflict {
 		if op.State != OpReady {
 			continue
 		}
-		findDups[op.Pkg.Canonical] = append(findDups[op.Pkg.Canonical], op)
+		findDups[op.Pkg.Path] = append(findDups[op.Pkg.Path], op)
 	}
 
 	var ret []*Conflict
@@ -591,7 +581,7 @@ func (ctx *Context) Alter() error {
 				}
 			}
 			if err != nil {
-				return fmt.Errorf("Failed to fetch package %q: %v", op.Pkg.Canonical, err)
+				return fmt.Errorf("Failed to fetch package %q: %v", op.Pkg.Path, err)
 			}
 		}
 		if len(nextOps) == 0 {
@@ -616,7 +606,7 @@ func (ctx *Context) Alter() error {
 			panic("unknown operation type")
 		case OpRemove:
 			ctx.dirty = true
-			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.Tree)
+			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.IncludeTree)
 			op.State = OpDone
 		case OpCopy:
 			ctx.copyOperation(op, nil)
@@ -638,12 +628,12 @@ func (ctx *Context) copyOperation(op *Operation, beforeCopy func(deps []string) 
 	h := sha1.New()
 	var checksum []byte
 
-	root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Canonical)
+	root, _ := pathos.TrimCommonSuffix(op.Src, pkg.Path)
 
-	err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Canonical, op.IgnoreFile, pkg.Tree, h, beforeCopy)
+	err = ctx.CopyPackage(op.Dest, op.Src, root, pkg.Path, op.IgnoreFile, pkg.IncludeTree, h, beforeCopy)
 	if err == nil && !op.Uncommitted {
 		checksum = h.Sum(nil)
-		vpkg := ctx.VendorFilePackagePath(pkg.Canonical)
+		vpkg := ctx.VendorFilePackagePath(pkg.Path)
 		if vpkg != nil {
 			vpkg.ChecksumSHA1 = base64.StdEncoding.EncodeToString(checksum)
 		}

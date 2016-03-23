@@ -216,14 +216,14 @@ func (ctx *Context) Status() ([]StatusItem, error) {
 	for _, pkg := range ctx.Package {
 		version := ""
 		versionExact := ""
-		if vp := ctx.VendorFilePackagePath(pkg.Canonical); vp != nil {
+		if vp := ctx.VendorFilePackagePath(pkg.Path); vp != nil {
 			version = vp.Version
 			versionExact = vp.VersionExact
 		}
 		// TODO (DT): assign Pkg directly from pkg.
 		li := StatusItem{
 			Status:       pkg.Status,
-			Pkg:          &pkgspec.Pkg{Path: pkg.Canonical, IncludeTree: pkg.Tree, Origin: pkg.Origin, Version: version},
+			Pkg:          &pkgspec.Pkg{Path: pkg.Path, IncludeTree: pkg.IncludeTree, Origin: pkg.Origin, Version: version},
 			Local:        pkg.Local,
 			VersionExact: versionExact,
 			ImportedBy:   make([]string, 0, len(pkg.referenced)),

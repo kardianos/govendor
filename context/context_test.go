@@ -1079,3 +1079,64 @@ func TestLicenseNested(t *testing.T) {
 /vendor/vendor.json
 `)
 }
+
+func TestOriginDir(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co3/vendor/co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport(pkg("co2/pk1::co3/vendor/co2/pk1"), Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	c = ctx(g)
+	for _, pkg := range c.Package {
+		if pkg.Path == "co2/pk1" {
+			if pkg.Origin != "co3/vendor/co2/pk1" {
+				t.Errorf("wrong origin, got %q", pkg.Origin)
+			}
+			if !strings.HasSuffix(strings.Replace(pkg.OriginDir, "\\", "/", -1), "src/co3/vendor/co2/pk1") {
+				t.Errorf("wrong originDir, got %q", pkg.OriginDir)
+			}
+		}
+	}
+}
+
+func TestRelativePath(t *testing.T) {
+	t.Skip("unsure if correct")
+	g := gt.New(t)
+	defer g.Clean()
+
+	// Two different versions should be listed
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1", "co3/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.Setup("co3/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co3/vendor/co2/pk1",
+		gt.File("a.go", "bytes"),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	list(g, c, "co1 list", `
+ e  co2/pk1 < ["co1/pk1"]
+ e  co3/vendor/co2/pk1 < ["co3/pk1"]
+ e  co3/pk1 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  strings < ["co2/pk1"]
+ s  bytes < ["co3/vendor/co2/pk1"]
+`)
+}

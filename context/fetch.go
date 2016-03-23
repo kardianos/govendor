@@ -44,9 +44,9 @@ func newFetcher(ctx *Context) (*fetcher, error) {
 func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// vcs.ShowCmd = true
 	var nextOps []*Operation
-	vpkg := f.Ctx.VendorFilePackagePath(op.Pkg.Canonical)
+	vpkg := f.Ctx.VendorFilePackagePath(op.Pkg.Path)
 	if vpkg == nil {
-		return nextOps, fmt.Errorf("Could not find vendor file package for %q. Internal error.", op.Pkg.Canonical)
+		return nextOps, fmt.Errorf("Could not find vendor file package for %q. Internal error.", op.Pkg.Path)
 	}
 
 	op.Type = OpCopy
@@ -191,7 +191,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 			hasDep := false
 			for _, test := range f.Ctx.Package {
-				if test.Canonical == dep {
+				if test.Path == dep {
 					hasDep = true
 					break
 				}
@@ -211,7 +211,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			}
 
 			// Look for tree deps.
-			if op.Pkg.Tree && strings.HasPrefix(dep, op.Pkg.Canonical+"/") {
+			if op.Pkg.IncludeTree && strings.HasPrefix(dep, op.Pkg.Path+"/") {
 				continue
 			}
 			version := ""
@@ -257,7 +257,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 			nextOps = append(nextOps, &Operation{
 				Type: OpFetch,
-				Pkg:  &Package{Canonical: dep},
+				Pkg:  &Package{Path: dep},
 				Src:  (&pkgspec.Pkg{Path: dep, Version: version, HasVersion: hasVersion}).String(),
 				Dest: dest,
 			})

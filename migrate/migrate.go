@@ -177,14 +177,14 @@ func (sysGodep) Migrate(root string) error {
 			if pkg.Status.Location != context.LocationVendor {
 				continue
 			}
-			if strings.HasPrefix(pkg.Canonical, d.ImportPath) == false {
+			if strings.HasPrefix(pkg.Path, d.ImportPath) == false {
 				continue
 			}
-			vf := ctx.VendorFilePackagePath(pkg.Canonical)
+			vf := ctx.VendorFilePackagePath(pkg.Path)
 			if vf == nil {
 				ctx.VendorFile.Package = append(ctx.VendorFile.Package, &vendorfile.Package{
 					Add:      true,
-					Path:     pkg.Canonical,
+					Path:     pkg.Path,
 					Comment:  d.Comment,
 					Revision: d.Rev,
 				})

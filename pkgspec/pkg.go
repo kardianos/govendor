@@ -37,3 +37,10 @@ func (pkg *Pkg) String() string {
 	}
 	return buf.String()
 }
+
+func (pkg *Pkg) PathOrigin() string {
+	if len(pkg.Origin) > 0 {
+		return pkg.Origin
+	}
+	return pkg.Path
+}

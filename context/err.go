@@ -63,7 +63,7 @@ func (err ErrOldVersion) Error() string {
 
 type ErrTreeChildren struct {
 	path     string
-	children []string
+	children []*Package
 }
 
 func (err ErrTreeChildren) Error() string {

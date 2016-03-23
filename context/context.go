@@ -73,15 +73,17 @@ type Context struct {
 type Package struct {
 	OriginDir string // Origin directory
 	Dir       string // Physical directory path of the package.
-	Origin    string // Origin path for remote
-	Canonical string
-	Local     string
-	Gopath    string // Inlcudes trailing "src".
-	Files     []*File
-	Status    Status
-	Tree      bool // Package is a tree of folder.
-	inVendor  bool // Different then Status.Location, this is in *any* vendor tree.
-	inTree    bool
+
+	Status      Status // Status and location of the package.
+	Origin      string // Origin path for remote
+	Path        string // Import path for a package.
+	Local       string // Current location of a package relative to $GOPATH/src.
+	IncludeTree bool   // Package is a tree of folder.
+	Gopath      string // Inlcudes trailing "src".
+	Files       []*File
+
+	inVendor bool // Different then Status.Location, this is in *any* vendor tree.
+	inTree   bool
 
 	ignoreFile []string
 
@@ -105,6 +107,10 @@ const (
 	RootWD
 	RootVendorOrWD
 )
+
+func (pkg *Package) String() string {
+	return pkg.Local
+}
 
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
@@ -255,12 +261,6 @@ func (ctx *Context) Write(s []byte) (int, error) {
 	return len(s), nil
 }
 
-// VendorFilePackageLocal finds a given vendor file package give the local import path.
-func (ctx *Context) VendorFilePackageLocal(local string) *vendorfile.Package {
-	root, _ := filepath.Split(ctx.VendorFilePath)
-	return vendorFileFindLocal(ctx.VendorFile, root, ctx.RootGopath, local)
-}
-
 // VendorFilePackageCanonical finds a given vendor file package give the import path.
 func (ctx *Context) VendorFilePackagePath(path string) *vendorfile.Package {
 	for _, pkg := range ctx.VendorFile.Package {
@@ -274,11 +274,20 @@ func (ctx *Context) VendorFilePackagePath(path string) *vendorfile.Package {
 	return nil
 }
 
+func (ctx *Context) packagePath(path string) []*Package {
+	var list []*Package
+	for _, pkg := range ctx.Package {
+		if pkg.Path == path {
+			list = append(list, pkg)
+		}
+	}
+	return list
+}
+
 // findPackageChild finds any package under the current package.
 // Used for finding tree overlaps.
-func (ctx *Context) findPackageChild(ck *Package) []string {
-	canonical := ck.Canonical
-	out := make([]string, 0, 3)
+func (ctx *Context) findPackageChild(ck *Package) []*Package {
+	out := make([]*Package, 0, 3)
 	for _, pkg := range ctx.Package {
 		if pkg == ck {
 			continue
@@ -289,8 +298,8 @@ func (ctx *Context) findPackageChild(ck *Package) []string {
 		if pkg.Status.Presence == PresenceTree {
 			continue
 		}
-		if strings.HasPrefix(pkg.Canonical, canonical) {
-			out = append(out, pkg.Canonical)
+		if strings.HasPrefix(pkg.Path, ck.Path) {
+			out = append(out, pkg)
 		}
 	}
 	return out
@@ -299,18 +308,17 @@ func (ctx *Context) findPackageChild(ck *Package) []string {
 // findPackageParentTree finds any parent tree package that would
 // include the given canonical path.
 func (ctx *Context) findPackageParentTree(ck *Package) []string {
-	canonical := ck.Canonical
 	out := make([]string, 0, 1)
 	for _, pkg := range ctx.Package {
 		if pkg.inVendor == false {
 			continue
 		}
-		if pkg.Tree == false || pkg == ck {
+		if pkg.IncludeTree == false || pkg == ck {
 			continue
 		}
-		// pkg.Canonical = github.com/usera/pkg, tree = true
-		// canonical = github.com/usera/pkg/dance
-		if strings.HasPrefix(canonical, pkg.Canonical) {
+		// pkg.Path = github.com/usera/pkg, tree = true
+		// ck.Path = github.com/usera/pkg/dance
+		if strings.HasPrefix(ck.Path, pkg.Path) {
 			out = append(out, pkg.Local)
 		}
 	}
@@ -319,21 +327,21 @@ func (ctx *Context) findPackageParentTree(ck *Package) []string {
 
 // updatePackageReferences populates the referenced field in each Package.
 func (ctx *Context) updatePackageReferences() {
-	canonicalUnderDirLookup := make(map[string]map[string]*Package)
-	findCanonicalUnderDir := func(dir, canonical string) *Package {
-		if importMap, found := canonicalUnderDirLookup[dir]; found {
-			if pkg, found2 := importMap[canonical]; found2 {
+	pathUnderDirLookup := make(map[string]map[string]*Package)
+	findCanonicalUnderDir := func(dir, path string) *Package {
+		if importMap, found := pathUnderDirLookup[dir]; found {
+			if pkg, found2 := importMap[path]; found2 {
 				return pkg
 			}
 		} else {
-			canonicalUnderDirLookup[dir] = make(map[string]*Package)
+			pathUnderDirLookup[dir] = make(map[string]*Package)
 		}
 		for _, pkg := range ctx.Package {
 			if !pkg.inVendor {
 				continue
 			}
 
-			removeFromEnd := len(pkg.Canonical) + len(ctx.VendorDiscoverFolder) + 2
+			removeFromEnd := len(pkg.Path) + len(ctx.VendorDiscoverFolder) + 2
 			nextLen := len(pkg.Dir) - removeFromEnd
 			if nextLen < 0 {
 				continue
@@ -342,13 +350,13 @@ func (ctx *Context) updatePackageReferences() {
 			if !pathos.FileHasPrefix(dir, checkDir) {
 				continue
 			}
-			if pkg.Canonical != canonical {
+			if pkg.Path != path {
 				continue
 			}
-			canonicalUnderDirLookup[dir][canonical] = pkg
+			pathUnderDirLookup[dir][path] = pkg
 			return pkg
 		}
-		canonicalUnderDirLookup[dir][canonical] = nil
+		pathUnderDirLookup[dir][path] = nil
 		return nil
 	}
 	for _, pkg := range ctx.Package {
@@ -375,7 +383,7 @@ func (ctx *Context) updatePackageReferences() {
 			if parentPkg := ctx.Package[parentTrees[0]]; parentPkg != nil {
 				for opath, opkg := range pkg.referenced {
 					// Do not transfer internal references.
-					if strings.HasPrefix(opkg.Canonical, parentPkg.Canonical+"/") {
+					if strings.HasPrefix(opkg.Path, parentPkg.Path+"/") {
 						continue
 					}
 					parentPkg.referenced[opath] = opkg

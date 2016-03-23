@@ -57,8 +57,9 @@ func (ctx *Context) loadPackage() error {
 	// This will be packages without go code in it.
 	for _, vp := range ctx.VendorFile.Package {
 		hasPkg := false
+		vpath := vp.Path
 		for _, pkg := range ctx.Package {
-			if pkg.Canonical == vp.Path {
+			if pkg.Path == vpath {
 				hasPkg = true
 				break
 			}
@@ -66,7 +67,7 @@ func (ctx *Context) loadPackage() error {
 		if hasPkg {
 			continue
 		}
-		err = ctx.addSingleImport("", vp.Path, vp.Tree)
+		err = ctx.addSingleImport("", vp.PathOrigin(), vp.Tree)
 		if err != nil {
 			return err
 		}
@@ -74,10 +75,10 @@ func (ctx *Context) loadPackage() error {
 			continue
 		}
 		for _, pkg := range ctx.Package {
-			if pkg.Canonical == vp.Path {
+			if pkg.Path == vpath {
 				pkg.inVendor = true
 			}
-			if strings.HasPrefix(pkg.Canonical, vp.Path+"/") {
+			if strings.HasPrefix(pkg.Path, vp.Path+"/") {
 				pkg.Status.Presence = PresenceTree
 			}
 		}
@@ -246,7 +247,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-		err = ctx.addSingleImport(pkg.Dir, imp, pkg.Tree)
+		err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
 		if err != nil {
 			return err
 		}
@@ -292,6 +293,8 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		at = strings.LastIndex(canonical, vStart) + len(vStart)
 	}
 
+	// TODO FIXME (DT): originDir isn't getting set correctly
+	// when the origin is different then the path I think.
 	originDir := dir
 	inVendor := false
 	tree := false
@@ -318,15 +321,15 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		status.Location = LocationLocal
 	}
 	pkg := &Package{
-		OriginDir: originDir,
-		Dir:       dir,
-		Origin:    origin,
-		Canonical: canonical,
-		Local:     local,
-		Gopath:    gopath,
-		Status:    status,
-		inVendor:  inVendor,
-		Tree:      tree,
+		OriginDir:   originDir,
+		Dir:         dir,
+		Origin:      origin,
+		Path:        canonical,
+		Local:       local,
+		Gopath:      gopath,
+		Status:      status,
+		inVendor:    inVendor,
+		IncludeTree: tree,
 	}
 	ctx.Package[local] = pkg
 	return pkg
@@ -338,7 +341,7 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
 	}
 	// Also need to check for vendor paths that won't use the local path in import path.
 	for _, pkg := range ctx.Package {
-		if pkg.Canonical == imp && pkg.inVendor && pathos.FileHasPrefix(pkg.Dir, pkgInDir) {
+		if pkg.Path == imp && pkg.inVendor && pathos.FileHasPrefix(pkg.Dir, pkgInDir) {
 			return nil
 		}
 	}
@@ -405,7 +408,7 @@ func (ctx *Context) determinePackageStatus() error {
 		if pkg.Status.Location != LocationUnknown {
 			continue
 		}
-		if strings.HasPrefix(pkg.Canonical, ctx.RootImportPath) {
+		if strings.HasPrefix(pkg.Path, ctx.RootImportPath) {
 			pkg.Status.Location = LocationLocal
 			continue
 		}
@@ -417,11 +420,11 @@ func (ctx *Context) determinePackageStatus() error {
 	// Mark sub-tree packages as "tree", but leave any existing bit (unused) on the
 	// parent most tree package.
 	for path, pkg := range ctx.Package {
-		if vp := ctx.VendorFilePackagePath(pkg.Canonical); vp != nil && vp.Tree {
+		if vp := ctx.VendorFilePackagePath(pkg.Path); vp != nil && vp.Tree {
 			// Remove internal tree references.
 			del := make([]string, 0, 6)
 			for opath, opkg := range pkg.referenced {
-				if strings.HasPrefix(opkg.Canonical, pkg.Canonical+"/") {
+				if strings.HasPrefix(opkg.Path, pkg.Path+"/") {
 					del = append(del, opath)
 				}
 			}
@@ -439,7 +442,7 @@ func (ctx *Context) determinePackageStatus() error {
 			if parentPkg := ctx.Package[parentTrees[0]]; parentPkg != nil {
 				for opath, opkg := range pkg.referenced {
 					// Do not transfer internal references.
-					if strings.HasPrefix(opkg.Canonical, parentPkg.Canonical+"/") {
+					if strings.HasPrefix(opkg.Path, parentPkg.Path+"/") {
 						continue
 					}
 					parentPkg.referenced[opath] = opkg

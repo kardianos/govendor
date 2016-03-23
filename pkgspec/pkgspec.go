@@ -17,13 +17,15 @@ const (
 )
 
 const (
-	originMatch  = "::"
-	versionMatch = "@"
+	originMatch   = "::"
+	versionMatch  = "@"
+	vendorSegment = "/vendor/"
 )
 
 var (
 	ErrEmptyPath   = errors.New("Empty package path")
 	ErrEmptyOrigin = errors.New("Empty origin specified")
+	ErrInvalidPath = errors.New("Path contains a vendor folder and a origin")
 )
 
 // Parse a package spec according to:
@@ -68,6 +70,17 @@ func Parse(currentGoPath, s string) (*Pkg, error) {
 			return nil, ErrEmptyOrigin
 		}
 	}
+	// Look for vendor folder in package path.
+	// This is allowed in origin, but not path.
+	vendorIndex := strings.LastIndex(pkg.Path, vendorSegment)
+	if vendorIndex >= 0 {
+		if len(pkg.Origin) > 0 {
+			return nil, ErrInvalidPath
+		}
+		pkg.Origin = pkg.Path
+		pkg.Path = pkg.Path[vendorIndex+len(vendorSegment):]
+	}
+
 	if strings.HasSuffix(pkg.Path, TreeMatchSuffix) {
 		pkg.MatchTree = true
 		pkg.Path = strings.TrimSuffix(pkg.Path, TreeMatchSuffix)

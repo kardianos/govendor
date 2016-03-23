@@ -55,6 +55,13 @@ type Package struct {
 	Comment      string
 }
 
+func (pkg *Package) PathOrigin() string {
+	if len(pkg.Origin) > 0 {
+		return pkg.Origin
+	}
+	return pkg.Path
+}
+
 // The following stringer functions are useful for debugging.
 
 type packageList []*Package

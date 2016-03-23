@@ -27,6 +27,8 @@ func TestParse(t *testing.T) {
 		{Spec: "./def@v1.2.3", Str: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, WD: "abc/"},
 		{Spec: "abc\\def\\", Str: "abc/def", Pkg: &Pkg{Path: "abc/def"}},
 		{Spec: "github.com/aws/aws-sdk-go/aws/client::github.com/aws/aws-sdk-go/aws/client"},
+		{Spec: "a/b/vendor/z/y/x", Str: "z/y/x::a/b/vendor/z/y/x"},
+		{Spec: "a/b/vendor/z/y/x::a/b/vendor/z/y/x", Err: ErrInvalidPath},
 	}
 
 	for _, item := range list {

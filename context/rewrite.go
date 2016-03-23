@@ -198,7 +198,7 @@ func (ctx *Context) makeSet(pkg *Package, mvSet map[*Package]struct{}) {
 					ctx.makeSet(next, mvSet)
 				}
 			case next == nil:
-			case next.Canonical == next.Local:
+			case next.Path == next.Local:
 			case next.Status.Location != LocationExternal:
 			}
 		}
