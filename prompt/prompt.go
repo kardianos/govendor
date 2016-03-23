@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// prompt for user feedback.
+// Package prompt prompts user for feedback.
 package prompt
 
 import (

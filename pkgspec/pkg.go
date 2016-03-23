@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package pkgspec defines a schema that contains the path, origin, version
+// and other properties.
 package pkgspec
 
 import "bytes"

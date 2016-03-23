@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// vendorfile is the meta-data file for vendoring.
+// Package vendorfile is the meta-data file for vendoring.
 // Round-trips unknown fields.
 // It will also allow moving the vendor file to new locations.
 package vendorfile
