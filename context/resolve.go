@@ -283,6 +283,9 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 }
 
 func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Status) *Package {
+	if pkg, exists := ctx.Package[local]; exists {
+		return pkg
+	}
 	at := 0
 	vMiddle := "/" + pathos.SlashToImportPath(ctx.VendorDiscoverFolder) + "/"
 	vStart := pathos.SlashToImportPath(ctx.VendorDiscoverFolder) + "/"
@@ -336,9 +339,10 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 }
 
 func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
-	if _, found := ctx.Package[imp]; found {
-		return nil
-	}
+	// Do not check for existing package right away. If a external package
+	// has been added and we are looking in a vendor package, this won't work.
+	// We need to search any relative vendor folders first.
+
 	// Also need to check for vendor paths that won't use the local path in import path.
 	for _, pkg := range ctx.Package {
 		if pkg.Path == imp && pkg.inVendor && pathos.FileHasPrefix(pkg.Dir, pkgInDir) {

@@ -1111,7 +1111,6 @@ func TestOriginDir(t *testing.T) {
 }
 
 func TestRelativePath(t *testing.T) {
-	t.Skip("unsure if correct")
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -1133,10 +1132,10 @@ func TestRelativePath(t *testing.T) {
 
 	list(g, c, "co1 list", `
  e  co2/pk1 < ["co1/pk1"]
- e  co3/vendor/co2/pk1 < ["co3/pk1"]
  e  co3/pk1 < ["co1/pk1"]
+ e  co3/vendor/co2/pk1 [co2/pk1] < ["co3/pk1"]
  l  co1/pk1 < []
- s  strings < ["co2/pk1"]
  s  bytes < ["co3/vendor/co2/pk1"]
+ s  strings < ["co2/pk1"]
 `)
 }
