@@ -88,7 +88,7 @@ Status can be logically composed:
 
  * `+local,program` (local AND program) local packages that are also programs
  * `+local +vendor` (local OR vendor) local packages or vendor packages
- * `+vendor,program +std` ((local AND program) OR std) vendor packages that are also programs
+ * `+vendor,program +std` ((vendor AND program) OR std) vendor packages that are also programs
 	or std library packages
  * `+vendor,^program` (vendor AND NOT program) vendor package that are not "main" packages.
 
