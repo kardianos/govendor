@@ -94,23 +94,6 @@ and sync work with remote repositories.
 
 If you don't want to check in dependencies, add "vendor/*/" in the .gitignore.
 
-### Fix Implementation
-
-Recent experiments with the the fetch command has seen how I'm not properly pipeing
-information through. I need to work through the desired behavior, then determine
-the detla from current behavior.
-
-```
-# Copy the restic package tree into the vendor folder and all deps.
-govendor fetch github.com/restic/restic/^@v0
-
-# Copy all packages from redis that are referenced, all at the same v3 revision.
-govendor fetch github.com/go-redis/redis/...@v3
-
-# This should also use the same revision for all redis libraries it pulls down.
-govendor fetch github.com/go-redis/redis@v3
-```
-
 ## In-progress, uncommitted flag
 
 Might support a new flag in add/update called "-uncommitted" which bypasses
@@ -118,11 +101,3 @@ checks for commited check. However it also doesn't update the revision field
 and it doesn't update the checksum field.
 
 When `govendor status` is ran, it will show that is package is out-of-date.
-
-## A way to add/remove all at once.
-
-Thinking of issue #75, could add a `govendor addremove` command
-that fetches missing packages, adds external packages, and removes unused
-packages. I'm not sure if it is worth it or not though.
-
-I don't think this is worth it.

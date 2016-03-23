@@ -8,7 +8,6 @@ Read the [whitepaper](doc/whitepaper.md)
 Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
 
 [![Build Status](https://travis-ci.org/kardianos/govendor.svg?branch=master)](https://travis-ci.org/kardianos/govendor)
-
 [![GoDoc](https://godoc.org/github.com/kardianos/govendor?status.svg)](https://godoc.org/github.com/kardianos/govendor)
 
  * Copy existing dependencies from $GOPATH with `govendor add/update`.

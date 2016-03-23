@@ -72,5 +72,5 @@
  - [ ] Add "-imports" to "list" sub-command. Shows the direct dependencies of the selected packages (not the selected packages).
 		`govendor list +local -imports +vendor` outputs all the vendor packages directly imported into local packages.
  - [x] Add RootPath (rootPath) to vendor.json file.
- - [ ] Setup binary releases on tags.
- - [ ] Fix getting the wrong revision on vendor from vendor (sync bug) https://gist.github.com/pkieltyka/502d27d02d7dc84c6202 .
+ - [x] Setup binary releases on tags.
+ - [x] Fix getting the wrong revision on vendor from vendor (sync bug) https://gist.github.com/pkieltyka/502d27d02d7dc84c6202 .
