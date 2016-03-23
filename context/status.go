@@ -181,7 +181,7 @@ type StatusItem struct {
 	Pkg          *pkgspec.Pkg
 	VersionExact string
 	Local        string
-	ImportedBy   []string
+	ImportedBy   []*Package
 }
 
 func (li StatusItem) String() string {
@@ -220,18 +220,18 @@ func (ctx *Context) Status() ([]StatusItem, error) {
 			version = vp.Version
 			versionExact = vp.VersionExact
 		}
-		// TODO (DT): assign Pkg directly from pkg.
+
 		li := StatusItem{
 			Status:       pkg.Status,
 			Pkg:          &pkgspec.Pkg{Path: pkg.Path, IncludeTree: pkg.IncludeTree, Origin: pkg.Origin, Version: version},
 			Local:        pkg.Local,
 			VersionExact: versionExact,
-			ImportedBy:   make([]string, 0, len(pkg.referenced)),
+			ImportedBy:   make([]*Package, 0, len(pkg.referenced)),
 		}
 		for _, ref := range pkg.referenced {
-			li.ImportedBy = append(li.ImportedBy, ref.Local)
+			li.ImportedBy = append(li.ImportedBy, ref)
 		}
-		sort.Strings(li.ImportedBy)
+		sort.Sort(packageList(li.ImportedBy))
 		list = append(list, li)
 	}
 	// Sort li by Status, then Path.

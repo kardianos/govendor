@@ -80,9 +80,9 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 		if *verbose {
 			for i, imp := range item.ImportedBy {
 				if i != len(item.ImportedBy)-1 {
-					fmt.Fprintf(tw, "    ├── %s\n", imp)
+					fmt.Fprintf(tw, "    ├── %s %s\n", imp.Status, imp)
 				} else {
-					fmt.Fprintf(tw, "    └── %s\n", imp)
+					fmt.Fprintf(tw, "    └── %s %s\n", imp.Status, imp)
 				}
 			}
 		}

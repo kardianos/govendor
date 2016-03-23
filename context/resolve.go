@@ -52,38 +52,6 @@ func (ctx *Context) loadPackage() error {
 	if err != nil {
 		return err
 	}
-
-	// Load packages in vendor file but not found in package list.
-	// This will be packages without go code in it.
-	for _, vp := range ctx.VendorFile.Package {
-		hasPkg := false
-		vpath := vp.Path
-		for _, pkg := range ctx.Package {
-			if pkg.Path == vpath {
-				hasPkg = true
-				break
-			}
-		}
-		if hasPkg {
-			continue
-		}
-		err = ctx.addSingleImport("", vp.PathOrigin(), vp.Tree)
-		if err != nil {
-			return err
-		}
-		if !vp.Tree {
-			continue
-		}
-		for _, pkg := range ctx.Package {
-			if pkg.Path == vpath {
-				pkg.inVendor = true
-			}
-			if strings.HasPrefix(pkg.Path, vp.Path+"/") {
-				pkg.Status.Presence = PresenceTree
-			}
-		}
-	}
-
 	// Finally, set any unset status.
 	return ctx.determinePackageStatus()
 }
@@ -407,6 +375,25 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
 }
 
 func (ctx *Context) determinePackageStatus() error {
+	// Add any packages in the vendor file but not in GOPATH or vendor dir.
+	for _, vp := range ctx.VendorFile.Package {
+		if vp.Remove {
+			continue
+		}
+		if _, found := ctx.Package[vp.Path]; found {
+			continue
+		}
+		err := ctx.addSingleImport(ctx.RootDir, vp.Path, vp.Tree)
+		if err != nil {
+			return err
+		}
+		if pkg, found := ctx.Package[vp.Path]; found {
+			pkg.Origin = vp.Origin
+			pkg.inTree = vp.Tree
+			pkg.inVendor = true
+		}
+	}
+
 	// Determine the status of remaining imports.
 	for _, pkg := range ctx.Package {
 		if pkg.Status.Location != LocationUnknown {
@@ -462,6 +449,8 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 	}
 
+	ctx.updatePackageReferences()
+
 	// Determine any un-used internal vendor imports.
 	for i := 0; i <= looplimit; i++ {
 		altered := false
@@ -486,22 +475,31 @@ func (ctx *Context) determinePackageStatus() error {
 		}
 	}
 
-	// Add any packages in the vendor file but not in GOPATH or vendor dir.
-	for _, vp := range ctx.VendorFile.Package {
-		if vp.Remove {
+	ctx.updatePackageReferences()
+
+	// Unused external references may have worked their way in through
+	// vendor file. Remove any external leafs.
+	for i := 0; i <= looplimit; i++ {
+		altered := false
+		for path, pkg := range ctx.Package {
+			if len(pkg.referenced) > 0 || pkg.Status.Location != LocationExternal {
+				continue
+			}
+			altered = true
+			delete(ctx.Package, path)
+			pkg.Status.Presence = PresenceUnsued
+			for _, other := range ctx.Package {
+				delete(other.referenced, path)
+			}
 			continue
 		}
-		if _, found := ctx.Package[vp.Path]; found {
-			continue
+		if !altered {
+			break
 		}
-		err := ctx.addSingleImport("", vp.Path, vp.Tree)
-		if err != nil {
-			return err
-		}
-		if pkg, found := ctx.Package[vp.Path]; found {
-			pkg.Origin = vp.Origin
-			pkg.inTree = vp.Tree
+		if i == looplimit {
+			panic("determinePackageStatus loop limit")
 		}
 	}
+
 	return nil
 }

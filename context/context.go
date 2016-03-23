@@ -112,6 +112,17 @@ func (pkg *Package) String() string {
 	return pkg.Local
 }
 
+type packageList []*Package
+
+func (li packageList) Len() int      { return len(li) }
+func (li packageList) Swap(i, j int) { li[i], li[j] = li[j], li[i] }
+func (li packageList) Less(i, j int) bool {
+	if li[i].Path != li[j].Path {
+		return li[i].Path < li[j].Path
+	}
+	return li[i].Local < li[j].Local
+}
+
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
 func NewContextWD(rt RootType) (*Context, error) {

@@ -142,14 +142,25 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	}
 
 	// Add packages from status.
+statusLoop:
 	for _, item := range list {
 		if f.HasStatus(item) {
 			if added[item.Pkg.Path] {
 				continue
 			}
-			if mod == context.Add && ctx.VendorFilePackagePath(item.Pkg.Path) != nil {
-				continue
+			// Do not attempt to add any existing status items that are
+			// already present in vendor folder.
+			if mod == context.Add {
+				if ctx.VendorFilePackagePath(item.Pkg.Path) != nil {
+					continue
+				}
+				for _, pkg := range ctx.Package {
+					if pkg.Status.Location == context.LocationVendor && item.Pkg.Path == pkg.Path {
+						continue statusLoop
+					}
+				}
 			}
+
 			if *tree {
 				item.Pkg.IncludeTree = true
 			}

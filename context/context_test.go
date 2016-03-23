@@ -461,7 +461,7 @@ func TestUpdate(t *testing.T) {
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  encoding/csv < ["co1/vendor/co2/pk1/pk2"]
- s  strings < ["co1/vendor/co2/pk1/pk2" "co2/pk1"]
+ s  strings < ["co2/pk1" "co1/vendor/co2/pk1/pk2"]
 `)
 }
 
