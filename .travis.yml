@@ -1,4 +1,25 @@
 language: go
-go: tip
-install:
-  
+go: 1.6
+install: 
+before_deploy:
+- GOOS=linux GOARCH=amd64 go build -o govendor_linux_amd64
+- GOOS=linux GOARCH=386 go build -o govendor_linux_386
+- GOOS=linux GOARCH=arm go build -o govendor_linux_arm
+- GOOS=darwin GOARCH=amd64 go build -o govendor_darwin_amd64
+- GOOS=windows GOARCH=amd64 go build -o govendor_windows_amd64.exe
+- GOOS=windows GOARCH=386 go build -o govendor_windows_386.exe
+deploy:
+  skip_cleanup: true
+  provider: releases
+  api_key:
+    secure: pRyZ9BkbDmgJUAd+pxPcuhels+3wuYgPCwKrH0C5Urrn8goO2ABaVDD4dbz96I0ecLcE2qDmFl/GpPtlhhLwngWBnpUdWS/M6imoubneZ+NneRVfnGSNUeDrZf8vVcGV9N6lpfDktIRb51XBCYaLcKvpHtpYjZtSbm+ENWddBz2wX2OUPHnO1lxdrDj4bpLBnzoNDucLO+zF+s6yjyHgC7eTkocfC+ywLm+zyE1zjKFJeAecWZgPACdOTKD/Nh4hY2vAo8Il37Ju4sCVWYrJYerrMzCJJsxGUGu5+jJBlIKLluTePbrvjAvTBa+HXcxHu2vpZlezPShczaiQYe0yMkkl4c90pzllWuWCpNRLFJvHsdvi7OxRMyfdccg9cppxvtqVLZsaIFmhI7VOm49Yd9LyHnbt/hfBchxQSaUEoVNx9AS8exZx/uH2oyhmFom1K+tQBhaMBUnP9kesiJ9YeUwS9YK+ubE/MU8e4X7IorxyekaiuqtYVisLhkoaUlJYcYcmdu41mLeqbZ8sqxFCbXWbOblKirsWi8BR+lh84qgyRjXSwmiyO7e/TyvfeEVXfOQPlq7YqfJpHg2Bfwza4H4p9YsFsjO6cWAPsvHJWy8HcB6/hmfLEWktHU01MM4TE/Ajanzt/LjR8SMm9lMyC4fSY8D1gVPWpr2gM2GA8gY=
+  file:
+  - govendor_linux_amd64
+  - govendor_linux_386
+  - govendor_linux_arm
+  - govendor_darwin_amd64
+  - govendor_windows_amd64.exe
+  - govendor_windows_386.exe
+  on:
+    tags: true
+    repo: kardianos/govendor
