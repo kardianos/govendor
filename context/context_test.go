@@ -1098,8 +1098,10 @@ func TestOriginDir(t *testing.T) {
 	g.Check(c.WriteVendorFile())
 
 	c = ctx(g)
+	found := false
 	for _, pkg := range c.Package {
 		if pkg.Path == "co2/pk1" {
+			found = true
 			if pkg.Origin != "co3/vendor/co2/pk1" {
 				t.Errorf("wrong origin, got %q", pkg.Origin)
 			}
@@ -1107,6 +1109,9 @@ func TestOriginDir(t *testing.T) {
 				t.Errorf("wrong originDir, got %q", pkg.OriginDir)
 			}
 		}
+	}
+	if !found {
+		t.Errorf("Package with path \"co2/pk1\" is not found")
 	}
 }
 

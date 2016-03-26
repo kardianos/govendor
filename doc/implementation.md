@@ -74,3 +74,6 @@
  - [x] Add RootPath (rootPath) to vendor.json file.
  - [x] Setup binary releases on tags.
  - [x] Fix getting the wrong revision on vendor from vendor (sync bug) https://gist.github.com/pkieltyka/502d27d02d7dc84c6202 .
+ - [ ] Write developer's guide to packages and vendoring document.
+ - [ ] Implement `govendor get` which downloads stated package into $GOPATH, puts
+		all dependencies into a vendor folder, and runs `govendor install +local`.

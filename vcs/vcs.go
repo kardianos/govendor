@@ -6,6 +6,7 @@
 package vcs
 
 import (
+	"fmt"
 	"path/filepath"
 	"sync"
 	"time"
@@ -47,6 +48,12 @@ const looplimit = 10000
 // FindVcs determines the version control information given a package dir and
 // lowest root dir.
 func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
+	if !filepath.IsAbs(root) {
+		return nil, fmt.Errorf("root %q is not an abs path", root)
+	}
+	if !filepath.IsAbs(packageDir) {
+		return nil, fmt.Errorf("packageDir %q is not an abs path", packageDir)
+	}
 	path := packageDir
 	for i := 0; i <= looplimit; i++ {
 		for _, vcs := range vcsRegistry {
