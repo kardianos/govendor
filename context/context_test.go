@@ -1097,7 +1097,41 @@ func TestOriginDir(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
+	tree(g, c, "pre", `
+/pk1/a.go
+/vendor/co2/pk1/a.go
+/vendor/vendor.json
+`)
+
+	vendorFile(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
+			"origin": "co3/vendor/co2/pk1",
+			"path": "co2/pk1",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+
+	list(g, c, "pre list", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  strings < ["co1/vendor/co2/pk1"]
+`)
+
 	c = ctx(g)
+
+	list(g, c, "post list", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  strings < ["co1/vendor/co2/pk1"]
+`)
+
 	found := false
 	for _, pkg := range c.Package {
 		if pkg.Path == "co2/pk1" {

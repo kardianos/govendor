@@ -15,6 +15,7 @@ import (
 	"github.com/kardianos/govendor/internal/pathos"
 	filepath "github.com/kardianos/govendor/internal/vfilepath"
 	os "github.com/kardianos/govendor/internal/vos"
+	"github.com/kardianos/govendor/pkgspec"
 )
 
 var knownOS = make(map[string]bool)
@@ -126,8 +127,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	dir, filenameExt := filepath.Split(pathname)
 	importPath := pathos.FileTrimPrefix(dir, gopath)
 	importPath = pathos.SlashToImportPath(importPath)
-	importPath = strings.TrimPrefix(importPath, "/")
-	importPath = strings.TrimSuffix(importPath, "/")
+	importPath = strings.Trim(importPath, "/")
 
 	if strings.HasSuffix(pathname, ".go") == false {
 		return nil
@@ -264,8 +264,6 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		at = strings.LastIndex(canonical, vStart) + len(vStart)
 	}
 
-	// TODO FIXME (DT): originDir isn't getting set correctly
-	// when the origin is different then the path I think.
 	originDir := dir
 	inVendor := false
 	tree := false
@@ -288,19 +286,32 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 		tree = vp.Tree
 		origin = vp.Origin
 	}
+	// Set originDir correctly if origin is set.
+	if len(origin) > 0 {
+		od, _, err := ctx.findImportDir("", origin)
+		if err == nil {
+			originDir = od
+		}
+	}
 	if status.Location == LocationUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
 		status.Location = LocationLocal
 	}
+	spec, err := pkgspec.Parse("", canonical)
+	if err != nil {
+		panic(err)
+	}
+	if len(origin) > 0 && origin != canonical {
+		spec.Origin = origin
+	}
+	spec.IncludeTree = tree
 	pkg := &Package{
-		OriginDir:   originDir,
-		Dir:         dir,
-		Origin:      origin,
-		Path:        canonical,
-		Local:       local,
-		Gopath:      gopath,
-		Status:      status,
-		inVendor:    inVendor,
-		IncludeTree: tree,
+		OriginDir: originDir,
+		Dir:       dir,
+		Pkg:       spec,
+		Local:     local,
+		Gopath:    gopath,
+		Status:    status,
+		inVendor:  inVendor,
 	}
 	ctx.Package[local] = pkg
 	return pkg

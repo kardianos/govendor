@@ -6,7 +6,6 @@
 package vcs
 
 import (
-	"fmt"
 	"path/filepath"
 	"sync"
 	"time"
@@ -49,10 +48,10 @@ const looplimit = 10000
 // lowest root dir.
 func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
 	if !filepath.IsAbs(root) {
-		return nil, fmt.Errorf("root %q is not an abs path", root)
+		return nil, nil
 	}
 	if !filepath.IsAbs(packageDir) {
-		return nil, fmt.Errorf("packageDir %q is not an abs path", packageDir)
+		return nil, nil
 	}
 	path := packageDir
 	for i := 0; i <= looplimit; i++ {

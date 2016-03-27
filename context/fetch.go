@@ -254,11 +254,11 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			if len(vp.Revision) == 0 {
 				vp.Revision = revision
 			}
-
+			spec := &pkgspec.Pkg{Path: dep, Version: version, HasVersion: hasVersion}
 			nextOps = append(nextOps, &Operation{
 				Type: OpFetch,
-				Pkg:  &Package{Path: dep},
-				Src:  (&pkgspec.Pkg{Path: dep, Version: version, HasVersion: hasVersion}).String(),
+				Pkg:  &Package{Pkg: spec},
+				Src:  spec.String(),
 				Dest: dest,
 			})
 		}

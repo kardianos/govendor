@@ -152,7 +152,10 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 			panic(fmt.Sprintf("Package %q should be listed internally but is not. Did find %q.", sourcePath, didFind))
 		}
 	}
+	// HACK (DT): It would be preferable to do something better here, assigning
+	// it when the package is added.
 	pkg.Origin = sourcePath
+	pkg.Path = ps.Path
 
 	// Do not support setting "tree" on Remove.
 	if tree && mod != Remove {

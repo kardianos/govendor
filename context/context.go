@@ -17,6 +17,7 @@ import (
 
 	"github.com/kardianos/govendor/internal/pathos"
 	os "github.com/kardianos/govendor/internal/vos"
+	"github.com/kardianos/govendor/pkgspec"
 	"github.com/kardianos/govendor/vendorfile"
 )
 
@@ -45,11 +46,10 @@ type Context struct {
 	RootGopath     string // The GOPATH the project is in.
 	RootImportPath string // The import path to the project.
 
-	VendorFile         *vendorfile.File
-	VendorFilePath     string // File path to vendor file.
-	VendorFolder       string // Store vendor packages in this folder.
-	VendorFileToFolder string // The relative path from the vendor file to the vendor folder.
-	RootToVendorFile   string // The relative path from the project root to the vendor file directory.
+	VendorFile       *vendorfile.File
+	VendorFilePath   string // File path to vendor file.
+	VendorFolder     string // Store vendor packages in this folder.
+	RootToVendorFile string // The relative path from the project root to the vendor file directory.
 
 	VendorDiscoverFolder string // Normally auto-set to "vendor"
 
@@ -74,13 +74,11 @@ type Package struct {
 	OriginDir string // Origin directory
 	Dir       string // Physical directory path of the package.
 
-	Status      Status // Status and location of the package.
-	Origin      string // Origin path for remote
-	Path        string // Import path for a package.
-	Local       string // Current location of a package relative to $GOPATH/src.
-	IncludeTree bool   // Package is a tree of folder.
-	Gopath      string // Inlcudes trailing "src".
-	Files       []*File
+	Status Status // Status and location of the package.
+	*pkgspec.Pkg
+	Local  string // Current location of a package relative to $GOPATH/src.
+	Gopath string // Inlcudes trailing "src".
+	Files  []*File
 
 	inVendor bool // Different then Status.Location, this is in *any* vendor tree.
 	inTree   bool
@@ -214,23 +212,15 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 
 	rootToVendorFile, _ := filepath.Split(vendorFilePathRel)
 
-	vendorFileDir, _ := filepath.Split(vendorFilePath)
-	vendorFolderRel, err := filepath.Rel(vendorFileDir, filepath.Join(root, vendorFolder))
-	if err != nil {
-		return nil, err
-	}
-	vendorFileToFolder := pathos.SlashToImportPath(vendorFolderRel)
-
 	ctx := &Context{
 		RootDir:    root,
 		GopathList: gopathGoroot,
 		Goroot:     goroot,
 
-		VendorFile:         vf,
-		VendorFilePath:     vendorFilePath,
-		VendorFolder:       vendorFolder,
-		VendorFileToFolder: vendorFileToFolder,
-		RootToVendorFile:   pathos.SlashToImportPath(rootToVendorFile),
+		VendorFile:       vf,
+		VendorFilePath:   vendorFilePath,
+		VendorFolder:     vendorFolder,
+		RootToVendorFile: pathos.SlashToImportPath(rootToVendorFile),
 
 		VendorDiscoverFolder: "vendor",
 
@@ -283,16 +273,6 @@ func (ctx *Context) VendorFilePackagePath(path string) *vendorfile.Package {
 		}
 	}
 	return nil
-}
-
-func (ctx *Context) packagePath(path string) []*Package {
-	var list []*Package
-	for _, pkg := range ctx.Package {
-		if pkg.Path == path {
-			list = append(list, pkg)
-		}
-	}
-	return list
 }
 
 // findPackageChild finds any package under the current package.
