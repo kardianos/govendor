@@ -195,6 +195,11 @@ func TestLabelOrder(t *testing.T) {
 			find:    Label{Source: LabelTag, Text: "v1.10.1"},
 		},
 		{
+			version: "=v1",
+			labels:  llC,
+			find:    Label{Source: LabelTag, Text: "v1"},
+		},
+		{
 			version: "v1",
 			labels:  llD,
 			find:    Label{Source: LabelTag, Text: "v1.mix100e"},

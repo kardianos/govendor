@@ -199,7 +199,16 @@ func (l labelAnalysisList) Less(i, j int) bool {
 func FindLabel(version string, labels []Label) Label {
 	list := make([]*labelAnalysis, 0, 6)
 
+	exact := strings.HasPrefix(version, "=")
+	version = strings.TrimPrefix(version, "=")
+
 	for _, label := range labels {
+		if exact {
+			if label.Text == version {
+				return label
+			}
+			continue
+		}
 		if strings.HasPrefix(label.Text, version) == false {
 			continue
 		}

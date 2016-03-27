@@ -40,7 +40,8 @@ govendor list -v fmt
 
 # Specify a specific version or revision to fetch
 govendor fetch golang.org/x/net/context@a4bbce9fcae005b22ae5443f6af064d80a6f5a55
-govendor fetch golang.org/x/net/context@v1
+govendor fetch golang.org/x/net/context@v1   # Get latest v1.*.* tag or branch.
+govendor fetch golang.org/x/net/context@=v1  # Get the tag or branch named "v1".
 
 # Update a package to latest, given any prior version constraint
 govendor fetch golang.org/x/net/context
@@ -113,6 +114,7 @@ Some examples:
 	revision `abc12032`.
  * `github.com/kardianos/govendor/...@v1` same as above, but get the most recent
 	"v1" tag, such as "v1.4.3".
+ * `github.com/kardianos/govendor/...@=v1` get the exact version "v1".
 
 ## Packages and Status
 
