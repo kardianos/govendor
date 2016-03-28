@@ -88,7 +88,7 @@ func tree(g *gt.GopathTest, c *Context, name, expected string) {
 		output.WriteString(item)
 		output.WriteRune('\n')
 	}
-	if strings.TrimSpace(output.String()) != strings.TrimSpace(expected) {
+	if strings.TrimSpace(strings.Replace(output.String(), "\\", "/", -1)) != strings.TrimSpace(expected) {
 		g.Fatalf("(%s) Got\n%s", name, output.String())
 	}
 }
