@@ -901,10 +901,19 @@ func TestAddMissing(t *testing.T) {
 	g.In("co1")
 	c := ctx(g)
 
+	list(g, c, "pre", `
+ l  co1/pk1 < []
+  m co2/pk1 < ["co1/pk1"]
+`)
+
 	err := c.ModifyImport(pkg("co2/pk1"), Add)
 	if _, is := err.(ErrNotInGOPATH); !is {
-		t.Fatalf("Expected not in GOPATH error. Got %v", err)
+		t.Errorf("Expected not in GOPATH error. Got %v", err)
 	}
+	list(g, c, "post", `
+ l  co1/pk1 < []
+  m co2/pk1 < ["co1/pk1"]
+`)
 }
 
 func TestTree(t *testing.T) {

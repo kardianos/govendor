@@ -110,13 +110,12 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 			return err
 		}
 	}
-	sourcePath := ps.PathOrigin()
 	tree := ps.IncludeTree
 
 	// Determine if we can find the source path from an add or update.
 	switch mod {
 	case Add, Update, AddUpdate:
-		_, _, err = ctx.findImportDir("", sourcePath)
+		_, _, err = ctx.findImportDir("", ps.PathOrigin())
 		if err != nil {
 			return err
 		}
@@ -126,36 +125,31 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	//   If so either update or just return.
 	//   If not find the disk path from the canonical path, copy locally and rewrite (if needed).
 	var pkg *Package
-	pkg, foundPkg := ctx.Package[sourcePath]
+	var foundPkg bool
 	if !foundPkg {
-		err = ctx.addSingleImport(ctx.RootDir, sourcePath, tree)
+		localPath := path.Join(ctx.RootImportPath, ctx.VendorFolder, ps.Path)
+		pkg, foundPkg = ctx.Package[localPath]
+		foundPkg = foundPkg && pkg.Status.Presence != PresenceMissing
+	}
+	if !foundPkg {
+		pkg, foundPkg = ctx.Package[ps.Path]
+		foundPkg = foundPkg && pkg.Status.Presence != PresenceMissing
+	}
+	if !foundPkg {
+		pkg, foundPkg = ctx.Package[ps.PathOrigin()]
+		foundPkg = foundPkg && pkg.Status.Presence != PresenceMissing
+	}
+	if !foundPkg {
+		pkg, err = ctx.addSingleImport(ctx.RootDir, ps.PathOrigin(), tree)
 		if err != nil {
 			return err
 		}
-		var foundPkg bool
-		pkg, foundPkg = ctx.Package[sourcePath]
-		// Find by canonical path if stored by different local path.
-		var didFind *Package
-		if !foundPkg {
-			for _, p := range ctx.Package {
-				if sourcePath == p.Path {
-					foundPkg = true
-					pkg = p
-					break
-				}
-			}
-		}
-		if !foundPkg && ps.MatchTree {
+		if pkg == nil {
 			return nil
 		}
-		if !foundPkg {
-			panic(fmt.Sprintf("Package %q should be listed internally but is not. Did find %q.", sourcePath, didFind))
-		}
+		pkg.Origin = ps.PathOrigin()
+		pkg.Path = ps.Path
 	}
-	// HACK (DT): It would be preferable to do something better here, assigning
-	// it when the package is added.
-	pkg.Origin = sourcePath
-	pkg.Path = ps.Path
 
 	// Do not support setting "tree" on Remove.
 	if tree && mod != Remove {
@@ -177,12 +171,12 @@ func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
 	}
 
 	// TODO (DT): figure out how to upgrade a non-tree package to a tree package with correct checks.
-	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(sourcePath)))
+	localExists, err := hasGoFileInFolder(filepath.Join(ctx.RootDir, ctx.VendorFolder, pathos.SlashToFilepath(ps.Path)))
 	if err != nil {
 		return err
 	}
 	if mod == Add && localExists {
-		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, sourcePath)}
+		return ErrPackageExists{path.Join(ctx.RootImportPath, ctx.VendorFolder, ps.Path)}
 	}
 	dprintf("stage 2: begin!\n")
 	switch mod {

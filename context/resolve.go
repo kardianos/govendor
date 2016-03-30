@@ -48,7 +48,8 @@ func (ctx *Context) loadPackage() error {
 		if info.IsDir() {
 			return nil
 		}
-		return ctx.addFileImports(path, ctx.RootGopath)
+		_, err = ctx.addFileImports(path, ctx.RootGopath)
+		return err
 	})
 	if err != nil {
 		return err
@@ -123,14 +124,14 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 }
 
 // addFileImports is called from loadPackage and resolveUnknown.
-func (ctx *Context) addFileImports(pathname, gopath string) error {
+func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 	dir, filenameExt := filepath.Split(pathname)
 	importPath := pathos.FileTrimPrefix(dir, gopath)
 	importPath = pathos.SlashToImportPath(importPath)
 	importPath = strings.Trim(importPath, "/")
 
 	if strings.HasSuffix(pathname, ".go") == false {
-		return nil
+		return nil, nil
 	}
 	// No need to add the same file more then once.
 	for _, pkg := range ctx.Package {
@@ -139,29 +140,29 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		}
 		for _, f := range pkg.Files {
 			if pathos.FileStringEquals(f.Path, pathname) {
-				return nil
+				return nil, nil
 			}
 		}
 		for _, f := range pkg.ignoreFile {
 			if pathos.FileStringEquals(f, filenameExt) {
-				return nil
+				return nil, nil
 			}
 		}
 	}
 	// Ignore error here and continue on best effort.
 	f, _ := parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 	if f == nil {
-		return nil
+		return nil, nil
 	}
 
 	// Files with package name "documentation" should be ignored, per go build tool.
 	if f.Name.Name == "documentation" {
-		return nil
+		return nil, nil
 	}
 
 	tags, _, err := ctx.getFileTags(pathname, f)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// if file has "// +build ignore", can mix package main with normal package.
 	isIgnore := false
@@ -172,7 +173,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 	}
 	// For now, just ignore ignored packages.
 	if isIgnore {
-		return nil
+		return nil, nil
 	}
 
 	pkg, found := ctx.Package[importPath]
@@ -193,7 +194,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 			for _, ignore := range ctx.ignoreTag {
 				if tag == ignore {
 					pkg.ignoreFile = append(pkg.ignoreFile, filenameExt)
-					return nil
+					return pkg, nil
 				}
 			}
 		}
@@ -215,9 +216,9 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-		err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
+		_, err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
 		if err != nil {
-			return err
+			return pkg, err
 		}
 	}
 
@@ -247,7 +248,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) error {
 		}
 	}
 
-	return nil
+	return pkg, nil
 }
 
 func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Status) *Package {
@@ -317,7 +318,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	return pkg
 }
 
-func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
+func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) (*Package, error) {
 	// Do not check for existing package right away. If a external package
 	// has been added and we are looking in a vendor package, this won't work.
 	// We need to search any relative vendor folders first.
@@ -325,46 +326,44 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
 	// Also need to check for vendor paths that won't use the local path in import path.
 	for _, pkg := range ctx.Package {
 		if pkg.Path == imp && pkg.inVendor && pathos.FileHasPrefix(pkg.Dir, pkgInDir) {
-			return nil
+			return nil, nil
 		}
 	}
 	dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
 	if err != nil {
 		if _, is := err.(ErrNotInGOPATH); is {
-			ctx.setPackage("", imp, imp, "", Status{
+			return ctx.setPackage("", imp, imp, "", Status{
 				Type:     TypePackage,
 				Location: LocationNotFound,
 				Presence: PresenceMissing,
-			})
-			return nil
+			}), nil
 		}
-		return err
+		return nil, err
 	}
 	if pathos.FileStringEquals(gopath, ctx.Goroot) {
-		ctx.setPackage(dir, imp, imp, ctx.Goroot, Status{
+		return ctx.setPackage(dir, imp, imp, ctx.Goroot, Status{
 			Type:     TypePackage,
 			Location: LocationStandard,
 			Presence: PresenceFound,
-		})
-		return nil
+		}), nil
 	}
 	if tree {
-		ctx.setPackage(dir, imp, imp, ctx.RootGopath, Status{
+		return ctx.setPackage(dir, imp, imp, ctx.RootGopath, Status{
 			Type:     TypePackage,
 			Location: LocationVendor,
 			Presence: PresenceFound,
-		})
-		return nil
+		}), nil
 	}
 	df, err := os.Open(dir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	info, err := df.Readdir(-1)
 	df.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var pkg *Package
 	for _, fi := range info {
 		if fi.IsDir() {
 			continue
@@ -377,12 +376,12 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) error {
 			continue
 		}
 		path := filepath.Join(dir, fi.Name())
-		err = ctx.addFileImports(path, gopath)
+		pkg, err = ctx.addFileImports(path, gopath)
 		if err != nil {
-			return err
+			return pkg, err
 		}
 	}
-	return nil
+	return pkg, nil
 }
 
 func (ctx *Context) determinePackageStatus() error {
@@ -394,11 +393,11 @@ func (ctx *Context) determinePackageStatus() error {
 		if _, found := ctx.Package[vp.Path]; found {
 			continue
 		}
-		err := ctx.addSingleImport(ctx.RootDir, vp.Path, vp.Tree)
+		pkg, err := ctx.addSingleImport(ctx.RootDir, vp.Path, vp.Tree)
 		if err != nil {
 			return err
 		}
-		if pkg, found := ctx.Package[vp.Path]; found {
+		if pkg != nil {
 			pkg.Origin = vp.Origin
 			pkg.inTree = vp.Tree
 			pkg.inVendor = true
