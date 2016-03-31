@@ -76,6 +76,7 @@ func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 		if err != nil {
 			return MsgNone, err
 		}
+		GoCmd("install", []string{a})
 	}
 	return MsgNone, nil
 }
