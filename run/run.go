@@ -78,10 +78,6 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	case "migrate":
 		return Migrate(w, args[1:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
-		msg, err := Sync(w, nil)
-		if err != nil {
-			return msg, err
-		}
 		return GoCmd(cmd, args[1:])
 	default:
 		return MsgFull, fmt.Errorf("Unknown command %q", cmd)

@@ -19,7 +19,6 @@ Sub-Commands
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	
 	go tool commands that are wrapped:
-	  "govendor sync" is called before these commands
 	  "+status" package selection may be used with them
 	fmt, build, install, clean, test, vet, generate
 
