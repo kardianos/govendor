@@ -63,6 +63,8 @@ func main() {
 		msgText = helpSync
 	case run.MsgMigrate:
 		msgText = helpMigrate
+	case run.MsgGet:
+		msgText = helpGet
 	}
 	if len(msgText) > 0 {
 		fmt.Fprint(os.Stderr, msgText)

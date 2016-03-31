@@ -28,6 +28,7 @@ const (
 	MsgStatus
 	MsgSync
 	MsgMigrate
+	MsgGet
 )
 
 type nullWriter struct{}
@@ -77,6 +78,8 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 		return Status(w, args[1:])
 	case "migrate":
 		return Migrate(w, args[1:])
+	case "get":
+		return Get(w, args[1:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
 		return GoCmd(cmd, args[1:])
 	default:

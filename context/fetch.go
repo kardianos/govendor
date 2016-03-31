@@ -54,9 +54,6 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	if err != nil {
 		return nextOps, err
 	}
-	if len(ps.Origin) == 0 {
-		ps.Origin = ps.Path
-	}
 
 	f.HavePkg[ps.Path] = true
 
@@ -66,13 +63,16 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// Get any tags.
 	// If we have a specific revision, update to that revision.
 
-	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.Origin))
+	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.PathOrigin()))
 	sysVcsCmd, repoRoot, err := vcs.FromDir(pkgDir, f.CacheRoot)
 	var vcsCmd *VCSCmd
 	repoRootDir := filepath.Join(f.CacheRoot, repoRoot)
 	if err != nil {
-		rr, err := vcs.RepoRootForImportPath(ps.Origin, false)
+		rr, err := vcs.RepoRootForImportPath(ps.PathOrigin(), false)
 		if err != nil {
+			if strings.Contains(err.Error(), "unrecognized import path") {
+				return nextOps, nil
+			}
 			return nextOps, err
 		}
 		if !f.Ctx.Insecure && !vcsIsSecure(rr.Repo) {
@@ -156,7 +156,8 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	var deps []string
 	op.IgnoreFile, deps, err = f.Ctx.getIngoreFiles(op.Src)
 	if err != nil {
-		return nextOps, fmt.Errorf("failed to get ignore files and deps from %q %v", op.Src, err)
+		return nextOps, nil
+		// return nextOps, fmt.Errorf("failed to get ignore files and deps from %q %v", op.Src, err)
 	}
 
 	// Once downloaded, be sure to set the revision and revisionTime
@@ -168,7 +169,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	}
 	if system != nil {
 		if system.Dirty {
-			return nextOps, ErrDirtyPackage{ps.Origin}
+			return nextOps, ErrDirtyPackage{ps.PathOrigin()}
 		}
 		vpkg.Revision = system.Revision
 		if system.RevisionTime != nil {

@@ -54,6 +54,25 @@ func Migrate(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	return MsgNone, migrate.MigrateWD(from)
 }
 
+func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+	flags := flag.NewFlagSet("get", flag.ContinueOnError)
+	flags.SetOutput(nullWriter{})
+
+	insecure := flags.Bool("insecure", false, "allows insecure connection")
+
+	err := flags.Parse(subCmdArgs)
+	if err != nil {
+		return MsgGet, err
+	}
+	for _, a := range flags.Args() {
+		err = context.Get(a, *insecure)
+		if err != nil {
+			return MsgNone, err
+		}
+	}
+	return MsgNone, nil
+}
+
 func GoCmd(subcmd string, args []string) (HelpMessage, error) {
 	ctx, err := context.NewContextWD(context.RootVendorOrWD)
 	if err != nil {

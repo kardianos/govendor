@@ -17,6 +17,7 @@ Sub-Commands
 	fetch    (beta) Add new or update existing packages from remote repository.
 	sync     (beta) Pull in packages from remote respository to match vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
+	get      Like "go get" but copies dependencies into a "vendor" folder.
 	
 	go tool commands that are wrapped:
 	  "+status" package selection may be used with them
@@ -122,4 +123,10 @@ var helpStatus = `govendor status
 
 var helpMigrate = `govendor migrate [auto, godep, internal]
 	Change from a one schema to use the vendor folder. Default to auto detect.
+`
+
+var helpGet = `govendor get [options] (import-path)...
+	Download package into GOPATH, put all dependencies into vendor folder.
+	Options:
+		-insecure    allow downloading over insecure connection
 `
