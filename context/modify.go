@@ -302,7 +302,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		} else {
 			vp.Revision = system.Revision
 			if system.RevisionTime != nil {
-				vp.RevisionTime = system.RevisionTime.Format(time.RFC3339)
+				vp.RevisionTime = system.RevisionTime.UTC().Format(time.RFC3339)
 			}
 		}
 	}

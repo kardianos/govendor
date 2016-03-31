@@ -27,7 +27,7 @@ func TestFetch(t *testing.T) {
 
 	g.In("remote/co3")
 	vcs := remote.Setup()
-	commitTime := time.Now().Format(time.RFC3339)
+	commitTime := time.Now().UTC().Format(time.RFC3339)
 	commitRev := vcs.Commit()
 
 	g.In("co1")

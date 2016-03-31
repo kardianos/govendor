@@ -20,5 +20,6 @@
 			"revision": "093d7650abf0a26882924de03a6c840a00356572",
 			"revisionTime": "2016-03-09T21:59:58Z"
 		}
-	]
+	],
+	"rootPath": "github.com/kardianos/govendor"
 }

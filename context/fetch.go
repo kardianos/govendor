@@ -172,7 +172,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		}
 		vpkg.Revision = system.Revision
 		if system.RevisionTime != nil {
-			vpkg.RevisionTime = system.RevisionTime.Format(time.RFC3339)
+			vpkg.RevisionTime = system.RevisionTime.UTC().Format(time.RFC3339)
 		}
 	}
 
