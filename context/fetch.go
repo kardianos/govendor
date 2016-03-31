@@ -55,8 +55,6 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		return nextOps, err
 	}
 
-	f.HavePkg[ps.Path] = true
-
 	// Don't check for bundle, rather check physical directory.
 	// If no repo in dir, clone.
 	// If there is a repo in dir, update to latest.
@@ -156,9 +154,13 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	var deps []string
 	op.IgnoreFile, deps, err = f.Ctx.getIngoreFiles(op.Src)
 	if err != nil {
-		return nextOps, nil
-		// return nextOps, fmt.Errorf("failed to get ignore files and deps from %q %v", op.Src, err)
+		if os.IsNotExist(err) {
+			return nextOps, nil
+		}
+		return nextOps, fmt.Errorf("failed to get ignore files and deps from %q %v", op.Src, err)
 	}
+
+	f.HavePkg[ps.Path] = true
 
 	// Once downloaded, be sure to set the revision and revisionTime
 	// in the vendor file package.
@@ -192,7 +194,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 			hasDep := false
 			for _, test := range f.Ctx.Package {
-				if test.Path == dep {
+				if test.Path == dep && test.Status.Location == LocationVendor {
 					hasDep = true
 					break
 				}

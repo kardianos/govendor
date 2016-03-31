@@ -129,4 +129,5 @@ var helpGet = `govendor get [options] (import-path)...
 	Download package into GOPATH, put all dependencies into vendor folder.
 	Options:
 		-insecure    allow downloading over insecure connection
+		-v           verbose mode
 `

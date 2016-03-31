@@ -59,13 +59,20 @@ func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	flags.SetOutput(nullWriter{})
 
 	insecure := flags.Bool("insecure", false, "allows insecure connection")
+	verbose := flags.Bool("v", false, "verbose")
+
+	flags.Bool("u", false, "update") // For compatibility with "go get".
 
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
 		return MsgGet, err
 	}
+	logger := w
+	if !*verbose {
+		logger = nil
+	}
 	for _, a := range flags.Args() {
-		err = context.Get(a, *insecure)
+		err = context.Get(logger, a, *insecure)
 		if err != nil {
 			return MsgNone, err
 		}

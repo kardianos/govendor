@@ -6,6 +6,7 @@ package context
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -13,7 +14,7 @@ import (
 	"golang.org/x/tools/go/vcs"
 )
 
-func Get(pkgspecName string, insecure bool) error {
+func Get(logger io.Writer, pkgspecName string, insecure bool) error {
 	// Get the GOPATHs.
 	all := os.Getenv("GOPATH")
 	if len(all) == 0 {
@@ -30,10 +31,10 @@ func Get(pkgspecName string, insecure bool) error {
 	if err != nil {
 		return err
 	}
-	return get(filepath.Join(gopath, "src"), ps, insecure)
+	return get(logger, filepath.Join(gopath, "src"), ps, insecure)
 }
 
-func get(gopath string, ps *pkgspec.Pkg, insecure bool) error {
+func get(logger io.Writer, gopath string, ps *pkgspec.Pkg, insecure bool) error {
 	pkgDir := filepath.Join(gopath, ps.Path)
 	sysVcsCmd, repoRoot, err := vcs.FromDir(pkgDir, gopath)
 	var vcsCmd *VCSCmd
@@ -72,6 +73,7 @@ func get(gopath string, ps *pkgspec.Pkg, insecure bool) error {
 		return err
 	}
 	ctx.Insecure = insecure
+	ctx.Logger = logger
 	statusList, err := ctx.Status()
 	if err != nil {
 		return err
