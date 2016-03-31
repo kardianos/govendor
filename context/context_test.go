@@ -26,6 +26,7 @@ func ctx(g *gt.GopathTest) *Context {
 	if err != nil {
 		g.Fatal(err)
 	}
+	c.Insecure = true
 	return c
 }
 
@@ -72,7 +73,7 @@ func verifyChecksum(g *gt.GopathTest, c *Context, name string) {
 	}
 }
 
-func tree(g *gt.GopathTest, c *Context, name, expected string) {
+func tree(g *gt.GopathTest, name, expected string) {
 	tree := make([]string, 0, 6)
 	filepath.Walk(g.Current(), func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
@@ -105,7 +106,7 @@ func vendorFile(g *gt.GopathTest, expected string) {
 		g.Fatal(err)
 	}
 	if string(buf) != expected {
-		g.Fatal("Got: ", string(buf))
+		g.Fatalf("Got:\n%s\nWant\n%s", string(buf), expected)
 	}
 }
 
@@ -763,7 +764,7 @@ func TestTestdata(t *testing.T) {
  s  encoding/csv < ["co1/vendor/co2/pk1"]
 `)
 
-	tree(g, c, "co1 after add testdata", `
+	tree(g, "co1 after add testdata", `
 /pk1/a.go
 /vendor/co2/pk1/b.go
 /vendor/co2/pk1/testdata/file-a
@@ -844,7 +845,7 @@ func TestTagAdd(t *testing.T) {
 		t.Error("b.go should not be copied into vendor folder")
 	}
 
-	tree(g, c, "co1 after add co2", `
+	tree(g, "co1 after add co2", `
 /pk1/a.go
 /pk1/a_test.go
 /vendor/co2/pk1/a.go
@@ -945,7 +946,7 @@ func TestTree(t *testing.T) {
  l  co1/pk1 < []
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/go_code"]
 `)
-	tree(g, c, "co1 after add tree", `
+	tree(g, "co1 after add tree", `
 /pk1/a.go
 /vendor/co2/pk1/a.go
 /vendor/co2/pk1/c_code/stub.c
@@ -973,7 +974,7 @@ func TestTree(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "co1 after remove tree", `
+	tree(g, "co1 after remove tree", `
 /pk1/a.go
 /vendor/vendor.json
 `)
@@ -1000,7 +1001,7 @@ func TestBadImport(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "co1 after add", `
+	tree(g, "co1 after add", `
 /pk1/a.go
 /vendor/co2/pk1/b.go
 /vendor/vendor.json
@@ -1027,7 +1028,7 @@ func TestLicenseSimple(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "co1 after add", `
+	tree(g, "co1 after add", `
 /pk1/a.go
 /vendor/co2/LICENSE
 /vendor/co2/go/pk1/b.go
@@ -1038,7 +1039,7 @@ func TestLicenseSimple(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "co1 after remove", `
+	tree(g, "co1 after remove", `
 /pk1/a.go
 /vendor/vendor.json
 `)
@@ -1066,7 +1067,7 @@ func TestLicenseNested(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "co2 after add", `
+	tree(g, "co2 after add", `
 /pk1/b.go
 /vendor/co3/LICENSE
 /vendor/co3/pk1/c.go
@@ -1080,7 +1081,7 @@ func TestLicenseNested(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "co1 after add", `
+	tree(g, "co1 after add", `
 /pk1/a.go
 /vendor/co2/pk1/b.go
 /vendor/co3/LICENSE
@@ -1106,7 +1107,7 @@ func TestOriginDir(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	tree(g, c, "pre", `
+	tree(g, "pre", `
 /pk1/a.go
 /vendor/co2/pk1/a.go
 /vendor/vendor.json

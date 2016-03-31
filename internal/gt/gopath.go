@@ -47,9 +47,12 @@ type GopathTest struct {
 	*testing.T
 
 	base    string
-	current string
+	current string // Current full path.
+	pkg     string // Current import path package.
 
 	initPath string
+
+	cleaners []func()
 }
 
 func (g *GopathTest) mkdir(s string) {
@@ -67,7 +70,10 @@ func (g *GopathTest) mksrc(s string) string {
 	}
 	return p
 }
+
+// In sets the current directory as an import path.
 func (g *GopathTest) In(pkg string) {
+	g.pkg = pkg
 	p := g.Path(pkg)
 	err := os.Chdir(p)
 	if err != nil {
@@ -75,11 +81,18 @@ func (g *GopathTest) In(pkg string) {
 	}
 	g.current = p
 }
+
+// Get path from package import path pkg.
 func (g *GopathTest) Path(pkg string) string {
 	return filepath.Join(g.base, "src", pkg)
 }
+
+// Current working directory.
 func (g *GopathTest) Current() string {
 	return g.current
+}
+func (g *GopathTest) onClean(f func()) {
+	g.cleaners = append(g.cleaners, f)
 }
 func (g *GopathTest) Clean() {
 	os.Chdir(g.initPath)
@@ -87,7 +100,13 @@ func (g *GopathTest) Clean() {
 	if err != nil {
 		g.Fatal(err)
 	}
+	for i := len(g.cleaners) - 1; i >= 0; i-- {
+		g.cleaners[i]()
+	}
+	g.cleaners = nil
 }
+
+// Check is fatal to the test if err is not nil.
 func (g *GopathTest) Check(err error) {
 	if err == nil {
 		return
