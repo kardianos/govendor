@@ -3,7 +3,9 @@
 
 New users please read the [FAQ](doc/faq.md)
 
-Read the [whitepaper](doc/whitepaper.md)
+Package developers should read the [developer guide](doc/dev-guide.md).
+
+For a high level overview read the [whitepaper](doc/whitepaper.md)
 
 Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
 
