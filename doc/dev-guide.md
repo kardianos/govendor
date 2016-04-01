@@ -29,7 +29,7 @@ maintainers 15 years from now will thank you.
 
 ## Release with semver, do not break compatibility within a major version
 
-Release with semver: "v<major>.<minor>.<patch>[-<pre-release>]".
+Release with semver: `v<major>.<minor>.<patch>[-<pre-release>]`.
 
  * Increment major: break existing API.
  * Increment minor: add API, no breaks to existing API.
