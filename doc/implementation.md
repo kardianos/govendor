@@ -62,9 +62,9 @@
  - [x] Re-add rewrite code for migrations.
  - [ ] gb github.com/constabulary/gb
  - [ ] govend https://github.com/govend/govend
- - [ ] godep (ensure it is still working)
+ - [x] godep (ensure it is still working)
  - [ ] gvt https://github.com/FiloSottile/gvt
- - [ ] glock https://github.com/robfig/glock
+ - [x] glock https://github.com/robfig/glock
 
 ## TODO
 
@@ -74,6 +74,6 @@
  - [x] Add RootPath (rootPath) to vendor.json file.
  - [x] Setup binary releases on tags.
  - [x] Fix getting the wrong revision on vendor from vendor (sync bug) https://gist.github.com/pkieltyka/502d27d02d7dc84c6202 .
- - [ ] Write developer's guide to packages and vendoring document.
- - [ ] Implement `govendor get` which downloads stated package into $GOPATH, puts
+ - [x] Write developer's guide to packages and vendoring document.
+ - [x] Implement `govendor get` which downloads stated package into $GOPATH, puts
 		all dependencies into a vendor folder, and runs `govendor install +local`.
