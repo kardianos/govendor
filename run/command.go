@@ -36,20 +36,16 @@ func Init(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	return MsgNone, err
 }
 func Migrate(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
-	from := migrate.Auto
-	if len(subCmdArgs) > 0 {
-		switch subCmdArgs[0] {
-		case "auto":
-			from = migrate.Auto
-		case "gb":
-			from = migrate.Gb
-		case "godep":
-			from = migrate.Godep
-		case "internal":
-			from = migrate.Internal
-		default:
-			return MsgMigrate, fmt.Errorf("Unknown migrate command %q", subCmdArgs[0])
-		}
+	flags := flag.NewFlagSet("migrate", flag.ContinueOnError)
+	flags.SetOutput(nullWriter{})
+	err := flags.Parse(subCmdArgs)
+	if err != nil {
+		return MsgMigrate, err
+	}
+
+	from := migrate.From("auto")
+	if len(flags.Args()) > 0 {
+		from = migrate.From(flags.Arg(0))
 	}
 	return MsgNone, migrate.MigrateWD(from)
 }

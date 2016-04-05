@@ -4,6 +4,12 @@
 
 package main
 
+import (
+	"strings"
+
+	"github.com/kardianos/govendor/migrate"
+)
+
 var helpFull = `govendor: copy go packages locally from GOPATH or remote. Uses vendor folder.
 
 Sub-Commands
@@ -121,7 +127,7 @@ var helpStatus = `govendor status
 	checksum) and should be sync'ed.
 `
 
-var helpMigrate = `govendor migrate [auto, godep, internal]
+var helpMigrate = `govendor migrate [` + strings.Join(migrate.SystemList(), ", ") + `]
 	Change from a one schema to use the vendor folder. Default to auto detect.
 `
 
