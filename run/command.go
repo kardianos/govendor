@@ -47,7 +47,12 @@ func Migrate(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	if len(flags.Args()) > 0 {
 		from = migrate.From(flags.Arg(0))
 	}
-	return MsgNone, migrate.MigrateWD(from)
+	err = migrate.MigrateWD(from)
+	if err != nil {
+		return MsgNone, err
+	}
+	fmt.Fprintf(w, `You may wish to run "govendor sync" now.%s`, "\n")
+	return MsgNone, nil
 }
 
 func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {

@@ -65,6 +65,7 @@ func (sysGodep) Migrate(root string) error {
 	ctx.VendorFilePath = filepath.Join(ctx.RootDir, "vendor", "vendor.json")
 
 	ctx.VendorDiscoverFolder = "vendor"
+	ctx.VendorFile.Ignore = "test"
 
 	// Translate then remove godeps.json file.
 	type Godeps struct {
@@ -92,9 +93,6 @@ func (sysGodep) Migrate(root string) error {
 
 	for _, d := range godeps.Deps {
 		for _, pkg := range ctx.Package {
-			if pkg.Status.Location != context.LocationVendor {
-				continue
-			}
 			if strings.HasPrefix(pkg.Path, d.ImportPath) == false {
 				continue
 			}
