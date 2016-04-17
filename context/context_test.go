@@ -366,6 +366,56 @@ func TestImportSimple(t *testing.T) {
 `)
 }
 
+func TestNoDep(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "strings"),
+	)
+	// Include some non-go files that sort before and after the go file.
+	// Triggers an edge case where the package wasn't added.
+	g.Setup("co2/pk1",
+		gt.File("a.txt", "fmt"),
+		gt.File("b.go", "bytes"),
+		gt.File("z.txt", "fmt"),
+	)
+	g.In("co1")
+	c := ctx(g)
+	list(g, c, "before", `
+ l  co1/pk1 < []
+ s  strings < ["co1/pk1"]
+`)
+	g.Check(c.ModifyImport(pkg("co2/pk1"), AddUpdate))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+	expected := `
+ vu co1/vendor/co2/pk1 [co2/pk1] < []
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/pk1"]
+ s  strings < ["co1/pk1"]
+	`
+	list(g, c, "same", expected)
+
+	c = ctx(g)
+	list(g, c, "new", expected)
+
+	vendorFile(g, `{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "QkjrJA3p/33sLeZnPIazB4vv30o=",
+			"path": "co2/pk1",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+	verifyChecksum(g, c, "new")
+}
+
 func TestUpdate(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()

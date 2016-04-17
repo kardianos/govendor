@@ -377,7 +377,10 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) (*Package, 
 			continue
 		}
 		path := filepath.Join(dir, fi.Name())
-		pkg, err = ctx.addFileImports(path, gopath)
+		tryPkg, err := ctx.addFileImports(path, gopath)
+		if tryPkg != nil {
+			pkg = tryPkg
+		}
 		if err != nil {
 			return pkg, err
 		}
