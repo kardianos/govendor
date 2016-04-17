@@ -203,12 +203,12 @@ func (li statusItemSort) Less(i, j int) bool {
 }
 
 // Status obtains the current package status list.
-func (ctx *Context) Status() ([]StatusItem, error) {
+func (ctx *Context) updateStatusCache() error {
 	var err error
 	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	ctx.updatePackageReferences()
@@ -221,9 +221,17 @@ func (ctx *Context) Status() ([]StatusItem, error) {
 			versionExact = vp.VersionExact
 		}
 
+		origin := ""
+		if pkg.Origin != pkg.Path {
+			origin = pkg.Origin
+		}
+		if len(pkg.Origin) == 0 && pkg.Path != pkg.Local {
+			origin = pkg.Local
+		}
+
 		li := StatusItem{
 			Status:       pkg.Status,
-			Pkg:          &pkgspec.Pkg{Path: pkg.Path, IncludeTree: pkg.IncludeTree, Origin: pkg.Origin, Version: version},
+			Pkg:          &pkgspec.Pkg{Path: pkg.Path, IncludeTree: pkg.IncludeTree, Origin: origin, Version: version},
 			Local:        pkg.Local,
 			VersionExact: versionExact,
 			ImportedBy:   make([]*Package, 0, len(pkg.referenced)),
@@ -237,5 +245,24 @@ func (ctx *Context) Status() ([]StatusItem, error) {
 	// Sort li by Status, then Path.
 	sort.Sort(statusItemSort(list))
 
-	return list, nil
+	ctx.statusCache = list
+	return nil
+}
+
+// Status obtains the current package status list.
+func (ctx *Context) Status() ([]StatusItem, error) {
+	var err error
+	if !ctx.loaded || ctx.dirty {
+		err = ctx.loadPackage()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if ctx.statusCache == nil {
+		err = ctx.updateStatusCache()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ctx.statusCache, nil
 }

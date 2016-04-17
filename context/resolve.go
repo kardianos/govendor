@@ -35,6 +35,7 @@ func init() {
 func (ctx *Context) loadPackage() error {
 	ctx.loaded = true
 	ctx.dirty = false
+	ctx.statusCache = nil
 	ctx.Package = make(map[string]*Package, len(ctx.Package))
 	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
 		if info == nil {

@@ -194,14 +194,10 @@ func TestDuplicatePackage(t *testing.T) {
 	)
 	g.In("co2")
 	c := ctx(g)
-	statusList, err := c.Status()
-	g.Check(err)
-	for _, item := range statusList {
-		if item.Status.Location != LocationExternal {
-			continue
-		}
-		g.Check(c.ModifyImport(pkg(item.Local), AddUpdate))
-	}
+
+	g.Check(c.ModifyStatus(StatusGroup{
+		Status: []Status{{Location: LocationExternal}},
+	}, AddUpdate))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
@@ -235,14 +231,9 @@ func TestDuplicatePackage(t *testing.T) {
  s  strings < ["co2/vendor/co3/pk3" "co3/pk3"]
 `)
 
-	statusList, err = c.Status()
-	g.Check(err)
-	for _, item := range statusList {
-		if item.Status.Location != LocationExternal {
-			continue
-		}
-		g.Check(c.ModifyImport(pkg(item.Local), AddUpdate))
-	}
+	g.Check(c.ModifyStatus(StatusGroup{
+		Status: []Status{{Location: LocationExternal}},
+	}, AddUpdate))
 	c.ResloveApply(ResolveAutoLongestPath(c.Check())) // Automaically resolve conflicts.
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
@@ -1095,21 +1086,25 @@ func TestOriginDir(t *testing.T) {
 	defer g.Clean()
 
 	g.Setup("co1/pk1",
-		gt.File("a.go", "co2/pk1"),
+		gt.File("a.go", "co2/pk1", "co2/pk1/sub1"),
 	)
 	g.Setup("co3/vendor/co2/pk1",
 		gt.File("a.go", "strings"),
 	)
+	g.Setup("co3/vendor/co2/pk1/sub1",
+		gt.File("b.go", "bytes"),
+	)
 	g.In("co1")
 	c := ctx(g)
 
-	g.Check(c.ModifyImport(pkg("co2/pk1::co3/vendor/co2/pk1"), Add))
+	g.Check(c.ModifyImport(pkg("co2/pk1/...::co3/vendor/co2/pk1"), Add))
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
 	tree(g, "pre", `
 /pk1/a.go
 /vendor/co2/pk1/a.go
+/vendor/co2/pk1/sub1/b.go
 /vendor/vendor.json
 `)
 
@@ -1122,25 +1117,30 @@ func TestOriginDir(t *testing.T) {
 			"origin": "co3/vendor/co2/pk1",
 			"path": "co2/pk1",
 			"revision": ""
+		},
+		{
+			"checksumSHA1": "9lQcNSYn9fe09txkREelZh/RSyw=",
+			"origin": "co3/vendor/co2/pk1/sub1",
+			"path": "co2/pk1/sub1",
+			"revision": ""
 		}
 	],
 	"rootPath": "co1"
 }
 `)
 
-	list(g, c, "pre list", `
+	afterAlterList := `
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ v  co1/vendor/co2/pk1/sub1 [co2/pk1/sub1] < ["co1/pk1"]
  l  co1/pk1 < []
+ s  bytes < ["co1/vendor/co2/pk1/sub1"]
  s  strings < ["co1/vendor/co2/pk1"]
-`)
+`
+	list(g, c, "pre list", afterAlterList)
 
 	c = ctx(g)
 
-	list(g, c, "post list", `
- v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
- l  co1/pk1 < []
- s  strings < ["co1/vendor/co2/pk1"]
-`)
+	list(g, c, "post list", afterAlterList)
 
 	found := false
 	for _, pkg := range c.Package {

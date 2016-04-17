@@ -67,6 +67,9 @@ type Context struct {
 	rewriteImports bool
 
 	ignoreTag []string // list of tags to ignore
+
+	statusCache []StatusItem
+	added       map[string]bool
 }
 
 // Package maintains information pertaining to a package.

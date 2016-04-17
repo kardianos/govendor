@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/kardianos/govendor/context"
 	"github.com/kardianos/govendor/prompt"
@@ -91,95 +90,25 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	if err != nil {
 		return msg, err
 	}
-	list, err := ctx.Status()
-	if err != nil {
-		return msg, err
-	}
 
-	added := make(map[string]bool, 10)
-	add := func(path string) {
-		added[path] = true
+	mops := make([]context.ModifyOption, 0, 3)
+	if *uncommitted {
+		mops = append(mops, context.Uncommitted)
+	}
+	if *tree {
+		mops = append(mops, context.IncludeTree)
 	}
 
 	// Add explicit imports.
 	for _, imp := range f.Import {
-		if *uncommitted {
-			imp.Uncommitted = true
-		}
-		if *tree {
-			imp.IncludeTree = true
-		}
-		add(imp.Path)
-		err = ctx.ModifyImport(imp, mod)
+		err = ctx.ModifyImport(imp, mod, mops...)
 		if err != nil {
 			return MsgNone, err
 		}
 	}
-
-	// If add any matched from "...".
-	for _, item := range list {
-		for _, imp := range f.Import {
-			if added[item.Pkg.Path] {
-				continue
-			}
-			if !imp.MatchTree {
-				continue
-			}
-			match := imp.Path + "/"
-			if !strings.HasPrefix(item.Pkg.Path, match) {
-				continue
-			}
-			if imp.HasVersion {
-				item.Pkg.HasVersion = true
-				item.Pkg.Version = imp.Version
-			}
-			add(item.Pkg.Path)
-			err = ctx.ModifyImport(item.Pkg, mod)
-			if err != nil {
-				return MsgNone, err
-			}
-		}
-	}
-
-	// Add packages from status.
-statusLoop:
-	for _, item := range list {
-		if f.HasStatus(item) {
-			if added[item.Pkg.Path] {
-				continue
-			}
-			// Do not attempt to add any existing status items that are
-			// already present in vendor folder.
-			if mod == context.Add {
-				if ctx.VendorFilePackagePath(item.Pkg.Path) != nil {
-					continue
-				}
-				for _, pkg := range ctx.Package {
-					if pkg.Status.Location == context.LocationVendor && item.Pkg.Path == pkg.Path {
-						continue statusLoop
-					}
-				}
-			}
-
-			if *tree {
-				item.Pkg.IncludeTree = true
-			}
-			if *uncommitted {
-				item.Pkg.Uncommitted = true
-			}
-			add(item.Pkg.Path)
-			err = ctx.ModifyImport(item.Pkg, mod)
-			if err != nil {
-				// Skip these errors if from status.
-				if _, is := err.(context.ErrTreeChildren); is {
-					continue
-				}
-				if _, is := err.(context.ErrTreeParents); is {
-					continue
-				}
-				return MsgNone, err
-			}
-		}
+	err = ctx.ModifyStatus(f.Status, mod, mops...)
+	if err != nil {
+		return MsgNone, err
 	}
 
 	// Auto-resolve package conflicts.

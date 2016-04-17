@@ -16,6 +16,7 @@ import (
 	"math"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kardianos/govendor/internal/pathos"
@@ -100,9 +101,117 @@ const (
 	Fetch                   // Get directly from remote repository.
 )
 
-// AddImport adds the package to the context. The vendorFolder is where the
-// package should be added to relative to the project root.
-func (ctx *Context) ModifyImport(ps *pkgspec.Pkg, mod Modify) error {
+type ModifyOption byte
+
+const (
+	Uncommitted ModifyOption = iota
+	MatchTree
+	IncludeTree
+)
+
+// ModifyStatus adds packages to the context by status.
+func (ctx *Context) ModifyStatus(sg StatusGroup, mod Modify, mops ...ModifyOption) error {
+	if ctx.added == nil {
+		ctx.added = make(map[string]bool, 10)
+	}
+
+	list, err := ctx.Status()
+	if err != nil {
+		return err
+	}
+
+	// Add packages from status.
+statusLoop:
+	for _, item := range list {
+		if !item.Status.MatchGroup(sg) {
+			continue
+		}
+		if ctx.added[item.Pkg.PathOrigin()] {
+			continue
+		}
+		// Do not attempt to add any existing status items that are
+		// already present in vendor folder.
+		if mod == Add {
+			if ctx.VendorFilePackagePath(item.Pkg.Path) != nil {
+				continue
+			}
+			for _, pkg := range ctx.Package {
+				if pkg.Status.Location == LocationVendor && item.Pkg.Path == pkg.Path {
+					continue statusLoop
+				}
+			}
+		}
+
+		err = ctx.modify(item.Pkg, mod, mops)
+		if err != nil {
+			// Skip these errors if from status.
+			if _, is := err.(ErrTreeChildren); is {
+				continue
+			}
+			if _, is := err.(ErrTreeParents); is {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// ModifyImport adds the package to the context.
+func (ctx *Context) ModifyImport(imp *pkgspec.Pkg, mod Modify, mops ...ModifyOption) error {
+	var err error
+	if ctx.added == nil {
+		ctx.added = make(map[string]bool, 10)
+	}
+	if !imp.MatchTree {
+		if !ctx.added[imp.PathOrigin()] {
+			err = ctx.modify(imp, mod, mops)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	list, err := ctx.Status()
+	if err != nil {
+		return err
+	}
+	// If add any matched from "...".
+	match := imp.Path + "/"
+	for _, item := range list {
+		if ctx.added[item.Pkg.PathOrigin()] {
+			continue
+		}
+		if item.Pkg.Path != imp.Path && !strings.HasPrefix(item.Pkg.Path, match) {
+			continue
+		}
+		if imp.HasVersion {
+			item.Pkg.HasVersion = true
+			item.Pkg.Version = imp.Version
+		}
+		item.Pkg.Origin = path.Join(imp.PathOrigin(), strings.TrimPrefix(item.Pkg.Path, imp.Path))
+		err = ctx.modify(item.Pkg, mod, mops)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ctx *Context) modify(ps *pkgspec.Pkg, mod Modify, mops []ModifyOption) error {
+	ctx.added[ps.PathOrigin()] = true
+	for _, mop := range mops {
+		switch mop {
+		default:
+			panic("unknown case")
+		case Uncommitted:
+			ps.Uncommitted = true
+		case MatchTree:
+			ps.MatchTree = true
+		case IncludeTree:
+			ps.IncludeTree = true
+		}
+	}
 	var err error
 	if !ctx.loaded || ctx.dirty {
 		err = ctx.loadPackage()
@@ -544,6 +653,7 @@ func (ctx *Context) ResolveAutoVendorFileOrigin(cc []*Conflict) []*Conflict {
 
 // Alter runs any requested package alterations.
 func (ctx *Context) Alter() error {
+	ctx.added = nil
 	// Ensure there are no conflicts at this time.
 	buf := &bytes.Buffer{}
 	for _, conflict := range ctx.Check() {
