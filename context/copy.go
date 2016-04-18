@@ -167,6 +167,12 @@ func copyFile(destPath, srcPath string, h hash.Hash) error {
 		return err
 	}
 	defer src.Close()
+	// Ensure we are not trying to copy a directory. May happen with symlinks.
+	if st, err := src.Stat(); err == nil {
+		if st.IsDir() {
+			return nil
+		}
+	}
 
 	dest, err := os.Create(destPath)
 	if err != nil {
