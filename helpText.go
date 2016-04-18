@@ -13,7 +13,7 @@ import (
 //go:generate govendor license -o licenses.go -template gen-license.template
 
 var helpFull = `govendor (` + version + `): record dependencies and copy into vendor folder
-	-govendor-licenses    Sho govendor's licenses.
+	-govendor-licenses    Show govendor's licenses.
 
 Sub-Commands
 
