@@ -5,12 +5,37 @@
 package context
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
 )
+
+type License struct {
+	Path     string
+	Filename string
+	Text     string
+}
+
+type LicenseSort []License
+
+func (list LicenseSort) Len() int {
+	return len(list)
+}
+func (list LicenseSort) Swap(i, j int) {
+	list[i], list[j] = list[j], list[i]
+}
+func (list LicenseSort) Less(i, j int) bool {
+	a, b := list[i], list[j]
+	if a.Path == b.Path {
+		return a.Filename < b.Filename
+	}
+	return a.Path < b.Path
+}
 
 type licenseSearchType byte
 
@@ -20,7 +45,7 @@ const (
 	licenseSuffix
 )
 
-type license struct {
+type licenseSearch struct {
 	Text   string
 	Search licenseSearchType
 }
@@ -42,7 +67,7 @@ type licenseTest interface {
 }
 
 // licenses lists the filenames to copy over to the vendor folder.
-var licenses = []license{
+var licenses = []licenseSearch{
 	{Text: "license", Search: licensePrefix},
 	{Text: "unlicense", Search: licensePrefix},
 	{Text: "copying", Search: licensePrefix},
@@ -56,8 +81,21 @@ var licenses = []license{
 	{Text: "thirdparty", Search: licenseSubstring},
 }
 
+var licenseNotExt = []string{
+	".go",
+	".c",
+	".h",
+	".cpp",
+	".hpp",
+}
+
 func isLicenseFile(name string) bool {
 	cname := strings.ToLower(name)
+	for _, X := range licenseNotExt {
+		if filepath.Ext(name) == X {
+			return false
+		}
+	}
 	for _, L := range licenses {
 		if L.Search.Test(cname, L.Text) {
 			return true
@@ -66,12 +104,10 @@ func isLicenseFile(name string) bool {
 	return false
 }
 
-// licenseCopy starts the search in the parent of "startIn" folder.
-// Looks in all sub-folders until root is reached. The root itself is not
-// searched.
-func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
-	addTo, _ := pathos.TrimCommonSuffix(pathos.SlashToFilepath(pkgPath), startIn)
-	folder := filepath.Clean(filepath.Join(startIn, ".."))
+// licenseWalk starts in a folder and searches up the folder tree
+// for license like files. Found files are reported to the found function.
+func licenseWalk(root, startIn string, found func(folder, name string) error) error {
+	folder := startIn
 	for i := 0; i <= looplimit; i++ {
 		dir, err := os.Open(folder)
 		if err != nil {
@@ -95,25 +131,7 @@ func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
 				continue
 			}
 
-			srcPath := filepath.Join(folder, name)
-			trimTo := pathos.FileTrimPrefix(getLastVendorRoot(folder), root)
-
-			/*
-				Path: "golang.org/x/tools/go/vcs"
-				Root: "/tmp/govendor-cache280388238/1"
-				StartIn: "/tmp/govendor-cache280388238/1/go/vcs"
-				addTo: "golang.org/x/tools"
-				$PROJ/vendor + addTo + pathos.FileTrimPrefix(folder, root) + "LICENSE"
-			*/
-			destPath := filepath.Join(vendorRoot, addTo, trimTo, name)
-
-			// Only copy if file does not exist.
-			_, err := os.Stat(destPath)
-			if err == nil {
-				continue
-			}
-
-			err = copyFile(destPath, srcPath, nil)
+			err = found(folder, name)
 			if err != nil {
 				return err
 			}
@@ -130,7 +148,36 @@ func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
 		}
 		folder = nextFolder
 	}
-	panic("copyLicense loop limit")
+	panic("licenseFind loop limit")
+}
+
+// licenseCopy starts the search in the parent of "startIn" folder.
+// Looks in all sub-folders until root is reached. The root itself is not
+// searched.
+func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
+	addTo, _ := pathos.TrimCommonSuffix(pathos.SlashToFilepath(pkgPath), startIn)
+	startIn = filepath.Clean(filepath.Join(startIn, ".."))
+	return licenseWalk(root, startIn, func(folder, name string) error {
+		srcPath := filepath.Join(folder, name)
+		trimTo := pathos.FileTrimPrefix(getLastVendorRoot(folder), root)
+
+		/*
+			Path: "golang.org/x/tools/go/vcs"
+			Root: "/tmp/govendor-cache280388238/1"
+			StartIn: "/tmp/govendor-cache280388238/1/go/vcs"
+			addTo: "golang.org/x/tools"
+			$PROJ/vendor + addTo + pathos.FileTrimPrefix(folder, root) + "LICENSE"
+		*/
+		destPath := filepath.Join(vendorRoot, addTo, trimTo, name)
+
+		// Only copy if file does not exist.
+		_, err := os.Stat(destPath)
+		if err == nil {
+			return nil
+		}
+
+		return copyFile(destPath, srcPath, nil)
+	})
 }
 
 func getLastVendorRoot(s string) string {
@@ -140,4 +187,29 @@ func getLastVendorRoot(s string) string {
 		return s
 	}
 	return s[ix+len("/vendor"):]
+}
+
+// LicenseDiscover looks for license files in a given path.
+func LicenseDiscover(root, startIn, overridePath string, list map[string]License) error {
+	return licenseWalk(root, startIn, func(folder, name string) error {
+		ipath := pathos.SlashToImportPath(strings.TrimPrefix(folder, root))
+		if len(overridePath) > 0 {
+			ipath = overridePath
+		}
+		if _, found := list[ipath]; found {
+			return nil
+		}
+		p := filepath.Join(folder, name)
+		text, err := ioutil.ReadFile(p)
+		if err != nil {
+			return fmt.Errorf("Failed to read license file %q %v", p, err)
+		}
+		key := path.Join(ipath, name)
+		list[key] = License{
+			Path:     ipath,
+			Filename: name,
+			Text:     string(text),
+		}
+		return nil
+	})
 }

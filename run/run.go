@@ -29,6 +29,8 @@ const (
 	MsgSync
 	MsgMigrate
 	MsgGet
+	MsgLicense
+	MsgGovendorLicense
 )
 
 type nullWriter struct{}
@@ -45,10 +47,14 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	}
 
 	flags := flag.NewFlagSet("govendor", flag.ContinueOnError)
+	licenses := flags.Bool("govendor-licenses", false, "show govendor's licenses")
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(appArgs[1:])
 	if err != nil {
 		return MsgFull, err
+	}
+	if *licenses {
+		return MsgGovendorLicense, nil
 	}
 
 	args := flags.Args()
@@ -80,6 +86,8 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 		return Migrate(w, args[1:])
 	case "get":
 		return Get(w, args[1:])
+	case "license":
+		return License(w, args[1:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
 		return GoCmd(cmd, args[1:])
 	default:

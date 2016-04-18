@@ -10,7 +10,10 @@ import (
 	"github.com/kardianos/govendor/migrate"
 )
 
-var helpFull = `govendor: copy go packages locally from GOPATH or remote. Uses vendor folder.
+//go:generate govendor license -o licenses.go -template gen-license.template
+
+var helpFull = `govendor (` + version + `): record dependencies and copy into vendor folder
+	-govendor-licenses    Sho govendor's licenses.
 
 Sub-Commands
 
@@ -24,6 +27,7 @@ Sub-Commands
 	sync     (beta) Pull in packages from remote respository to match vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	get      Like "go get" but copies dependencies into a "vendor" folder.
+	license  List discovered licenses for the given status or import paths.
 	
 	go tool commands that are wrapped:
 	  "+status" package selection may be used with them
@@ -136,4 +140,11 @@ var helpGet = `govendor get [options] (import-path)...
 	Options:
 		-insecure    allow downloading over insecure connection
 		-v           verbose mode
+`
+
+var helpLicense = `govendor license [options] ( +status or package-spec )
+	Attempt to find and list licenses for the specified packages.
+	Options:
+		-o           output to file name
+		-template    template file to use, input is "[]context.License"
 `

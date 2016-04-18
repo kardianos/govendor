@@ -65,6 +65,10 @@ func main() {
 		msgText = helpMigrate
 	case run.MsgGet:
 		msgText = helpGet
+	case run.MsgLicense:
+		msgText = helpLicense
+	case run.MsgGovendorLicense:
+		msgText = msgGovendorLicenses
 	}
 	if len(msgText) > 0 {
 		fmt.Fprint(os.Stderr, msgText)
