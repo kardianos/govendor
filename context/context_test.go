@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package context_test
+package context
 
 import (
 	"bytes"
@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/kardianos/govendor/context"
 	"github.com/kardianos/govendor/internal/gt"
 	"github.com/kardianos/govendor/pkgspec"
 )
@@ -369,6 +368,9 @@ func TestImportSimple(t *testing.T) {
 func TestNoDep(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
+
+	// This test relies on the file list being sorted. Normally not required.
+	testNeedsSortOrder = true
 
 	g.Setup("co1/pk1",
 		gt.File("a.go", "strings"),

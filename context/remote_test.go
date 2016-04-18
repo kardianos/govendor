@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package context_test
+package context
 
 import (
 	"testing"
 	"time"
 
-	. "github.com/kardianos/govendor/context"
 	"github.com/kardianos/govendor/internal/gt"
 )
 

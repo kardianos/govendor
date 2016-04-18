@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -319,6 +320,8 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 	return pkg
 }
 
+var testNeedsSortOrder = false
+
 func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) (*Package, error) {
 	// Do not check for existing package right away. If a external package
 	// has been added and we are looking in a vendor package, this won't work.
@@ -363,6 +366,9 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) (*Package, 
 	df.Close()
 	if err != nil {
 		return nil, err
+	}
+	if testNeedsSortOrder {
+		sort.Sort(fileInfoSort(info))
 	}
 	var pkg *Package
 	for _, fi := range info {
