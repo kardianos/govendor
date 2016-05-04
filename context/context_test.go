@@ -47,6 +47,12 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 		output.WriteString(statusItemString(item))
 		output.WriteRune('\n')
 	}
+	if !stringSameIgnoreSpace(output.String(), expected) {
+		g.Fatalf("(%s) Got\n%s", name, output.String())
+	}
+}
+
+func stringSameIgnoreSpace(a, b string) bool {
 	// Remove any space padding on the start/end of each line.
 	trimLines := func(s string) string {
 		lines := strings.Split(strings.TrimSpace(s), "\n")
@@ -55,9 +61,7 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 		}
 		return strings.Join(lines, "\n")
 	}
-	if trimLines(output.String()) != trimLines(expected) {
-		g.Fatalf("(%s) Got\n%s", name, output.String())
-	}
+	return trimLines(a) == trimLines(b)
 }
 
 func verifyChecksum(g *gt.GopathTest, c *Context, name string) {
@@ -99,13 +103,14 @@ func statusItemString(li StatusItem) string {
 	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Pkg.Path, li.ImportedBy)
 }
 
-func vendorFile(g *gt.GopathTest, expected string) {
+func vendorFile(g *gt.GopathTest, name, expected string) {
 	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), relVendorFile))
 	if err != nil {
 		g.Fatal(err)
 	}
-	if string(buf) != expected {
-		g.Fatalf("Got:\n%s\nWant\n%s", string(buf), expected)
+	s := string(buf)
+	if !stringSameIgnoreSpace(s, expected) {
+		g.Fatalf("(%s) Got:\n%s\nWant\n%s", name, s, expected)
 	}
 }
 
@@ -200,7 +205,7 @@ func TestDuplicatePackage(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -236,7 +241,7 @@ func TestDuplicatePackage(t *testing.T) {
 	c.ResloveApply(ResolveAutoLongestPath(c.Check())) // Automaically resolve conflicts.
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -345,7 +350,7 @@ func TestImportSimple(t *testing.T) {
 	c = ctx(g)
 	list(g, c, "new", expected)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -410,7 +415,7 @@ func TestNoDep(t *testing.T) {
 	c = ctx(g)
 	list(g, c, "new", expected)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -455,7 +460,7 @@ func TestUpdate(t *testing.T) {
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "a", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -503,6 +508,26 @@ func TestUpdate(t *testing.T) {
  s  strings < ["co1/vendor/co2/pk1" "co1/vendor/co2/pk1/pk2"]
 `)
 
+	vendorFile(g, "b", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
+			"path": "co2/pk1",
+			"revision": ""
+		},
+		{
+			"checksumSHA1": "0GMhcCYB/xH0CWDPYljKj3W7ylY=",
+			"path": "co2/pk1/pk2",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+
 	// Now remove an import.
 	g.Check(c.ModifyImport(pkg("co2/pk1"), Remove))
 	g.Check(c.Alter())
@@ -514,6 +539,21 @@ func TestUpdate(t *testing.T) {
  s  bytes < ["co1/pk1"]
  s  encoding/csv < ["co1/vendor/co2/pk1/pk2"]
  s  strings < ["co2/pk1" "co1/vendor/co2/pk1/pk2"]
+`)
+
+	vendorFile(g, "c", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "0GMhcCYB/xH0CWDPYljKj3W7ylY=",
+			"path": "co2/pk1/pk2",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
 `)
 }
 
@@ -556,7 +596,7 @@ func TestVendor(t *testing.T) {
  s  strings < ["co1/vendor/a"]
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -720,7 +760,7 @@ func TestVendorFile(t *testing.T) {
  s  strings < ["co1/vendor/a"]
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -759,7 +799,7 @@ func TestVendorFile(t *testing.T) {
  s  strings < ["co1/vendor/a"]
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -1044,7 +1084,7 @@ func TestTree(t *testing.T) {
 /vendor/vendor.json
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -1207,7 +1247,7 @@ func TestOriginDir(t *testing.T) {
 /vendor/vendor.json
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [

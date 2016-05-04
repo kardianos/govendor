@@ -5,13 +5,14 @@
 package context
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
 	"github.com/kardianos/govendor/internal/gt"
 )
 
-func TestFetch(t *testing.T) {
+func TestFetchSimple(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()
 
@@ -44,7 +45,7 @@ func TestFetch(t *testing.T) {
 /vendor/vendor.json
 `)
 
-	vendorFile(g, `{
+	vendorFile(g, "", `{
 	"comment": "",
 	"ignore": "",
 	"package": [
@@ -66,4 +67,34 @@ func TestFetch(t *testing.T) {
  s  strings < ["co1/vendor/co2/pk1"]
 `)
 
+}
+
+func TestFetchVerbose(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("remote/co3/vendor/co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.In("remote")
+	remote := gt.NewHttpHandler(g, "git")
+
+	g.In("remote/co3")
+	remote.Setup().Commit()
+
+	g.In("co1")
+	c := ctx(g)
+
+	buf := &bytes.Buffer{}
+	c.Logger = buf
+
+	remoteOrigin := remote.HttpAddr() + "/remote/co3/vendor/co2/pk1"
+
+	g.Check(c.ModifyImport(pkg("co2/pk1::"+remoteOrigin), Fetch))
+	g.Check(c.Alter())
+
+	t.Logf("Log\n%s\n", buf.Bytes())
 }

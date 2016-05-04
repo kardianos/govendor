@@ -389,7 +389,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		vp.Tree = pkg.IncludeTree
 	}
 	vp.Origin = pkg.Origin
-	if pkg.Path != pkg.Local && pkg.inVendor {
+	if pkg.Path != pkg.Local && pkg.inVendor && vp.Add {
 		vp.Origin = pkg.Local
 	}
 
