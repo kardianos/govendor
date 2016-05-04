@@ -288,7 +288,10 @@ func TestVendorProgram(t *testing.T) {
 		gt.File("a.go", "strings"),
 	)
 	g.Setup("co2/main",
-		gt.File("b.go", "bytes"),
+		gt.File("b.go", "bytes", "co3/pk1"),
+	)
+	g.Setup("co3/pk1",
+		gt.File("a.go", "fmt"),
 	)
 	g.In("co1")
 	c := ctx(g)
@@ -298,10 +301,14 @@ func TestVendorProgram(t *testing.T) {
 	g.Check(c.Alter())
 	g.Check(c.WriteVendorFile())
 
+	c = ctx(g)
+
 	list(g, c, "co1 list", `
- pv  co1/vendor/co2/main [co2/main] < []
+pv  co1/vendor/co2/main [co2/main] < []
+ e  co3/pk1 < ["co1/vendor/co2/main"]
  l  co1/pk1 < []
  s  bytes < ["co1/vendor/co2/main"]
+ s  fmt < ["co3/pk1"]
  s  strings < ["co1/pk1"]
 `)
 }
@@ -832,6 +839,17 @@ func TestTagList(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx(g)
+
+	list(g, c, "co1 before ignore", `
+ e  co2/pk1 < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  encoding/binary < ["co2/pk1"]
+ s  encoding/csv < ["co2/pk1"]
+ s  encoding/hex < ["co1/pk1"]
+ s  encoding/json < ["co2/pk1"]
+ s  testing < ["co1/pk1" "co2/pk1"]
+`)
 	c.IgnoreBuild("test appengine")
 
 	list(g, c, "co1 list", `
@@ -839,6 +857,34 @@ func TestTagList(t *testing.T) {
  l  co1/pk1 < []
  s  bytes < ["co1/pk1"]
  s  encoding/csv < ["co2/pk1"]
+ s  encoding/hex < ["co1/pk1"]
+ s  testing < ["co1/pk1"]
+`)
+
+	c.IgnoreBuild("")
+
+	g.Check(c.ModifyStatus(StatusGroup{
+		Status: []Status{{Location: LocationExternal}},
+	}, AddUpdate))
+	g.Check(c.Alter())
+
+	list(g, c, "after co1 before ignore", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  encoding/binary < ["co1/vendor/co2/pk1"]
+ s  encoding/csv < ["co1/vendor/co2/pk1"]
+ s  encoding/hex < ["co1/pk1"]
+ s  encoding/json < ["co1/vendor/co2/pk1"]
+ s  testing < ["co1/pk1" "co1/vendor/co2/pk1"]
+`)
+	c.IgnoreBuild("test appengine")
+
+	list(g, c, "after co1 list", `
+ v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/pk1"]
+ s  encoding/csv < ["co1/vendor/co2/pk1"]
  s  encoding/hex < ["co1/pk1"]
  s  testing < ["co1/pk1"]
 `)

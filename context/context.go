@@ -247,6 +247,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 // IgnoreBuild takes a space separated list of tags to ignore.
 // "a b c" will ignore "a" OR "b" OR "c".
 func (ctx *Context) IgnoreBuild(ignore string) {
+	ctx.dirty = true
 	ors := strings.Fields(ignore)
 	ctx.ignoreTag = make([]string, 0, len(ors))
 	for _, or := range ors {
