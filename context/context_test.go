@@ -288,7 +288,7 @@ func TestVendorProgram(t *testing.T) {
 		gt.File("a.go", "strings"),
 	)
 	g.Setup("co2/main",
-		gt.File("b.go", "bytes", "co3/pk1"),
+		gt.File("b.go", "bytes", "co3/pk1", "notfound"),
 	)
 	g.Setup("co3/pk1",
 		gt.File("a.go", "fmt"),
@@ -310,6 +310,7 @@ pv  co1/vendor/co2/main [co2/main] < []
  s  bytes < ["co1/vendor/co2/main"]
  s  fmt < ["co3/pk1"]
  s  strings < ["co1/pk1"]
+  m notfound < ["co1/vendor/co2/main"]
 `)
 }
 
