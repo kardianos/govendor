@@ -431,6 +431,51 @@ func TestNoDep(t *testing.T) {
 	verifyChecksum(g, c, "new")
 }
 
+func TestMainTest(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	// This test relies on the file list being sorted. Normally not required.
+	testNeedsSortOrder = true
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "strings"),
+	)
+	// Include some non-go files that sort before and after the go file.
+	// Triggers an edge case where the package wasn't added.
+	g.Setup("co2/pk1",
+		gt.FilePkgBuild("a.go", "main_test", "", "testing"),
+		gt.FilePkgBuild("b.go", "main", "", "fmt"),
+	)
+	g.In("co1")
+	c := ctx(g)
+	list(g, c, "before", `
+ l  co1/pk1 < []
+ s  strings < ["co1/pk1"]
+`)
+	g.Check(c.ModifyImport(pkg("co2/pk1"), AddUpdate))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "after", `
+pv  co1/vendor/co2/pk1 [co2/pk1] < []
+ l  co1/pk1 < []
+ s  fmt < ["co1/vendor/co2/pk1"]
+ s  strings < ["co1/pk1"]
+ s  testing < ["co1/vendor/co2/pk1"]
+`)
+
+	c.IgnoreBuild("test")
+
+	list(g, c, "ignore test", `
+pv  co1/vendor/co2/pk1 [co2/pk1] < []
+ l  co1/pk1 < []
+ s  fmt < ["co1/vendor/co2/pk1"]
+ s  strings < ["co1/pk1"]
+`)
+
+}
+
 func TestUpdate(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()

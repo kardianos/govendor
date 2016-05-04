@@ -72,15 +72,20 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 			return nil, nil, nil
 		}
 	}
+	tags = make([]string, 0, 6)
+	if strings.HasSuffix(f.Name.Name, "_test") {
+		tags = append(tags, "test")
+	}
+	pkgNameNormalized := strings.TrimSuffix(f.Name.Name, "_test")
+
 	// Files with package name "documentation" should be ignored, per go build tool.
-	if f.Name.Name == "documentation" {
+	if pkgNameNormalized == "documentation" {
 		return nil, nil, nil
 	}
 
 	filename := filenameExt[:len(filenameExt)-3]
 
 	l := strings.Split(filename, "_")
-	tags = make([]string, 0, 6)
 
 	if n := len(l); n > 1 && l[n-1] == "test" {
 		l = l[:n-1]
@@ -156,9 +161,10 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 	if f == nil {
 		return nil, nil
 	}
+	pkgNameNormalized := strings.TrimSuffix(f.Name.Name, "_test")
 
 	// Files with package name "documentation" should be ignored, per go build tool.
-	if f.Name.Name == "documentation" {
+	if pkgNameNormalized == "documentation" {
 		return nil, nil
 	}
 
@@ -185,7 +191,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 			Location: LocationUnknown,
 			Presence: PresenceFound,
 		}
-		if f.Name.Name == "main" {
+		if pkgNameNormalized == "main" {
 			status.Type = TypeProgram
 		}
 		pkg = ctx.setPackage(dir, importPath, importPath, gopath, status)

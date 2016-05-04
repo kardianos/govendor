@@ -116,23 +116,20 @@ func (g *GopathTest) Check(err error) {
 
 type FileSpec struct {
 	Pkg     string
+	PkgName string
 	Name    string
 	Imports []string
 	Build   string
 }
 
 var fileSpecFile = template.Must(template.New("").Funcs(map[string]interface{}{
-	"pkg": func(s string) string {
-		_, pkg := path.Split(s)
-		return pkg
-	},
 	"imp": func(s string) string {
 		return "`" + s + "`"
 	},
 }).Parse(` {{if .Build}}
 // +build {{.Build}}
 {{end}}
-package {{.Pkg|pkg}}
+package {{.PkgName}}
 
 import (
 {{range .Imports}}	{{.|imp}}
@@ -151,12 +148,18 @@ func File(name string, imports ...string) FileSpec {
 func FileBuild(name, build string, imports ...string) FileSpec {
 	return FileSpec{Name: name, Build: build, Imports: imports}
 }
+func FilePkgBuild(name, pkgName, build string, imports ...string) FileSpec {
+	return FileSpec{Name: name, PkgName: pkgName, Build: build, Imports: imports}
+}
 
 func (g *GopathTest) Setup(at string, files ...FileSpec) {
 	var err error
 	pkg := g.mksrc(at)
 	for _, f := range files {
 		f.Pkg = at
+		if len(f.PkgName) == 0 {
+			_, f.PkgName = path.Split(f.Pkg)
+		}
 		p := filepath.Join(pkg, f.Name)
 		err = ioutil.WriteFile(p, f.Bytes(), 0600)
 		if err != nil {

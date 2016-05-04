@@ -111,8 +111,9 @@ func (ctx *Context) rewrite() error {
 		if f == nil {
 			return nil
 		}
+		pkgNameNormalized := strings.TrimSuffix(f.Name.Name, "_test")
 		// Files with package name "documentation" should be ignored, per go build tool.
-		if f.Name.Name == "documentation" {
+		if pkgNameNormalized == "documentation" {
 			return nil
 		}
 
