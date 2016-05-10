@@ -7,6 +7,7 @@ package pathos
 import (
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -108,4 +109,25 @@ func FileStringEquals(s1, s2 string) bool {
 		s2 = s2[:len(s2)-1]
 	}
 	return s1 == s2
+}
+
+// GoEnv parses a "go env" line and checks for a specific
+// variable name.
+func GoEnv(name, line string) (value string, ok bool) {
+	// Remove any leading "set " found on windows.
+	// Match the name to the env var + "=".
+	// Remove any quotes.
+	// Return result.
+	line = strings.TrimPrefix(line, "set ")
+	if len(line) < len(name)+1 {
+		return "", false
+	}
+	if name != line[:len(name)] || line[len(name)] != '=' {
+		return "", false
+	}
+	line = line[len(name)+1:]
+	if un, err := strconv.Unquote(line); err == nil {
+		line = un
+	}
+	return line, true
 }

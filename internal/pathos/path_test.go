@@ -29,3 +29,29 @@ func TestTrimCommonSuffix(t *testing.T) {
 		}
 	}
 }
+
+func TestGoEnv(t *testing.T) {
+	list := []struct {
+		line   string
+		name   string
+		result string
+		ok     bool
+	}{
+		{`set GOROOT=C:\Foo\Bar`, "GOROOT", `C:\Foo\Bar`, true},
+		{`set GOPATH=C:\Foo\Bar`, "GOROOT", ``, false},
+		{`set GOROOT=`, "GOROOT", ``, true},
+		{`GOROOT="/foo/bar"`, "GOROOT", `/foo/bar`, true},
+		{`GOPATH="/foo/bar"`, "GOROOT", ``, false},
+		{`GOROOT=""`, "GOROOT", ``, true},
+	}
+
+	for index, item := range list {
+		result, ok := GoEnv(item.name, item.line)
+		if ok != item.ok {
+			t.Errorf("index %d line %#v expected ok %t but got %t", index, item, item.ok, ok)
+		}
+		if result != item.result {
+			t.Errorf("index %d line %#v expected result %q but got %q", index, item, item.result, result)
+		}
+	}
+}
