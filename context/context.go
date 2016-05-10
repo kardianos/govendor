@@ -183,8 +183,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 			return nil, err
 		}
 		for _, line := range strings.Split(string(goEnv), "\n") {
-			v, ok := pathos.GoEnv("GOROOT", line)
-			if ok {
+			if v, ok := pathos.GoEnv("GOROOT", line); ok {
 				goroot = v
 				break
 			}
