@@ -14,6 +14,7 @@ import (
 
 var helpFull = `govendor (` + version + `): record dependencies and copy into vendor folder
 	-govendor-licenses    Show govendor's licenses.
+	-version              Show govendor version
 
 Sub-Commands
 
@@ -23,8 +24,9 @@ Sub-Commands
 	update   Update packages from $GOPATH.
 	remove   Remove packages from the vendor folder.
 	status   Lists any packages missing, out-of-date, or modified locally.
-	fetch    (beta) Add new or update existing packages from remote repository.
-	sync     (beta) Pull in packages from remote respository to match vendor.json file.
+	fetch    Add new or update vendor folder packages from remote repository.
+	sync     Pull packages into vendor folder from remote repository with revisions
+  	             from vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	get      Like "go get" but copies dependencies into a "vendor" folder.
 	license  List discovered licenses for the given status or import paths.
@@ -59,7 +61,7 @@ Ignoring files with build tags:
 	listing and copying files. By default the init command adds the
 	the "test" tag to the ignore list.
 
-If using go1.5, ensure you set GO15VENDOREXPERIMENT=1
+If using go1.5, ensure GO15VENDOREXPERIMENT=1 is set.
 
 `
 
@@ -147,4 +149,7 @@ var helpLicense = `govendor license [options] ( +status or package-spec )
 	Options:
 		-o           output to file name
 		-template    template file to use, input is "[]context.License"
+`
+
+var msgGovendorVersion = version + `
 `

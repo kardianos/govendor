@@ -31,6 +31,7 @@ const (
 	MsgGet
 	MsgLicense
 	MsgGovendorLicense
+	MsgGovendorVersion
 )
 
 type nullWriter struct{}
@@ -48,6 +49,7 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 
 	flags := flag.NewFlagSet("govendor", flag.ContinueOnError)
 	licenses := flags.Bool("govendor-licenses", false, "show govendor's licenses")
+	version := flags.Bool("version", false, "show govendor version")
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(appArgs[1:])
 	if err != nil {
@@ -55,6 +57,9 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	}
 	if *licenses {
 		return MsgGovendorLicense, nil
+	}
+	if *version {
+		return MsgGovendorVersion, nil
 	}
 
 	args := flags.Args()

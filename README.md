@@ -57,8 +57,9 @@ govendor fetch golang.org/x/net/context
 	update   Update packages from $GOPATH.
 	remove   Remove packages from the vendor folder.
 	status   Lists any packages missing, out-of-date, or modified locally.
-	fetch    (beta) Add new or update existing packages from remote repository.
-	sync     (beta) Pull in packages from remote respository to match vendor.json file.
+	fetch    Add new or update vendor folder packages from remote repository.
+	sync     Pull packages into vendor folder from remote repository with revisions
+  	             from vendor.json file.
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	get      Like "go get" but copies dependencies into a "vendor" folder.
 	license  List discovered licenses for the given status or import paths.
