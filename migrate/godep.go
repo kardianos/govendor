@@ -28,7 +28,7 @@ func (sys sysGodep) Check(root string) (system, error) {
 	return nil, nil
 }
 func (sysGodep) Migrate(root string) error {
-	// Determine if import paths are rewriten.
+	// Determine if import paths are rewritten.
 	// Un-rewrite import paths.
 	// Copy files from Godeps/_workspace/src to "vendor".
 	// Translate Godeps/Godeps.json to vendor.json.
