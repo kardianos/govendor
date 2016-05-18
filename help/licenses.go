@@ -2,7 +2,7 @@
 
 package help
 
-var GovendorLicenses = `LICENSE -  go
+var msgGovendorLicenses = `LICENSE -  go
 Copyright (c) 2012 The Go Authors. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kardianos/govendor/help"
 	"github.com/kardianos/govendor/internal/gt"
 	"github.com/kardianos/govendor/prompt"
 )
@@ -46,7 +47,7 @@ func Vendor(g *gt.GopathTest, name, argLine, expectedOutput string) {
 	if err != nil {
 		g.Fatalf("(%s) Error: %v", name, err)
 	}
-	if msg != MsgNone {
+	if msg != help.MsgNone {
 		g.Fatalf("(%s) Printed help", name)
 	}
 	// Remove any space padding on the start/end of each line.
