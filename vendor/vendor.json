@@ -9,6 +9,12 @@
 			"revisionTime": "2015-10-22T12:31:44+02:00"
 		},
 		{
+			"checksumSHA1": "3VJcSYFds0zeIO5opOs0AoKm3Mw=",
+			"path": "github.com/google/shlex",
+			"revision": "6f45313302b9c56850fc17f99e40caebce98c716",
+			"revisionTime": "2015-01-27T13:39:51Z"
+		},
+		{
 			"checksumSHA1": "PuNlB3GBL80NhPt6ULoM+GFBXaQ=",
 			"path": "golang.org/x/crypto/ssh/terminal",
 			"revision": "5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3",

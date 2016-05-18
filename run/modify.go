@@ -11,20 +11,21 @@ import (
 	"io"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/help"
 	"github.com/kardianos/govendor/prompt"
 )
 
-func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Prompt) (HelpMessage, error) {
-	msg := MsgFull
+func (r *runner) Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Prompt) (help.HelpMessage, error) {
+	msg := help.MsgFull
 	switch mod {
 	case context.Add:
-		msg = MsgAdd
+		msg = help.MsgAdd
 	case context.Update, context.AddUpdate:
-		msg = MsgUpdate
+		msg = help.MsgUpdate
 	case context.Remove:
-		msg = MsgRemove
+		msg = help.MsgRemove
 	case context.Fetch:
-		msg = MsgFetch
+		msg = help.MsgFetch
 	}
 	var err error
 	/*
@@ -47,7 +48,7 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		}
 		if resp == prompt.RespCancel {
 			fmt.Printf("Cancelled\n")
-			return MsgNone, nil
+			return help.MsgNone, nil
 		}
 		choosen := q.AnswerSingle(true)
 
@@ -68,13 +69,13 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 		return msg, err
 	}
 	if *short && *long {
-		return MsgNone, errors.New("cannot select both long and short path")
+		return help.MsgNone, errors.New("cannot select both long and short path")
 	}
 	args := listFlags.Args()
 	if len(args) == 0 {
 		return msg, errors.New("missing package or status")
 	}
-	ctx, err := context.NewContextWD(context.RootVendor)
+	ctx, err := r.NewContextWD(context.RootVendor)
 	if err != nil {
 		return checkNewContextError(err)
 	}
@@ -103,12 +104,12 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 	for _, imp := range f.Import {
 		err = ctx.ModifyImport(imp, mod, mops...)
 		if err != nil {
-			return MsgNone, err
+			return help.MsgNone, err
 		}
 	}
 	err = ctx.ModifyStatus(f.Status, mod, mops...)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 
 	// Auto-resolve package conflicts.
@@ -139,22 +140,22 @@ func Modify(w io.Writer, subCmdArgs []string, mod context.Modify, ask prompt.Pro
 				fmt.Fprintf(w, "Fetch %q\n", op.Src)
 			}
 		}
-		return MsgNone, nil
+		return help.MsgNone, nil
 	}
 
 	// Write intent, make the changes, then record any checksums or recursive info.
 	err = ctx.WriteVendorFile()
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	// Write out vendor file and do change.
 	err = ctx.Alter()
 	vferr := ctx.WriteVendorFile()
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	if vferr != nil {
-		return MsgNone, vferr
+		return help.MsgNone, vferr
 	}
-	return MsgNone, nil
+	return help.MsgNone, nil
 }

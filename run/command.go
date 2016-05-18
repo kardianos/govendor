@@ -13,34 +13,35 @@ import (
 	"path/filepath"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/help"
 	"github.com/kardianos/govendor/migrate"
 )
 
-func Init(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+func (r *runner) Init(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	flags := flag.NewFlagSet("init", flag.ContinueOnError)
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
-		return MsgInit, err
+		return help.MsgInit, err
 	}
-	ctx, err := context.NewContextWD(context.RootWD)
+	ctx, err := r.NewContextWD(context.RootWD)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	ctx.VendorFile.Ignore = "test" // Add default ignore rule.
 	err = ctx.WriteVendorFile()
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	err = os.MkdirAll(filepath.Join(ctx.RootDir, ctx.VendorFolder), 0777)
-	return MsgNone, err
+	return help.MsgNone, err
 }
-func Migrate(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+func (r *runner) Migrate(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	flags := flag.NewFlagSet("migrate", flag.ContinueOnError)
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
-		return MsgMigrate, err
+		return help.MsgMigrate, err
 	}
 
 	from := migrate.From("auto")
@@ -49,13 +50,13 @@ func Migrate(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	}
 	err = migrate.MigrateWD(from)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	fmt.Fprintf(w, `You may wish to run "govendor sync" now.%s`, "\n")
-	return MsgNone, nil
+	return help.MsgNone, nil
 }
 
-func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+func (r *runner) Get(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	flags := flag.NewFlagSet("get", flag.ContinueOnError)
 	flags.SetOutput(nullWriter{})
 
@@ -66,7 +67,7 @@ func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
-		return MsgGet, err
+		return help.MsgGet, err
 	}
 	logger := w
 	if !*verbose {
@@ -75,17 +76,17 @@ func Get(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 	for _, a := range flags.Args() {
 		err = context.Get(logger, a, *insecure)
 		if err != nil {
-			return MsgNone, err
+			return help.MsgNone, err
 		}
-		GoCmd("install", []string{a})
+		r.GoCmd("install", []string{a})
 	}
-	return MsgNone, nil
+	return help.MsgNone, nil
 }
 
-func GoCmd(subcmd string, args []string) (HelpMessage, error) {
-	ctx, err := context.NewContextWD(context.RootVendorOrWD)
+func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
+	ctx, err := r.NewContextWD(context.RootVendorOrWD)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	statusArgs := make([]string, 0, len(args))
 	otherArgs := make([]string, 1, len(args)+1)
@@ -100,15 +101,15 @@ func GoCmd(subcmd string, args []string) (HelpMessage, error) {
 	}
 	cgp, err := currentGoPath(ctx)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	f, err := parseFilter(cgp, statusArgs)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	list, err := ctx.Status()
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 
 	for _, item := range list {
@@ -119,30 +120,30 @@ func GoCmd(subcmd string, args []string) (HelpMessage, error) {
 	cmd := exec.Command("go", otherArgs...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	return MsgNone, cmd.Run()
+	return help.MsgNone, cmd.Run()
 }
 
-func Status(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+func (r *runner) Status(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	flags := flag.NewFlagSet("status", flag.ContinueOnError)
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
-		return MsgStatus, err
+		return help.MsgStatus, err
 	}
-	ctx, err := context.NewContextWD(context.RootVendor)
+	ctx, err := r.NewContextWD(context.RootVendor)
 	if err != nil {
-		return MsgStatus, err
+		return help.MsgStatus, err
 	}
 	outOfDate, err := ctx.VerifyVendor()
 	if err != nil {
-		return MsgStatus, err
+		return help.MsgStatus, err
 	}
 	if len(outOfDate) == 0 {
-		return MsgNone, nil
+		return help.MsgNone, nil
 	}
 	fmt.Fprintf(w, "The following packages are missing or modified locally:\n")
 	for _, pkg := range outOfDate {
 		fmt.Fprintf(w, "\t%s\n", pkg.Path)
 	}
-	return MsgNone, nil
+	return help.MsgNone, nil
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package help
 
 import (
 	"strings"
@@ -149,6 +149,9 @@ var helpLicense = `govendor license [options] ( +status or package-spec )
 	Options:
 		-o           output to file name
 		-template    template file to use, input is "[]context.License"
+`
+var helpShell = `govendor shell
+	Open a govendor "shell". Useful for faster queries on large projects.
 `
 
 var msgGovendorVersion = version + `

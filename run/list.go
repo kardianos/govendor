@@ -12,32 +12,33 @@ import (
 	"text/tabwriter"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/help"
 )
 
-func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
+func (r *runner) List(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
 	listFlags.SetOutput(nullWriter{})
 	verbose := listFlags.Bool("v", false, "verbose")
 	noStatus := listFlags.Bool("no-status", false, "do not show the status")
 	err := listFlags.Parse(subCmdArgs)
 	if err != nil {
-		return MsgList, err
+		return help.MsgList, err
 	}
 	args := listFlags.Args()
 	// fmt.Printf("Status: %q\n", f.Status)
 
 	// Print all listed status.
-	ctx, err := context.NewContextWD(context.RootVendorOrWD)
+	ctx, err := r.NewContextWD(context.RootVendorOrWD)
 	if err != nil {
 		return checkNewContextError(err)
 	}
 	cgp, err := currentGoPath(ctx)
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 	f, err := parseFilter(cgp, args)
 	if err != nil {
-		return MsgList, err
+		return help.MsgList, err
 	}
 	if len(f.Import) == 0 {
 		insertListToAllNot(&f.Status, normal)
@@ -47,7 +48,7 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 
 	list, err := ctx.Status()
 	if err != nil {
-		return MsgNone, err
+		return help.MsgNone, err
 	}
 
 	formatSame := "%[1]v %[2]s\t%[3]s\t%[4]s\n"
@@ -87,5 +88,5 @@ func List(w io.Writer, subCmdArgs []string) (HelpMessage, error) {
 			}
 		}
 	}
-	return MsgNone, nil
+	return help.MsgNone, nil
 }

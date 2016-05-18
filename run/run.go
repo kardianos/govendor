@@ -11,27 +11,8 @@ import (
 	"io"
 
 	"github.com/kardianos/govendor/context"
+	"github.com/kardianos/govendor/help"
 	"github.com/kardianos/govendor/prompt"
-)
-
-type HelpMessage byte
-
-const (
-	MsgNone HelpMessage = iota
-	MsgFull
-	MsgInit
-	MsgList
-	MsgAdd
-	MsgUpdate
-	MsgRemove
-	MsgFetch
-	MsgStatus
-	MsgSync
-	MsgMigrate
-	MsgGet
-	MsgLicense
-	MsgGovendorLicense
-	MsgGovendorVersion
 )
 
 type nullWriter struct{}
@@ -40,11 +21,28 @@ func (nw nullWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+type runner struct {
+	ctx *context.Context
+}
+
+func (r *runner) NewContextWD(rt context.RootType) (*context.Context, error) {
+	if r.ctx != nil {
+		return r.ctx, nil
+	}
+	var err error
+	r.ctx, err = context.NewContextWD(rt)
+	return r.ctx, err
+}
+
 // Run is isoloated from main and os.Args to help with testing.
 // Shouldn't directly print to console, just write through w.
-func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) {
+func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (help.HelpMessage, error) {
+	r := &runner{}
+	return r.run(w, appArgs, ask)
+}
+func (r *runner) run(w io.Writer, appArgs []string, ask prompt.Prompt) (help.HelpMessage, error) {
 	if len(appArgs) == 1 {
-		return MsgFull, nil
+		return help.MsgFull, nil
 	}
 
 	flags := flag.NewFlagSet("govendor", flag.ContinueOnError)
@@ -53,13 +51,13 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(appArgs[1:])
 	if err != nil {
-		return MsgFull, err
+		return help.MsgFull, err
 	}
 	if *licenses {
-		return MsgGovendorLicense, nil
+		return help.MsgGovendorLicense, nil
 	}
 	if *version {
-		return MsgGovendorVersion, nil
+		return help.MsgGovendorVersion, nil
 	}
 
 	args := flags.Args()
@@ -67,9 +65,9 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 	cmd := args[0]
 	switch cmd {
 	case "init":
-		return Init(w, args[1:])
+		return r.Init(w, args[1:])
 	case "list":
-		return List(w, args[1:])
+		return r.List(w, args[1:])
 	case "add", "update", "remove", "fetch":
 		var mod context.Modify
 		switch cmd {
@@ -82,28 +80,30 @@ func Run(w io.Writer, appArgs []string, ask prompt.Prompt) (HelpMessage, error) 
 		case "fetch":
 			mod = context.Fetch
 		}
-		return Modify(w, args[1:], mod, ask)
+		return r.Modify(w, args[1:], mod, ask)
 	case "sync":
-		return Sync(w, args[1:])
+		return r.Sync(w, args[1:])
 	case "status":
-		return Status(w, args[1:])
+		return r.Status(w, args[1:])
 	case "migrate":
-		return Migrate(w, args[1:])
+		return r.Migrate(w, args[1:])
 	case "get":
-		return Get(w, args[1:])
+		return r.Get(w, args[1:])
 	case "license":
-		return License(w, args[1:])
+		return r.License(w, args[1:])
+	case "shell":
+		return r.Shell(w, args[1:])
 	case "fmt", "build", "install", "clean", "test", "vet", "generate":
-		return GoCmd(cmd, args[1:])
+		return r.GoCmd(cmd, args[1:])
 	default:
-		return MsgFull, fmt.Errorf("Unknown command %q", cmd)
+		return help.MsgFull, fmt.Errorf("Unknown command %q", cmd)
 	}
 }
 
-func checkNewContextError(err error) (HelpMessage, error) {
+func checkNewContextError(err error) (help.HelpMessage, error) {
 	// Diagnose error, show current value of 1.5vendor, suggest alter.
 	if err == nil {
-		return MsgNone, nil
+		return help.MsgNone, nil
 	}
 	if _, is := err.(context.ErrMissingVendorFile); is {
 		err = fmt.Errorf(`%v
@@ -111,7 +111,7 @@ func checkNewContextError(err error) (HelpMessage, error) {
 Ensure the current folder or a parent folder contains a folder named "vendor".
 If in doubt, run "govendor init" in the project root.
 `, err)
-		return MsgNone, err
+		return help.MsgNone, err
 	}
-	return MsgNone, err
+	return help.MsgNone, err
 }

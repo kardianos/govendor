@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/kardianos/govendor/cliprompt"
+	"github.com/kardianos/govendor/help"
 	"github.com/kardianos/govendor/run"
 )
 
@@ -38,47 +39,14 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
-	msgText := ""
-	switch msg {
-	default:
-		panic("Unknown message type")
-	case run.MsgNone:
-	case run.MsgFull:
-		msgText = helpFull
-	case run.MsgInit:
-		msgText = helpInit
-	case run.MsgList:
-		msgText = helpList
-	case run.MsgAdd:
-		msgText = helpAdd
-	case run.MsgUpdate:
-		msgText = helpUpdate
-	case run.MsgRemove:
-		msgText = helpRemove
-	case run.MsgFetch:
-		msgText = helpFetch
-	case run.MsgStatus:
-		msgText = helpStatus
-	case run.MsgSync:
-		msgText = helpSync
-	case run.MsgMigrate:
-		msgText = helpMigrate
-	case run.MsgGet:
-		msgText = helpGet
-	case run.MsgLicense:
-		msgText = helpLicense
-	case run.MsgGovendorLicense:
-		msgText = msgGovendorLicenses
-	case run.MsgGovendorVersion:
-		msgText = msgGovendorVersion
-	}
+	msgText := msg.String()
 	if len(msgText) > 0 {
 		fmt.Fprint(os.Stderr, msgText)
 	}
 	if err != nil {
 		os.Exit(2)
 	}
-	if msg != run.MsgNone {
+	if msg != help.MsgNone {
 		os.Exit(1)
 	}
 }

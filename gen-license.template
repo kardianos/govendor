@@ -1,8 +1,0 @@
-// Machine generated; DO NOT EDIT.
-
-package main
-
-var msgGovendorLicenses = `{{range $index, $t := .}}{{if ne $index 0}}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-{{end}}{{.Filename}} - {{.Path}}
-{{.Text}}{{end}}
-`
