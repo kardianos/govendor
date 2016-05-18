@@ -98,3 +98,54 @@ func TestFetchVerbose(t *testing.T) {
 
 	t.Logf("Log\n%s\n", buf.Bytes())
 }
+
+func TestUpdateOrigin(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.Setup("co2/pk1",
+		gt.File("a.go", "bytes"),
+	)
+	g.Setup("remote/co3/vendor/co2/pk1",
+		gt.File("a.go", "strings"),
+	)
+	g.In("remote")
+	remote := gt.NewHttpHandler(g, "git")
+
+	g.In("remote/co3")
+	commitTime := time.Now().UTC().Format(time.RFC3339)
+	commitRev := remote.Setup().Commit()
+
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	remoteOrigin := remote.HttpAddr() + "/remote/co3/vendor/co2/pk1"
+
+	g.Check(c.ModifyImport(pkg("co2/pk1::"+remoteOrigin), Fetch))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	vendorFile(g, "", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "uL2Z45bjLtrTugQclzHmwbmiTb4=",
+			"origin": "`+remoteOrigin+`",
+			"path": "co2/pk1",
+			"revision": "`+commitRev+`",
+			"revisionTime": "`+commitTime+`"
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+}

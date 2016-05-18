@@ -259,6 +259,9 @@ func (ctx *Context) modify(ps *pkgspec.Pkg, mod Modify, mops []ModifyOption) err
 		pkg.Origin = ps.PathOrigin()
 		pkg.Path = ps.Path
 	}
+	if ps.Origin != pkg.Origin {
+		pkg.Origin = ps.Origin
+	}
 
 	// Do not support setting "tree" on Remove.
 	if tree && mod != Remove {
