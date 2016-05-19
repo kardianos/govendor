@@ -7,38 +7,26 @@ package cliprompt
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/kardianos/govendor/prompt"
 
-	"golang.org/x/crypto/ssh/terminal"
+	cp "github.com/Bowery/prompt"
 )
-
-type rw struct {
-	io.Reader
-	io.Writer
-}
 
 type Prompt struct{}
 
 // Ask the user a question based on the CLI.
 // TODO (DT): Currently can't handle fetching empty responses do to cancel method.
 func (p *Prompt) Ask(q *prompt.Question) (prompt.Response, error) {
-	fd := 0
-	termState, err := terminal.MakeRaw(fd)
+	term, err := cp.NewTerminal()
 	if err != nil {
 		return prompt.RespCancel, err
 	}
-	defer terminal.Restore(fd, termState)
-
-	termRW := rw{Reader: os.Stdin, Writer: os.Stdout}
-	term := terminal.NewTerminal(termRW, "")
 
 	if len(q.Error) > 0 {
-		fmt.Fprintf(termRW, "%s\n\n", q.Error)
+		fmt.Fprintf(term.Out, "%s\n\n", q.Error)
 	}
 
 	switch q.Type {
@@ -51,7 +39,7 @@ func (p *Prompt) Ask(q *prompt.Question) (prompt.Response, error) {
 	}
 }
 
-func getSingle(term *terminal.Terminal, q *prompt.Question) (prompt.Response, error) {
+func getSingle(term *cp.Terminal, q *prompt.Question) (prompt.Response, error) {
 	if len(q.Options) == 1 && q.Options[0].Other() {
 		opt := &q.Options[0]
 		opt.Choosen = true
@@ -73,24 +61,23 @@ func getSingle(term *terminal.Terminal, q *prompt.Question) (prompt.Response, er
 	return resp, nil
 }
 
-func setOther(term *terminal.Terminal, q *prompt.Question, opt *prompt.Option) (prompt.Response, error) {
+func setOther(term *cp.Terminal, q *prompt.Question, opt *prompt.Option) (prompt.Response, error) {
 	var blankCount = 0
 	var internalMessage = ""
 	for {
 		// Write out messages
 		if len(internalMessage) > 0 {
-			fmt.Fprintf(term, "%s\n\n", internalMessage)
+			fmt.Fprintf(term.Out, "%s\n\n", internalMessage)
 		}
 		if len(q.Prompt) > 0 {
-			fmt.Fprintf(term, "%s\n", q.Prompt)
+			fmt.Fprintf(term.Out, "%s\n", q.Prompt)
 		}
 		if len(opt.Validation()) > 0 {
-			fmt.Fprintf(term, "  ** %s\n", opt.Validation())
+			fmt.Fprintf(term.Out, "  ** %s\n", opt.Validation())
 		}
 		// Reset message.
 		internalMessage = ""
-		term.SetPrompt(" > ")
-		ln, err := term.ReadLine()
+		ln, err := term.Basic(" > ", false)
 		if err != nil {
 			return prompt.RespCancel, err
 		}
@@ -108,27 +95,26 @@ func setOther(term *terminal.Terminal, q *prompt.Question, opt *prompt.Option) (
 	}
 }
 
-func setOption(term *terminal.Terminal, q *prompt.Question) (prompt.Response, error) {
+func setOption(term *cp.Terminal, q *prompt.Question) (prompt.Response, error) {
 	var blankCount = 0
 	var internalMessage = ""
 	for {
 		// Write out messages
 		if len(internalMessage) > 0 {
-			fmt.Fprintf(term, "%s\n\n", internalMessage)
+			fmt.Fprintf(term.Out, "%s\n\n", internalMessage)
 		}
 		if len(q.Prompt) > 0 {
-			fmt.Fprintf(term, "%s\n", q.Prompt)
+			fmt.Fprintf(term.Out, "%s\n", q.Prompt)
 		}
 		for index, opt := range q.Options {
-			fmt.Fprintf(term, " (%d) %s\n", index+1, opt.Prompt())
+			fmt.Fprintf(term.Out, " (%d) %s\n", index+1, opt.Prompt())
 			if len(opt.Validation()) > 0 {
-				fmt.Fprintf(term, "  ** %s\n", opt.Validation())
+				fmt.Fprintf(term.Out, "  ** %s\n", opt.Validation())
 			}
 		}
 		// Reset message.
 		internalMessage = ""
-		term.SetPrompt(" # ")
-		ln, err := term.ReadLine()
+		ln, err := term.Basic(" # ", false)
 		if err != nil {
 			return prompt.RespCancel, err
 		}

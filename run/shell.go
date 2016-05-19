@@ -6,13 +6,13 @@ package run
 
 import (
 	"flag"
+	"fmt"
 	"io"
-	"os"
 
 	"github.com/kardianos/govendor/help"
 
+	"github.com/Bowery/prompt"
 	"github.com/google/shlex"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
@@ -23,28 +23,20 @@ func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, erro
 		return help.MsgShell, err
 	}
 
-	fd := 0
-
-	type rw struct {
-		io.Reader
-		io.Writer
+	term, err := prompt.NewTerminal()
+	if err != nil {
+		return help.MsgNone, err
 	}
-	termRW := rw{Reader: os.Stdin, Writer: os.Stdout}
-	term := terminal.NewTerminal(termRW, "> ")
+	defer term.Close()
 
 	for {
-		termState, err := terminal.MakeRaw(fd)
-		if err != nil {
-			return help.MsgNone, err
-		}
-		line, err := term.ReadLine()
-		terminal.Restore(fd, termState)
+		line, err := term.Basic("> ", false)
 		if err != nil {
 			break
 		}
 		args, err := shlex.Split(line)
 		if err != nil {
-			termRW.Write([]byte(err.Error()))
+			fmt.Fprintf(term.Out, "%v", err.Error())
 		}
 		if len(args) == 0 {
 			continue
@@ -59,14 +51,13 @@ func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, erro
 		case "shell":
 			continue
 		}
-		msg, err := r.run(termRW, args, nil)
+		msg, err := r.run(term.Out, args, nil)
 		if err != nil {
-			termRW.Write([]byte(err.Error()))
+			fmt.Fprintf(term.Out, "%v", err.Error())
 		}
 		msgText := msg.String()
 		if len(msgText) > 0 {
-			termRW.Write([]byte(msgText))
-			termRW.Write([]byte("\tType \"exit\" to exit.\n"))
+			fmt.Fprintf(term.Out, "%s\tType \"exit\" to exit.\n", msgText)
 		}
 	}
 

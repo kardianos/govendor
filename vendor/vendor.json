@@ -1,7 +1,13 @@
 {
 	"comment": "",
-	"ignore": "",
+	"ignore": "test",
 	"package": [
+		{
+			"checksumSHA1": "IUksYuRikEHicKTi2d+TpQedxdw=",
+			"path": "github.com/Bowery/prompt",
+			"revision": "3a76720709401fd06e29c3105c51f18b9f001108",
+			"revisionTime": "2015-07-22T23:30:59Z"
+		},
 		{
 			"checksumSHA1": "6VGFARaK8zd23IAiDf7a+gglC8k=",
 			"path": "github.com/dchest/safefile",
@@ -13,12 +19,6 @@
 			"path": "github.com/google/shlex",
 			"revision": "6f45313302b9c56850fc17f99e40caebce98c716",
 			"revisionTime": "2015-01-27T13:39:51Z"
-		},
-		{
-			"checksumSHA1": "PuNlB3GBL80NhPt6ULoM+GFBXaQ=",
-			"path": "golang.org/x/crypto/ssh/terminal",
-			"revision": "5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3",
-			"revisionTime": "2016-02-25T15:07:55+01:00"
 		},
 		{
 			"checksumSHA1": "oLJR4yo+KxojmI5PqkeZFtRUmpY=",
