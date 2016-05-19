@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/kardianos/govendor/help"
 
@@ -23,20 +24,21 @@ func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, erro
 		return help.MsgShell, err
 	}
 
-	term, err := prompt.NewTerminal()
-	if err != nil {
-		return help.MsgNone, err
-	}
-	defer term.Close()
+	//	term, err := prompt.NewTerminal()
+	//	if err != nil {
+	//		return help.MsgNone, err
+	//	}
+	//	defer term.Close()
+	out := os.Stdout
 
 	for {
-		line, err := term.Basic("> ", false)
+		line, err := prompt.Basic("> ", false)
 		if err != nil {
 			break
 		}
 		args, err := shlex.Split(line)
 		if err != nil {
-			fmt.Fprintf(term.Out, "%v", err.Error())
+			fmt.Fprintf(out, "%v", err.Error())
 		}
 		if len(args) == 0 {
 			continue
@@ -51,13 +53,13 @@ func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, erro
 		case "shell":
 			continue
 		}
-		msg, err := r.run(term.Out, args, nil)
+		msg, err := r.run(out, args, nil)
 		if err != nil {
-			fmt.Fprintf(term.Out, "%v", err.Error())
+			fmt.Fprintf(out, "%v", err.Error())
 		}
 		msgText := msg.String()
 		if len(msgText) > 0 {
-			fmt.Fprintf(term.Out, "%s\tType \"exit\" to exit.\n", msgText)
+			fmt.Fprintf(out, "%s\tType \"exit\" to exit.\n", msgText)
 		}
 	}
 
