@@ -29,7 +29,7 @@ var (
 )
 
 // Parse a package spec according to:
-// package-sepc = <path>[{/...|/^}][::<origin>][@[<version-spec>]]
+// package-spec = <path>[{/...|/^}][::<origin>][@[<version-spec>]]
 func Parse(currentGoPath, s string) (*Pkg, error) {
 	// Clean up the import path before
 	s = strings.Trim(s, "/\\ \t")
