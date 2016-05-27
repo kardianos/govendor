@@ -82,7 +82,7 @@ Make interactive, but separate out asking from CLI in API.
 
 If may be benefitial to be able to set the origin when fetching packages. A
 possible design would look like this:
-`package-sepc = <path>[::<origin>][{/...|/^}][@[<version-spec>]]`
+`package-spec = <path>[::<origin>][{/...|/^}][@[<version-spec>]]`
 
 ### Summary
 

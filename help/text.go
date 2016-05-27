@@ -117,7 +117,7 @@ var helpRemove = `govendor remove [options] ( +status or import-path-filter )
 
 var helpFetch = `govendor fetch [options] ( +status or package-spec )
 	Fetches packages directly into the vendor folder.
-	package-sepc = <path>[::<origin>][{/...|/^}][@[<version-spec>]]
+	package-spec = <path>[::<origin>][{/...|/^}][@[<version-spec>]]
 	Options:
 		-tree        copy package(s) and all sub-folders under each package
 		-insecure    allow downloading over insecure connection
