@@ -24,11 +24,6 @@ func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, erro
 		return help.MsgShell, err
 	}
 
-	//	term, err := prompt.NewTerminal()
-	//	if err != nil {
-	//		return help.MsgNone, err
-	//	}
-	//	defer term.Close()
 	out := os.Stdout
 
 	for {
