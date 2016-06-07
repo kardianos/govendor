@@ -47,6 +47,16 @@ govendor fetch golang.org/x/net/context@=v1  # Get the tag or branch named "v1".
 
 # Update a package to latest, given any prior version constraint
 govendor fetch golang.org/x/net/context
+
+# Format your repository only
+govendor fmt +local
+
+# Build everything in your repository only
+govendor install +local
+
+# Test your repository only
+govendor test +local
+
 ```
 
 ## Sub-commands
