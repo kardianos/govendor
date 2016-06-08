@@ -31,7 +31,7 @@ func (p *Prompt) Ask(q *prompt.Question) (prompt.Response, error) {
 
 	switch q.Type {
 	default:
-		panic("Uknown question type")
+		panic("Unknown question type")
 	case prompt.TypeSelectMultiple:
 		return prompt.RespCancel, fmt.Errorf("Selecting multiple isn't currently supported")
 	case prompt.TypeSelectOne:
