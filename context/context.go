@@ -286,7 +286,7 @@ func (ctx *Context) findPackageChild(ck *Package) []*Package {
 		if pkg.Status.Presence == PresenceTree {
 			continue
 		}
-		if strings.HasPrefix(pkg.Path, ck.Path) {
+		if strings.HasPrefix(pkg.Path, ck.Path+"/") {
 			out = append(out, pkg)
 		}
 	}
@@ -306,7 +306,7 @@ func (ctx *Context) findPackageParentTree(ck *Package) []string {
 		}
 		// pkg.Path = github.com/usera/pkg, tree = true
 		// ck.Path = github.com/usera/pkg/dance
-		if strings.HasPrefix(ck.Path, pkg.Path) {
+		if strings.HasPrefix(ck.Path, pkg.Path+"/") {
 			out = append(out, pkg.Local)
 		}
 	}
