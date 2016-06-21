@@ -79,7 +79,7 @@ type Package struct {
 	Status Status // Status and location of the package.
 	*pkgspec.Pkg
 	Local  string // Current location of a package relative to $GOPATH/src.
-	Gopath string // Inlcudes trailing "src".
+	Gopath string // Includes trailing "src".
 	Files  []*File
 
 	inVendor bool // Different then Status.Location, this is in *any* vendor tree.
@@ -259,7 +259,7 @@ func (ctx *Context) Write(s []byte) (int, error) {
 	return len(s), nil
 }
 
-// VendorFilePackageCanonical finds a given vendor file package give the import path.
+// VendorFilePackagePath finds a given vendor file package give the import path.
 func (ctx *Context) VendorFilePackagePath(path string) *vendorfile.Package {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Remove {
