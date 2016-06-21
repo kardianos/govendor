@@ -17,7 +17,7 @@ type (
 	Status struct {
 		Type     StatusType     // program, package
 		Location StatusLocation // vendor, local, external, stdlib
-		Presence StatusPresence // missing, unused, tree
+		Presence StatusPresence // missing, unused, tree, excluded
 
 		Not bool // Not indicates boolean operation "not" on above.
 	}
@@ -82,6 +82,8 @@ func (s Status) String() string {
 		p = 'u'
 	case PresenceTree:
 		p = 't'
+	case PresenceExcluded:
+		p = 'x'
 	}
 	return not + string(t) + string(l) + string(p)
 }
@@ -168,11 +170,12 @@ const (
 )
 
 const (
-	PresenceUnknown StatusPresence = iota // PresenceUnknown is unset StatusPresence.
-	PresenceFound                         // PresenceFound package exists.
-	PresenceMissing                       // PresenceMissing package is referenced but not found.
-	PresenceUnused                        // PresenceUnused package is found locally but not referenced.
-	PresenceTree                          // PresenceTree package is in vendor folder, in a tree, but not referenced.
+	PresenceUnknown  StatusPresence = iota // PresenceUnknown is unset StatusPresence.
+	PresenceFound                          // PresenceFound package exists.
+	PresenceMissing                        // PresenceMissing package is referenced but not found.
+	PresenceUnused                         // PresenceUnused package is found locally but not referenced.
+	PresenceTree                           // PresenceTree package is in vendor folder, in a tree, but not referenced.
+	PresenceExcluded                       // PresenceExcluded package exists, but should not be vendored.
 )
 
 // ListItem represents a package in the current project.

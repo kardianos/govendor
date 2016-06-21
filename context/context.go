@@ -65,7 +65,8 @@ type Context struct {
 	loaded, dirty  bool
 	rewriteImports bool
 
-	ignoreTag []string // list of tags to ignore
+	ignoreTag      []string // list of tags to ignore
+	excludePackage []string // list of package prefixes to exclude
 
 	statusCache []StatusItem
 	added       map[string]bool
@@ -233,6 +234,7 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 	}
 
 	ctx.IgnoreBuild(vf.Ignore)
+	ctx.ExcludePackage(vf.Exclude)
 
 	return ctx, nil
 }
@@ -248,6 +250,20 @@ func (ctx *Context) IgnoreBuild(ignore string) {
 			continue
 		}
 		ctx.ignoreTag = append(ctx.ignoreTag, or)
+	}
+}
+
+// ExcludePackage takes a space separated list of package prefixes to ignore.
+// "a b" will ignore "a" OR "b" OR "a/c", etc.
+func (ctx *Context) ExcludePackage(exclude string) {
+	ctx.dirty = true
+	ors := strings.Fields(exclude)
+	ctx.excludePackage = make([]string, 0, len(ors))
+	for _, or := range ors {
+		if len(or) == 0 {
+			continue
+		}
+		ctx.excludePackage = append(ctx.excludePackage, strings.Trim(or, "./"))
 	}
 }
 

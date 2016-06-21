@@ -27,6 +27,8 @@ type File struct {
 
 	Ignore string
 
+	Exclude string
+
 	Package []*Package
 
 	// all preserves unknown values.
@@ -98,6 +100,7 @@ var (
 	rootPathNames     = []string{"rootPath"}
 	packageNames      = []string{"package", "Package"}
 	ignoreNames       = []string{"ignore"}
+	excludeNames      = []string{"exclude"}
 	originNames       = []string{"origin"}
 	pathNames         = []string{"path", "canonical", "Canonical", "vendor", "Vendor"}
 	treeNames         = []string{"tree"}
@@ -208,6 +211,7 @@ func (vf *File) toFields() {
 	setField(&vf.RootPath, vf.all, rootPathNames)
 	setField(&vf.Comment, vf.all, commentNames)
 	setField(&vf.Ignore, vf.all, ignoreNames)
+	setField(&vf.Exclude, vf.all, excludeNames)
 
 	rawPackageList := vf.getRawPackageList()
 
@@ -240,6 +244,7 @@ func (vf *File) toAll() {
 	setObject(vf.RootPath, vf.all, rootPathNames, true)
 	setObject(vf.Comment, vf.all, commentNames, false)
 	setObject(vf.Ignore, vf.all, ignoreNames, false)
+	setObject(vf.Exclude, vf.all, excludeNames, false)
 
 	rawPackageList := vf.getRawPackageList()
 
