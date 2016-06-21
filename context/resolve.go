@@ -206,6 +206,12 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 				}
 			}
 		}
+		// package excluded if non-local && same name or sub-package of an excluded package
+		for _, exclude := range ctx.excludePackage {
+			if importPath == exclude || strings.HasPrefix(importPath, exclude+"/") {
+				pkg.Status.Presence = PresenceExcluded
+			}
+		}
 	}
 	pf := &File{
 		Package: pkg,
@@ -224,9 +230,11 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-		_, err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
-		if err != nil {
-			return pkg, err
+		if pkg.Status.Presence != PresenceExcluded { // do not add package imports if it was explicitely excluded
+			_, err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
+			if err != nil {
+				return pkg, err
+			}
 		}
 	}
 
