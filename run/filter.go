@@ -63,7 +63,7 @@ func parseStatusGroup(statusString string) (sg context.StatusGroup, err error) {
 		case strings.HasPrefix("vendor", s):
 			st.Location = context.LocationVendor
 		case strings.HasPrefix("unused", s):
-			st.Presence = context.PresenceUnsued
+			st.Presence = context.PresenceUnused
 		case strings.HasPrefix("missing", s):
 			st.Presence = context.PresenceMissing
 		case strings.HasPrefix("local", s):

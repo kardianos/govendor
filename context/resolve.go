@@ -481,14 +481,14 @@ func (ctx *Context) determinePackageStatus() error {
 	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for path, pkg := range ctx.Package {
-			if pkg.Status.Presence == PresenceUnsued || pkg.Status.Presence == PresenceTree || pkg.Status.Type == TypeProgram {
+			if pkg.Status.Presence == PresenceUnused || pkg.Status.Presence == PresenceTree || pkg.Status.Type == TypeProgram {
 				continue
 			}
 			if len(pkg.referenced) > 0 || pkg.Status.Location != LocationVendor {
 				continue
 			}
 			altered = true
-			pkg.Status.Presence = PresenceUnsued
+			pkg.Status.Presence = PresenceUnused
 			for _, other := range ctx.Package {
 				delete(other.referenced, path)
 			}
@@ -513,7 +513,7 @@ func (ctx *Context) determinePackageStatus() error {
 			}
 			altered = true
 			delete(ctx.Package, path)
-			pkg.Status.Presence = PresenceUnsued
+			pkg.Status.Presence = PresenceUnused
 			for _, other := range ctx.Package {
 				delete(other.referenced, path)
 			}

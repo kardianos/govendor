@@ -78,7 +78,7 @@ func (s Status) String() string {
 		p = ' '
 	case PresenceMissing:
 		p = 'm'
-	case PresenceUnsued:
+	case PresenceUnused:
 		p = 'u'
 	case PresenceTree:
 		p = 't'
@@ -171,7 +171,7 @@ const (
 	PresenceUnknown StatusPresence = iota // PresenceUnknown is unset StatusPresence.
 	PresenceFound                         // PresenceFound package exists.
 	PresenceMissing                       // PresenceMissing package is referenced but not found.
-	PresenceUnsued                        // PresenceUnused package is found locally but not referenced.
+	PresenceUnused                        // PresenceUnused package is found locally but not referenced.
 	PresenceTree                          // PresenceTree package is in vendor folder, in a tree, but not referenced.
 )
 
