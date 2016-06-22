@@ -240,9 +240,9 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 
 // IgnoreBuildAndPackage takes a space separated list of tags or package prefixes
 // to ignore.
-// Tags are words, packages are folders, ending with a "/".
+// Tags are words, packages are folders, containing or ending with a "/".
 // "a b c" will ignore tags "a" OR "b" OR "c".
-// "p/ q/" will ignore packages "p" OR "q" OR "p/x", etc.
+// "p/x q/" will ignore packages "p/x" OR "p/x/y" OR "q" OR "q/z", etc.
 func (ctx *Context) IgnoreBuildAndPackage(ignore string) {
 	ctx.dirty = true
 	ors := strings.Fields(ignore)
@@ -252,7 +252,7 @@ func (ctx *Context) IgnoreBuildAndPackage(ignore string) {
 		if len(or) == 0 {
 			continue
 		}
-		if or[len(or)-1] == '/' {
+		if strings.Index(or, "/") != -1 {
 			// package
 			ctx.excludePackage = append(ctx.excludePackage, strings.Trim(or, "./"))
 		} else {

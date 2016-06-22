@@ -62,10 +62,10 @@ Ignoring files with build tags, or excluding packages from being vendored:
 	The "vendor.json" file contains a string field named "ignore".
 	It may contain a space separated list of build tags to ignore when
 	listing and copying files.
-	This list may also contain package prefixes (ending with a "/") to exclude
-	when copying files in the vendor folder. If "foo/" appears in this field,
-	then package "foo" and all its sub-packages ("foo/bar", …) will be excluded
-	(but package "bar/foo" will not).
+	This list may also contain package prefixes (containing a "/", possibly
+	as last character) to exclude when copying files in the vendor folder.
+	If "foo/" appears in this field, then package "foo" and all its sub-packages
+	("foo/bar", …) will be excluded (but package "bar/foo" will not).
 	By default the init command adds the "test" tag to the ignore list.
 
 If using go1.5, ensure GO15VENDOREXPERIMENT=1 is set.

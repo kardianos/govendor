@@ -172,7 +172,8 @@ package `bar/foo` is not). The import dependencies of excluded packages are not
 listed, and thus not vendored.
 
 To exclude packages, also use the "ignore" field of the "vendor.json" file.
-Packages are identified by their name followed by a trailing "/":
+Packages are identified by their name, they should contain a "/" character
+(possibly at the end):
 ```
 {
 	"ignore": "test appengine foo/",
