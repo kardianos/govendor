@@ -465,7 +465,7 @@ pv  co1/vendor/co2/pk1 [co2/pk1] < []
  s  testing < ["co1/vendor/co2/pk1"]
 `)
 
-	c.IgnoreBuild("test")
+	c.IgnoreBuildAndPackage("test")
 
 	list(g, c, "ignore test", `
 pv  co1/vendor/co2/pk1 [co2/pk1] < []
@@ -936,7 +936,7 @@ func TestTagList(t *testing.T) {
  s  encoding/json < ["co2/pk1"]
  s  testing < ["co1/pk1" "co2/pk1"]
 `)
-	c.IgnoreBuild("test appengine")
+	c.IgnoreBuildAndPackage("test appengine")
 
 	list(g, c, "co1 list", `
  e  co2/pk1 < ["co1/pk1"]
@@ -947,7 +947,7 @@ func TestTagList(t *testing.T) {
  s  testing < ["co1/pk1"]
 `)
 
-	c.IgnoreBuild("")
+	c.IgnoreBuildAndPackage("")
 
 	g.Check(c.ModifyStatus(StatusGroup{
 		Status: []Status{{Location: LocationExternal}},
@@ -964,7 +964,7 @@ func TestTagList(t *testing.T) {
  s  encoding/json < ["co1/vendor/co2/pk1"]
  s  testing < ["co1/pk1" "co1/vendor/co2/pk1"]
 `)
-	c.IgnoreBuild("test appengine")
+	c.IgnoreBuildAndPackage("test appengine")
 
 	list(g, c, "after co1 list", `
  v  co1/vendor/co2/pk1 [co2/pk1] < ["co1/pk1"]
@@ -994,7 +994,7 @@ func TestTagAdd(t *testing.T) {
 	)
 	g.In("co1")
 	c := ctx(g)
-	c.IgnoreBuild("test appengine")
+	c.IgnoreBuildAndPackage("test appengine")
 
 	g.Check(c.ModifyImport(pkg("co2/pk1"), Add))
 	g.Check(c.Alter())
