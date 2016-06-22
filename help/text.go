@@ -44,7 +44,7 @@ Status Types
 	+vendor   (v) packages in the vendor folder
 	+std      (s) packages in the standard library
 
-	+excluded (x) referenced packages explicitely excluded from vendoring
+	+excluded (x) external packages explicitely excluded from vendoring
 	+unused   (u) packages in the vendor folder, but unused
 	+missing  (m) referenced packages but not found
 
@@ -58,19 +58,15 @@ Status Types
 Package specifier
 	<path>[::<origin>][{/...|/^}][@[<version-spec>]]
 
-Ignoring files with build tags:
+Ignoring files with build tags, or excluding packages from being vendored:
 	The "vendor.json" file contains a string field named "ignore".
 	It may contain a space separated list of build tags to ignore when
-	listing and copying files. By default the init command adds the
-	the "test" tag to the ignore list.
-
-Excluding packages from being vendored:
-	The "vendor.json" file contains a string field named "exclude".
-	It may contain a space separated list of package prefixes to exclude
-	when copying files in the vendor folder.
-	If "foo" appears in this field, then package "foo" and all its
-	sub-packages ("foo/bar", …) will be excluded, but package "bar/foo"
-	will not.
+	listing and copying files.
+	This list may also contain package prefixes (ending with a "/") to exclude
+	when copying files in the vendor folder. If "foo/" appears in this field,
+	then package "foo" and all its sub-packages ("foo/bar", …) will be excluded
+	(but package "bar/foo" will not).
+	By default the init command adds the "test" tag to the ignore list.
 
 If using go1.5, ensure GO15VENDOREXPERIMENT=1 is set.
 

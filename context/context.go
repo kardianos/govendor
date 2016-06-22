@@ -233,37 +233,32 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 		return nil, err
 	}
 
-	ctx.IgnoreBuild(vf.Ignore)
-	ctx.ExcludePackage(vf.Exclude)
+	ctx.IgnoreBuildAndPackage(vf.Ignore)
 
 	return ctx, nil
 }
 
-// IgnoreBuild takes a space separated list of tags to ignore.
-// "a b c" will ignore "a" OR "b" OR "c".
-func (ctx *Context) IgnoreBuild(ignore string) {
+// IgnoreBuildAndPackage takes a space separated list of tags or package prefixes
+// to ignore.
+// Tags are words, packages are folders, ending with a "/".
+// "a b c" will ignore tags "a" OR "b" OR "c".
+// "p/ q/" will ignore packages "p" OR "q" OR "p/x", etc.
+func (ctx *Context) IgnoreBuildAndPackage(ignore string) {
 	ctx.dirty = true
 	ors := strings.Fields(ignore)
 	ctx.ignoreTag = make([]string, 0, len(ors))
-	for _, or := range ors {
-		if len(or) == 0 {
-			continue
-		}
-		ctx.ignoreTag = append(ctx.ignoreTag, or)
-	}
-}
-
-// ExcludePackage takes a space separated list of package prefixes to ignore.
-// "a b" will ignore "a" OR "b" OR "a/c", etc.
-func (ctx *Context) ExcludePackage(exclude string) {
-	ctx.dirty = true
-	ors := strings.Fields(exclude)
 	ctx.excludePackage = make([]string, 0, len(ors))
 	for _, or := range ors {
 		if len(or) == 0 {
 			continue
 		}
-		ctx.excludePackage = append(ctx.excludePackage, strings.Trim(or, "./"))
+		if or[len(or)-1] == '/' {
+			// package
+			ctx.excludePackage = append(ctx.excludePackage, strings.Trim(or, "./"))
+		} else {
+			// tag
+			ctx.ignoreTag = append(ctx.ignoreTag, or)
+		}
 	}
 }
 
