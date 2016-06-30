@@ -54,6 +54,16 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	if err != nil {
 		return nextOps, err
 	}
+	if len(ps.Version) == 0 {
+		longest := ""
+		for _, pkg := range f.Ctx.Package {
+			if strings.HasPrefix(ps.Path, pkg.Path+"/") && len(pkg.Path) > len(longest) && pkg.HasVersion {
+				longest = pkg.Path
+				ps.Version = pkg.Version
+				ps.HasVersion = true
+			}
+		}
+	}
 
 	// Don't check for bundle, rather check physical directory.
 	// If no repo in dir, clone.

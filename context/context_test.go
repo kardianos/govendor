@@ -47,21 +47,30 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 		output.WriteString(statusItemString(item))
 		output.WriteRune('\n')
 	}
-	if !stringSameIgnoreSpace(output.String(), expected) {
-		g.Fatalf("(%s) Got\n%s", name, output.String())
+	if ok, msg := stringSameIgnoreSpace(output.String(), expected); !ok {
+		g.Fatalf("%s(%s) Got\n%s", msg, name, output.String())
 	}
 }
 
-func stringSameIgnoreSpace(a, b string) bool {
+func stringSameIgnoreSpace(a, b string) (bool, string) {
 	// Remove any space padding on the start/end of each line.
-	trimLines := func(s string) string {
-		lines := strings.Split(strings.TrimSpace(s), "\n")
-		for i := range lines {
-			lines[i] = strings.TrimSpace(lines[i])
-		}
-		return strings.Join(lines, "\n")
+	a = strings.TrimSpace(a)
+	b = strings.TrimSpace(b)
+	aLine := strings.Split(a, "\n")
+	bLine := strings.Split(b, "\n")
+	ct := len(aLine)
+	if len(bLine) < ct {
+		ct = len(bLine)
 	}
-	return trimLines(a) == trimLines(b)
+	for i := 0; i < ct; i++ {
+		if aLine[i] != bLine[i] {
+			return false, fmt.Sprintf("A: %s\nB: %s\n", aLine[i], bLine[i])
+		}
+	}
+	if len(aLine) != len(bLine) {
+		return false, "Different Line Count"
+	}
+	return true, ""
 }
 
 func verifyChecksum(g *gt.GopathTest, c *Context, name string) {
@@ -109,8 +118,8 @@ func vendorFile(g *gt.GopathTest, name, expected string) {
 		g.Fatal(err)
 	}
 	s := string(buf)
-	if !stringSameIgnoreSpace(s, expected) {
-		g.Fatalf("(%s) Got:\n%s\nWant\n%s", name, s, expected)
+	if ok, msg := stringSameIgnoreSpace(s, expected); !ok {
+		g.Fatalf("(%s) \n%sGot:\n%s\nWant\n%s", name, msg, s, expected)
 	}
 }
 

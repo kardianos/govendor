@@ -499,6 +499,8 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, vers
 	}
 	if hasVersion {
 		vp.Version = version
+		pkg.Version = version
+		pkg.HasVersion = true
 	}
 	if pkg.IncludeTree {
 		vp.Tree = pkg.IncludeTree
