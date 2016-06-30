@@ -21,10 +21,10 @@
 			"revisionTime": "2015-01-27T13:39:51Z"
 		},
 		{
-			"checksumSHA1": "oLJR4yo+KxojmI5PqkeZFtRUmpY=",
+			"checksumSHA1": "uwKP1AVzd+lrTMlXVFjZXXHzB7U=",
 			"path": "golang.org/x/tools/go/vcs",
-			"revision": "093d7650abf0a26882924de03a6c840a00356572",
-			"revisionTime": "2016-03-09T21:59:58Z"
+			"revision": "1727758746e7a08feaaceb9366d1468498ac2ac2",
+			"revisionTime": "2016-06-24T22:27:06Z"
 		}
 	],
 	"rootPath": "github.com/kardianos/govendor"
