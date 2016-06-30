@@ -206,6 +206,12 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 				}
 			}
 		}
+		// package excluded if non-local && same name or sub-package of an excluded package
+		for _, exclude := range ctx.excludePackage {
+			if importPath == exclude || strings.HasPrefix(importPath, exclude+"/") {
+				pkg.Status.Presence = PresenceExcluded
+			}
+		}
 	}
 	pf := &File{
 		Package: pkg,
@@ -224,9 +230,11 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-		_, err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
-		if err != nil {
-			return pkg, err
+		if pkg.Status.Presence != PresenceExcluded { // do not add package imports if it was explicitely excluded
+			_, err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
+			if err != nil {
+				return pkg, err
+			}
 		}
 	}
 
@@ -481,14 +489,14 @@ func (ctx *Context) determinePackageStatus() error {
 	for i := 0; i <= looplimit; i++ {
 		altered := false
 		for path, pkg := range ctx.Package {
-			if pkg.Status.Presence == PresenceUnsued || pkg.Status.Presence == PresenceTree || pkg.Status.Type == TypeProgram {
+			if pkg.Status.Presence == PresenceUnused || pkg.Status.Presence == PresenceTree || pkg.Status.Type == TypeProgram {
 				continue
 			}
 			if len(pkg.referenced) > 0 || pkg.Status.Location != LocationVendor {
 				continue
 			}
 			altered = true
-			pkg.Status.Presence = PresenceUnsued
+			pkg.Status.Presence = PresenceUnused
 			for _, other := range ctx.Package {
 				delete(other.referenced, path)
 			}
@@ -513,7 +521,7 @@ func (ctx *Context) determinePackageStatus() error {
 			}
 			altered = true
 			delete(ctx.Package, path)
-			pkg.Status.Presence = PresenceUnsued
+			pkg.Status.Presence = PresenceUnused
 			for _, other := range ctx.Package {
 				delete(other.referenced, path)
 			}

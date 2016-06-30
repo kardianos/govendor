@@ -75,7 +75,7 @@ govendor test +local
 	license  List discovered licenses for the given status or import paths.
 	shell    Run a "shell" to make multiple sub-commands more efficent for large
 	             projects.
-	
+
 	go tool commands that are wrapped:
 	  `+<status>` package selection may be used with them
 	fmt, build, install, clean, test, vet, generate
@@ -90,6 +90,7 @@ Packages can be specified by their "status".
 	+vendor   (v) packages in the vendor folder
 	+std      (s) packages in the standard library
 
+	+excluded (x) external packages explicitely excluded from vendoring
 	+unused   (u) packages in the vendor folder, but unused
 	+missing  (m) referenced packages but not found
 
@@ -103,7 +104,8 @@ Status can be referenced by their initial letters.
 
  * `+std` same as `+s`
  * `+external` same as `+ext` same as `+e`
-	
+ * `+excluded` same as `+exc` same as `+x`
+
 Status can be logically composed:
 
  * `+local,program` (local AND program) local packages that are also programs
@@ -114,7 +116,7 @@ Status can be logically composed:
 
 ## Package specifier
 
-The full package-spec is: 
+The full package-spec is:
 `<path>[::<origin>][{/...|/^}][@[<version-spec>]]`
 
 Some examples:
@@ -146,7 +148,7 @@ Commands that accept status and package-spec:
 You may pass arguments to govendor through stdin if the last argument is a "-".
 For example `echo +vendor | govendor list -` will list all vendor packages.
 
-## Ignoring build tags
+## Ignoring build tags and excluding packages
 Ignoring build tags is opt-out and is designed to be the opposite of the build
 file directives which are opt-in when specified. Typically a developer will
 want to support cross platform builds, but selectively opt out of tags, tests,
@@ -158,5 +160,22 @@ For example the following will ignore both test and appengine files.
 ```
 {
 	"ignore": "test appengine",
+}
+```
+
+Similarly, some specific packages can be excluded from the vendoring process.
+These packages will be listed as `excluded` (`x`), and will not be copied to the
+"vendor" folder when running `govendor add|fetch|update`.
+
+Any sub-package `foo/bar` of an excluded package `foo` is also excluded (but
+package `bar/foo` is not). The import dependencies of excluded packages are not
+listed, and thus not vendored.
+
+To exclude packages, also use the "ignore" field of the "vendor.json" file.
+Packages are identified by their name, they should contain a "/" character
+(possibly at the end):
+```
+{
+	"ignore": "test appengine foo/",
 }
 ```

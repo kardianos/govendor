@@ -129,6 +129,10 @@ statusLoop:
 		if ctx.added[item.Pkg.PathOrigin()] {
 			continue
 		}
+		// Do not add excluded packages
+		if item.Status.Presence == PresenceExcluded {
+			continue
+		}
 		// Do not attempt to add any existing status items that are
 		// already present in vendor folder.
 		if mod == Add {

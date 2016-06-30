@@ -65,7 +65,8 @@ type Context struct {
 	loaded, dirty  bool
 	rewriteImports bool
 
-	ignoreTag []string // list of tags to ignore
+	ignoreTag      []string // list of tags to ignore
+	excludePackage []string // list of package prefixes to exclude
 
 	statusCache []StatusItem
 	added       map[string]bool
@@ -79,7 +80,7 @@ type Package struct {
 	Status Status // Status and location of the package.
 	*pkgspec.Pkg
 	Local  string // Current location of a package relative to $GOPATH/src.
-	Gopath string // Inlcudes trailing "src".
+	Gopath string // Includes trailing "src".
 	Files  []*File
 
 	inVendor bool // Different then Status.Location, this is in *any* vendor tree.
@@ -232,22 +233,32 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 		return nil, err
 	}
 
-	ctx.IgnoreBuild(vf.Ignore)
+	ctx.IgnoreBuildAndPackage(vf.Ignore)
 
 	return ctx, nil
 }
 
-// IgnoreBuild takes a space separated list of tags to ignore.
-// "a b c" will ignore "a" OR "b" OR "c".
-func (ctx *Context) IgnoreBuild(ignore string) {
+// IgnoreBuildAndPackage takes a space separated list of tags or package prefixes
+// to ignore.
+// Tags are words, packages are folders, containing or ending with a "/".
+// "a b c" will ignore tags "a" OR "b" OR "c".
+// "p/x q/" will ignore packages "p/x" OR "p/x/y" OR "q" OR "q/z", etc.
+func (ctx *Context) IgnoreBuildAndPackage(ignore string) {
 	ctx.dirty = true
 	ors := strings.Fields(ignore)
 	ctx.ignoreTag = make([]string, 0, len(ors))
+	ctx.excludePackage = make([]string, 0, len(ors))
 	for _, or := range ors {
 		if len(or) == 0 {
 			continue
 		}
-		ctx.ignoreTag = append(ctx.ignoreTag, or)
+		if strings.Index(or, "/") != -1 {
+			// package
+			ctx.excludePackage = append(ctx.excludePackage, strings.Trim(or, "./"))
+		} else {
+			// tag
+			ctx.ignoreTag = append(ctx.ignoreTag, or)
+		}
 	}
 }
 
@@ -259,7 +270,7 @@ func (ctx *Context) Write(s []byte) (int, error) {
 	return len(s), nil
 }
 
-// VendorFilePackageCanonical finds a given vendor file package give the import path.
+// VendorFilePackagePath finds a given vendor file package give the import path.
 func (ctx *Context) VendorFilePackagePath(path string) *vendorfile.Package {
 	for _, pkg := range ctx.VendorFile.Package {
 		if pkg.Remove {

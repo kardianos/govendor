@@ -32,18 +32,19 @@ Sub-Commands
 	license  List discovered licenses for the given status or import paths.
 	shell    Run a "shell" to make multiple sub-commands more efficent for large
 	             projects.
-	
+
 	go tool commands that are wrapped:
 	  "+status" package selection may be used with them
 	fmt, build, install, clean, test, vet, generate
 
-Status Types	
+Status Types
 
 	+local    (l) packages in your project
 	+external (e) referenced packages in GOPATH but not in current project
 	+vendor   (v) packages in the vendor folder
 	+std      (s) packages in the standard library
 
+	+excluded (x) external packages explicitely excluded from vendoring
 	+unused   (u) packages in the vendor folder, but unused
 	+missing  (m) referenced packages but not found
 
@@ -51,17 +52,21 @@ Status Types
 
 	+outside  +external +missing
 	+all      +all packages
-	
+
 	Status can be referenced by their initial letters.
-	
-Package specifier 
+
+Package specifier
 	<path>[::<origin>][{/...|/^}][@[<version-spec>]]
 
-Ignoring files with build tags:
+Ignoring files with build tags, or excluding packages from being vendored:
 	The "vendor.json" file contains a string field named "ignore".
 	It may contain a space separated list of build tags to ignore when
-	listing and copying files. By default the init command adds the
-	the "test" tag to the ignore list.
+	listing and copying files.
+	This list may also contain package prefixes (containing a "/", possibly
+	as last character) to exclude when copying files in the vendor folder.
+	If "foo/" appears in this field, then package "foo" and all its sub-packages
+	("foo/bar", …) will be excluded (but package "bar/foo" will not).
+	By default the init command adds the "test" tag to the ignore list.
 
 If using go1.5, ensure GO15VENDOREXPERIMENT=1 is set.
 
@@ -88,11 +93,11 @@ var helpAdd = `govendor add [options] ( +status or import-path-filter )
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
-		-uncommitted allows copying a package with uncommitted changes, doesn't 
+		-uncommitted allows copying a package with uncommitted changes, doesn't
 		             update revision or checksum so it will always be out-of-date.
-		
+
 		The following may be replaced with something else in the future.
-		-short       if conflict, take short path 
+		-short       if conflict, take short path
 		-long        if conflict, take long path
 `
 
@@ -101,11 +106,11 @@ var helpUpdate = `govendor update [options] ( +status or import-path-filter )
 	Options:
 		-n           dry run and print actions that would be taken
 		-tree        copy package(s) and all sub-folders under each package
-		-uncommitted allows copying a package with uncommitted changes, doesn't 
+		-uncommitted allows copying a package with uncommitted changes, doesn't
 		             update revision or checksum so it will always be out-of-date.
-		
+
 		The following may be replaced with something else in the future.
-		-short       if conflict, take short path 
+		-short       if conflict, take short path
 		-long        if conflict, take long path
 `
 
