@@ -225,8 +225,8 @@ func (ctx *Context) modify(ps *pkgspec.Pkg, mod Modify, mops []ModifyOption) err
 	}
 	tree := ps.IncludeTree
 
-	// Determine if we can find the source path from an add or update.
 	switch mod {
+	// Determine if we can find the source path from an add or update.
 	case Add, Update, AddUpdate:
 		_, _, err = ctx.findImportDir("", ps.PathOrigin())
 		if err != nil {

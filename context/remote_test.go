@@ -7,7 +7,6 @@ package context
 import (
 	"bytes"
 	"testing"
-	"time"
 
 	"github.com/kardianos/govendor/internal/gt"
 )
@@ -27,8 +26,7 @@ func TestFetchSimple(t *testing.T) {
 
 	g.In("remote/co3")
 	vcs := remote.Setup()
-	commitTime := time.Now().UTC().Format(time.RFC3339)
-	commitRev := vcs.Commit()
+	commitRev, commitTime := vcs.Commit()
 
 	g.In("co1")
 	c := ctx(g)
@@ -116,8 +114,7 @@ func TestUpdateOrigin(t *testing.T) {
 	remote := gt.NewHttpHandler(g, "git")
 
 	g.In("remote/co3")
-	commitTime := time.Now().UTC().Format(time.RFC3339)
-	commitRev := remote.Setup().Commit()
+	commitRev, commitTime := remote.Setup().Commit()
 
 	g.In("co1")
 	c := ctx(g)

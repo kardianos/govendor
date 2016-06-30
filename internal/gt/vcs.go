@@ -149,7 +149,7 @@ type VcsHandle interface {
 	remove()
 	pkg() string
 	create()
-	Commit() (rev string)
+	Commit() (rev string, commitTime string)
 }
 
 type gitVcsHandle struct {
@@ -165,11 +165,20 @@ func (vcs *gitVcsHandle) create() {
 	vcs.run("config", "user.email", "tests@govendor.io")
 }
 
-func (vcs *gitVcsHandle) Commit() (rev string) {
+func (vcs *gitVcsHandle) Commit() (rev string, commitTime string) {
 	vcs.run("add", "-A")
 	vcs.run("commit", "-a", "-m", "msg")
-	out := vcs.run("show", "--pretty=format:%H", "-s")
-	return string(bytes.TrimSpace(out))
+	out := vcs.run("show", "--pretty=format:%H@%ai", "-s")
+
+	line := strings.TrimSpace(string(out))
+	ss := strings.Split(line, "@")
+	rev = ss[0]
+	tm, err := time.Parse("2006-01-02 15:04:05 -0700", ss[1])
+	if err != nil {
+		panic("Failed to parse time: " + ss[1] + " : " + err.Error())
+	}
+
+	return rev, tm.UTC().Format(time.RFC3339)
 }
 
 type runner struct {
