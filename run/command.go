@@ -88,40 +88,39 @@ func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
 	if err != nil {
 		return help.MsgNone, err
 	}
-	statusArgs := make([]string, 0, len(args))
-	otherArgs := make([]string, 1, len(args)+1)
-	otherArgs[0] = subcmd
-
-	for _, a := range args {
-		if a[0] == '+' {
-			statusArgs = append(statusArgs, a)
-		} else {
-			otherArgs = append(otherArgs, a)
-		}
+	list, err := ctx.Status()
+	if err != nil {
+		return help.MsgNone, err
 	}
 	cgp, err := currentGoPath(ctx)
 	if err != nil {
 		return help.MsgNone, err
 	}
-	f, err := parseFilter(cgp, statusArgs)
-	if err != nil {
-		return help.MsgNone, err
-	}
-	list, err := ctx.Status()
-	if err != nil {
-		return help.MsgNone, err
-	}
 
-	for _, item := range list {
-		if f.HasStatus(item) {
-			add := item.Local
-			// "go tool vet" takes dirs, not pkgs, so special case it.
-			if subcmd == "tool" && len(args) > 0 && args[0] == "vet" {
-				add = filepath.Join(ctx.RootGopath, add)
+	otherArgs := make([]string, 1, len(args)+1)
+	otherArgs[0] = subcmd
+
+	for _, a := range args {
+		if a[0] == '+' {
+			f, err := parseFilter(cgp, []string{a})
+			if err != nil {
+				return help.MsgNone, err
 			}
-			otherArgs = append(otherArgs, add)
+			for _, item := range list {
+				if f.HasStatus(item) {
+					add := item.Local
+					// "go tool vet" takes dirs, not pkgs, so special case it.
+					if subcmd == "tool" && len(args) > 0 && args[0] == "vet" {
+						add = filepath.Join(ctx.RootGopath, add)
+					}
+					otherArgs = append(otherArgs, add)
+				}
+			}
+		} else {
+			otherArgs = append(otherArgs, a)
 		}
 	}
+
 	cmd := exec.Command("go", otherArgs...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
