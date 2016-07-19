@@ -78,7 +78,7 @@ govendor test +local
 
 	go tool commands that are wrapped:
 	  `+<status>` package selection may be used with them
-	fmt, build, install, clean, test, vet, generate
+	fmt, build, install, clean, test, vet, generate, tool
 ```
 
 ## Status

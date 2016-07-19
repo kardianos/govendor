@@ -114,7 +114,12 @@ func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
 
 	for _, item := range list {
 		if f.HasStatus(item) {
-			otherArgs = append(otherArgs, item.Local)
+			add := item.Local
+			// "go tool vet" takes dirs, not pkgs, so special case it.
+			if subcmd == "tool" && len(args) > 0 && args[0] == "vet" {
+				add = filepath.Join(ctx.RootGopath, add)
+			}
+			otherArgs = append(otherArgs, add)
 		}
 	}
 	cmd := exec.Command("go", otherArgs...)

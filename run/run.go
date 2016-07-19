@@ -93,7 +93,7 @@ func (r *runner) run(w io.Writer, appArgs []string, ask prompt.Prompt) (help.Hel
 		return r.License(w, args[1:])
 	case "shell":
 		return r.Shell(w, args[1:])
-	case "fmt", "build", "install", "clean", "test", "vet", "generate":
+	case "fmt", "build", "install", "clean", "test", "vet", "generate", "tool":
 		return r.GoCmd(cmd, args[1:])
 	default:
 		return help.MsgFull, fmt.Errorf("Unknown command %q", cmd)
