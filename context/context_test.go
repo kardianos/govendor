@@ -52,7 +52,7 @@ func list(g *gt.GopathTest, c *Context, name, expected string) {
 	}
 }
 
-func stringSameIgnoreSpace(a, b string) (bool, string) {
+func stringSameIgnoreSpace(a, b string, ignore ...string) (bool, string) {
 	// Remove any space padding on the start/end of each line.
 	a = strings.TrimSpace(a)
 	b = strings.TrimSpace(b)
@@ -62,9 +62,17 @@ func stringSameIgnoreSpace(a, b string) (bool, string) {
 	if len(bLine) < ct {
 		ct = len(bLine)
 	}
+lineLoop:
 	for i := 0; i < ct; i++ {
-		if aLine[i] != bLine[i] {
-			return false, fmt.Sprintf("A: %s\nB: %s\n", aLine[i], bLine[i])
+		al := strings.TrimSpace(aLine[i])
+		bl := strings.TrimSpace(bLine[i])
+		if al != bl {
+			for _, ignorePrefix := range ignore {
+				if strings.HasPrefix(al, ignorePrefix) && strings.HasPrefix(bl, ignorePrefix) {
+					continue lineLoop
+				}
+			}
+			return false, fmt.Sprintf("A: %s\nB: %s\n", al, bl)
 		}
 	}
 	if len(aLine) != len(bLine) {
@@ -112,13 +120,13 @@ func statusItemString(li StatusItem) string {
 	return fmt.Sprintf("%s %s [%s] < %q", li.Status.String(), li.Local, li.Pkg.Path, li.ImportedBy)
 }
 
-func vendorFile(g *gt.GopathTest, name, expected string) {
+func vendorFile(g *gt.GopathTest, name, expected string, ignore ...string) {
 	buf, err := ioutil.ReadFile(filepath.Join(g.Current(), relVendorFile))
 	if err != nil {
 		g.Fatal(err)
 	}
 	s := string(buf)
-	if ok, msg := stringSameIgnoreSpace(s, expected); !ok {
+	if ok, msg := stringSameIgnoreSpace(s, expected, ignore...); !ok {
 		g.Fatalf("(%s) \n%sGot:\n%s\nWant\n%s", name, msg, s, expected)
 	}
 }

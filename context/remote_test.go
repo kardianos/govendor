@@ -204,3 +204,78 @@ func TestFetchSub(t *testing.T) {
 }
 `)
 }
+
+func TestFetchAgain(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("remote/co2/pk1",
+		gt.File("a.go", "bytes"),
+	)
+	g.In("remote")
+	remote := gt.NewHttpHandler(g, "git")
+
+	g.In("remote/co2")
+	commitRev1, commitTime1 := remote.Setup().Commit()
+
+	remotePkg := remote.HttpAddr() + "/remote/co2/pk1"
+	g.Setup("co1/pk1",
+		gt.File("a.go", remotePkg),
+	)
+	g.In("co1")
+	c := ctx(g)
+
+	g.Check(c.ModifyImport(pkg(remotePkg), Fetch))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	vendorFile(g, "1", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "x",
+			"path": "`+remotePkg+`",
+			"revision": "`+commitRev1+`",
+			"revisionTime": "`+commitTime1+`"
+		}
+	],
+	"rootPath": "co1"
+}
+`, `"checksumSHA1":`)
+
+	g.Setup("remote/co2/pk1",
+		gt.File("a.go", "bytes", "strings"),
+	)
+	g.In("remote/co2")
+	commitRev2, commitTime2 := remote.Setup().Commit()
+
+	g.In("co1")
+	g.Check(c.ModifyStatus(StatusGroup{Status: []Status{Status{Location: LocationVendor}}}, Fetch))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	vendorFile(g, "2", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "x",
+			"path": "`+remotePkg+`",
+			"revision": "`+commitRev2+`",
+			"revisionTime": "`+commitTime2+`"
+		}
+	],
+	"rootPath": "co1"
+}
+`, `"checksumSHA1":`)
+
+	list(g, c, "2", `
+ v  co1/vendor/`+remotePkg+` [`+remotePkg+`] < ["co1/pk1"]
+ l  co1/pk1 < []
+ s  bytes < ["co1/vendor/`+remotePkg+`"]
+ s  strings < ["co1/vendor/`+remotePkg+`"]
+	`)
+}

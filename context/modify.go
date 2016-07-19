@@ -505,6 +505,7 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, vers
 	if pkg.IncludeTree {
 		vp.Tree = pkg.IncludeTree
 	}
+	pkg.Origin = strings.TrimPrefix(pkg.Origin, ctx.RootImportPath+"/"+ctx.VendorFolder+"/")
 	vp.Origin = pkg.Origin
 	origin := vp.Origin
 	if len(vp.Origin) == 0 {
