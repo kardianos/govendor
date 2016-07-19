@@ -100,6 +100,8 @@ func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
 	otherArgs := make([]string, 1, len(args)+1)
 	otherArgs[0] = subcmd
 
+	// Expand any status flags in-place. Some wrapped commands the order is
+	// important to the operation of the command.
 	for _, a := range args {
 		if a[0] == '+' {
 			f, err := parseFilter(cgp, []string{a})
