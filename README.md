@@ -73,7 +73,7 @@ govendor test +local
 	migrate  Move packages from a legacy tool to the vendor folder with metadata.
 	get      Like "go get" but copies dependencies into a "vendor" folder.
 	license  List discovered licenses for the given status or import paths.
-	shell    Run a "shell" to make multiple sub-commands more efficent for large
+	shell    Run a "shell" to make multiple sub-commands more efficient for large
 	             projects.
 
 	go tool commands that are wrapped:
