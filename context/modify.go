@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math"
 	"path"
@@ -24,6 +23,7 @@ import (
 	"github.com/kardianos/govendor/pkgspec"
 	"github.com/kardianos/govendor/vcs"
 	"github.com/kardianos/govendor/vendorfile"
+	"github.com/pkg/errors"
 )
 
 // OperationState is the state of the given package move operation.
@@ -697,7 +697,7 @@ func (ctx *Context) Alter() error {
 				}
 			}
 			if err != nil {
-				return fmt.Errorf("Failed to fetch package %q: %v", op.Pkg.Path, err)
+				return errors.Wrapf(err, "Failed to fetch package %q", op.Pkg.Path)
 			}
 		}
 		if len(nextOps) == 0 {
@@ -725,10 +725,14 @@ func (ctx *Context) Alter() error {
 			err = RemovePackage(op.Src, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkg.IncludeTree)
 			op.State = OpDone
 		case OpCopy:
-			ctx.copyOperation(op, nil)
+			err = ctx.copyOperation(op, nil)
+			if os.IsNotExist(errors.Cause(err)) {
+				// Ignore packages that don't exist, like appengine.
+				err = nil
+			}
 		}
 		if err != nil {
-			return fmt.Errorf("Failed to %v package %q -> %q: %v", op.Type, op.Src, op.Dest, err)
+			return errors.Wrapf(err, "Failed to %v package %q -> %q", op.Type, op.Src, op.Dest)
 		}
 	}
 	if ctx.rewriteImports {
@@ -756,7 +760,7 @@ func (ctx *Context) copyOperation(op *Operation, beforeCopy func(deps []string) 
 	}
 	op.State = OpDone
 	if err != nil {
-		return fmt.Errorf("copy failed. dest: %q, src: %q, pkgPath %q, err %v", op.Dest, op.Src, root, err)
+		return errors.Wrapf(err, "copy failed. dest: %q, src: %q, pkgPath %q", op.Dest, op.Src, root)
 	}
 	return nil
 }

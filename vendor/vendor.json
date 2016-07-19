@@ -21,6 +21,12 @@
 			"revisionTime": "2015-01-27T13:39:51Z"
 		},
 		{
+			"checksumSHA1": "GcaTbmmzSGqTb2X6qnNtmDyew1Q=",
+			"path": "github.com/pkg/errors",
+			"revision": "a2d6902c6d2a2f194eb3fb474981ab7867c81505",
+			"revisionTime": "2016-06-27T22:23:52Z"
+		},
+		{
 			"checksumSHA1": "uwKP1AVzd+lrTMlXVFjZXXHzB7U=",
 			"path": "golang.org/x/tools/go/vcs",
 			"revision": "1727758746e7a08feaaceb9366d1468498ac2ac2",

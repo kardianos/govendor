@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	"github.com/pkg/errors"
 )
 
 type License struct {
@@ -171,12 +172,13 @@ func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
 		destPath := filepath.Join(vendorRoot, addTo, trimTo, name)
 
 		// Only copy if file does not exist.
-		_, err := os.Stat(destPath)
-		if err == nil {
-			return nil
+		_, err := os.Stat(srcPath)
+		if err != nil {
+			return errors.Errorf("Source license path doesn't exist %q", srcPath)
 		}
-
-		return copyFile(destPath, srcPath, nil)
+		destDir, _ := filepath.Split(destPath)
+		os.MkdirAll(destDir, 0777)
+		return errors.Wrapf(copyFile(destPath, srcPath, nil), "copyFile dest=%q src=%q", destPath, srcPath)
 	})
 }
 

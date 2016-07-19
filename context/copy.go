@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/kardianos/govendor/internal/pathos"
+	"github.com/pkg/errors"
 )
 
 type fileInfoSort []os.FileInfo
@@ -66,14 +67,14 @@ func (ctx *Context) CopyPackage(destPath, srcPath, lookRoot, pkgPath string, ign
 	for _, fi := range fl {
 		if fi.IsDir() {
 			if tree {
-				err = os.RemoveAll(filepath.Join(destPath, fi.Name()))
+				err = errors.Wrap(os.RemoveAll(filepath.Join(destPath, fi.Name())), "remove all existing tree entries")
 				if err != nil {
 					return err
 				}
 			}
 			continue
 		}
-		err = os.Remove(filepath.Join(destPath, fi.Name()))
+		err = errors.Wrap(os.Remove(filepath.Join(destPath, fi.Name())), "remove existing file")
 		if err != nil {
 			return err
 		}
@@ -82,13 +83,13 @@ func (ctx *Context) CopyPackage(destPath, srcPath, lookRoot, pkgPath string, ign
 	// Copy files into dest.
 	srcDir, err := os.Open(srcPath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "open srcPath directory")
 	}
 
 	fl, err = srcDir.Readdir(-1)
 	srcDir.Close()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "src readdir")
 	}
 	if h != nil {
 		// Write relative path to GOPATH.
@@ -127,12 +128,15 @@ fileLoop:
 			if beforeCopy != nil {
 				err = beforeCopy(deps)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "beforeCopy")
 				}
 			}
 			err = ctx.CopyPackage(nextDestPath, nextSrcPath, lookRoot, path.Join(pkgPath, name), nextIgnoreFiles, true, h, beforeCopy)
 			if err != nil {
-				return err
+				return errors.Wrapf(err,
+					"CopyPackage dest=%q src=%q lookRoot=%q pkgPath=%q ignoreFiles=%q tree=%t has beforeCopy=%t",
+					nextDestPath, nextSrcPath, lookRoot, path.Join(pkgPath, name), nextIgnoreFiles, true, beforeCopy != nil,
+				)
 			}
 			continue
 		}
@@ -150,21 +154,21 @@ fileLoop:
 			h,
 		)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "copyFile dest=%q src=%q", filepath.Join(destPath, name), filepath.Join(srcPath, name))
 		}
 	}
 
-	return licenseCopy(lookRoot, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkgPath)
+	return errors.Wrapf(licenseCopy(lookRoot, srcPath, filepath.Join(ctx.RootDir, ctx.VendorFolder), pkgPath), "licenseCopy srcPath=%q", srcPath)
 }
 
 func copyFile(destPath, srcPath string, h hash.Hash) error {
 	ss, err := os.Stat(srcPath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "copyFile Stat")
 	}
 	src, err := os.Open(srcPath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "open src=%q", srcPath)
 	}
 	defer src.Close()
 	// Ensure we are not trying to copy a directory. May happen with symlinks.
@@ -176,7 +180,7 @@ func copyFile(destPath, srcPath string, h hash.Hash) error {
 
 	dest, err := os.Create(destPath)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "create dest=%q", destPath)
 	}
 
 	r := io.Reader(src)
@@ -189,7 +193,7 @@ func copyFile(destPath, srcPath string, h hash.Hash) error {
 	// Close before setting mod and time.
 	dest.Close()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "copy")
 	}
 	err = os.Chmod(destPath, ss.Mode())
 	if err != nil {

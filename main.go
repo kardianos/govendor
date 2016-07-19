@@ -37,7 +37,7 @@ func main() {
 		err = nil
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
 	}
 	msgText := msg.String()
 	if len(msgText) > 0 {
