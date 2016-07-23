@@ -8,6 +8,7 @@ import (
 	"bytes"
 	ros "os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dchest/safefile"
 	"github.com/kardianos/govendor/vendorfile"
@@ -55,7 +56,7 @@ func (ctx *Context) WriteVendorFile() (err error) {
 	return
 }
 
-func readVendorFile(vendorFilePath string) (*vendorfile.File, error) {
+func readVendorFile(vendorRoot, vendorFilePath string) (*vendorfile.File, error) {
 	vf := &vendorfile.File{}
 	f, err := os.Open(vendorFilePath)
 	if err != nil {
@@ -67,5 +68,12 @@ func readVendorFile(vendorFilePath string) (*vendorfile.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Remove any existing origin field if the prefix matches the
+	// context package root. This fixes a previous bug introduced in the file,
+	// that is now fixed.
+	for _, row := range vf.Package {
+		row.Origin = strings.TrimPrefix(row.Origin, vendorRoot)
+	}
+
 	return vf, nil
 }

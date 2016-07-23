@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -164,14 +165,7 @@ func NewContextWD(rt RootType) (*Context, error) {
 // The vendorFolder is where vendor packages should be placed.
 func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports bool) (*Context, error) {
 	dprintf("CTX: %s\n", root)
-	vendorFilePath := filepath.Join(root, vendorFilePathRel)
-	vf, err := readVendorFile(vendorFilePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-		vf = &vendorfile.File{}
-	}
+	var err error
 
 	// Get GOROOT. First check ENV, then run "go env" and find the GOROOT line.
 	goroot := os.Getenv("GOROOT")
@@ -209,12 +203,13 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 
 	rootToVendorFile, _ := filepath.Split(vendorFilePathRel)
 
+	vendorFilePath := filepath.Join(root, vendorFilePathRel)
+
 	ctx := &Context{
 		RootDir:    root,
 		GopathList: gopathGoroot,
 		Goroot:     goroot,
 
-		VendorFile:       vf,
 		VendorFilePath:   vendorFilePath,
 		VendorFolder:     vendorFolder,
 		RootToVendorFile: pathos.SlashToImportPath(rootToVendorFile),
@@ -232,6 +227,15 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 	if err != nil {
 		return nil, err
 	}
+
+	vf, err := readVendorFile(path.Join(ctx.RootImportPath, vendorFolder)+"/", vendorFilePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		vf = &vendorfile.File{}
+	}
+	ctx.VendorFile = vf
 
 	ctx.IgnoreBuildAndPackage(vf.Ignore)
 
