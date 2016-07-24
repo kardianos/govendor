@@ -167,6 +167,17 @@ func (ctx *Context) ModifyImport(imp *pkgspec.Pkg, mod Modify, mops ...ModifyOpt
 	if ctx.added == nil {
 		ctx.added = make(map[string]bool, 10)
 	}
+	// Grap the origin of the pkg spec from the vendor file as needed.
+	if len(imp.Origin) == 0 {
+		for _, vpkg := range ctx.VendorFile.Package {
+			if vpkg.Remove {
+				continue
+			}
+			if vpkg.Path == imp.Path {
+				imp.Origin = vpkg.Origin
+			}
+		}
+	}
 	if !imp.MatchTree {
 		if !ctx.added[imp.PathOrigin()] {
 			err = ctx.modify(imp, mod, mops)

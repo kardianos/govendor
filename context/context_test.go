@@ -1431,3 +1431,56 @@ func TestAddTreeWithSamePrefix2(t *testing.T) {
 	g.Check(c.ModifyImport(pkg("co2/pk1"), Add, IncludeTree))
 	g.Check(c.Alter())
 }
+
+func TestOrginRetain(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go"),
+	)
+	g.Setup("co2/pk2",
+		gt.File("a.go"),
+	)
+	g.In("co1")
+	c := ctx(g)
+	g.Check(c.ModifyImport(pkg("correct/name/pk2::co2/pk2"), Add))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	vendorFile(g, "after add", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "KcwRyEXPUn2jwAgWGhFDjIt3deI=",
+			"origin": "co2/pk2",
+			"path": "correct/name/pk2",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+
+	g.Check(c.ModifyImport(pkg("correct/name/pk2"), Update))
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	vendorFile(g, "after update", `
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "KcwRyEXPUn2jwAgWGhFDjIt3deI=",
+			"origin": "co2/pk2",
+			"path": "correct/name/pk2",
+			"revision": ""
+		}
+	],
+	"rootPath": "co1"
+}
+`)
+}
