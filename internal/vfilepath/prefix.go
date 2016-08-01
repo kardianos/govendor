@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
-func HasPrefixDir(file string, prefix string) bool {
-	return strings.HasPrefix(filepath.Clean(file), filepath.Clean(prefix)+"/")
+func HasPrefixDir(path string, prefix string) bool {
+	return strings.HasPrefix(makeDirPath(path), makeDirPath(prefix))
+}
+
+func makeDirPath(path string) string {
+	if path = filepath.Clean(path); path != "/" {
+		path += "/"
+	}
+	return path
 }
