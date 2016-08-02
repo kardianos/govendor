@@ -51,6 +51,38 @@ func (r *runner) List(w io.Writer, subCmdArgs []string) (help.HelpMessage, error
 		return help.MsgNone, err
 	}
 
+	// If not verbose, remove any entries that will just confuse people.
+	// For example, one package may reference pkgA inside vendor, another
+	// package may reference pkgA outside vendor, resulting in both a
+	// external reference and a vendor reference.
+	// In the above case, remove the external reference.
+	if !*verbose {
+		next := make([]context.StatusItem, 0, len(list))
+		for checkIndex, check := range list {
+			if check.Status.Location != context.LocationExternal {
+				next = append(next, check)
+				continue
+			}
+			found := false
+			for lookIndex, look := range list {
+				if checkIndex == lookIndex {
+					continue
+				}
+				if check.Pkg.Path != look.Pkg.Path {
+					continue
+				}
+				if look.Status.Location == context.LocationVendor {
+					found = true
+					break
+				}
+			}
+			if !found {
+				next = append(next, check)
+			}
+		}
+		list = next
+	}
+
 	formatSame := "%[1]v %[2]s\t%[3]s\t%[4]s\n"
 	formatDifferent := "%[1]v %[2]s\t%[4]s\t%[5]s\n"
 	if *verbose {
