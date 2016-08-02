@@ -318,7 +318,7 @@ func (ctx *Context) Sync(dryrun bool) (err error) {
 		if from != vp.Path {
 			fmt.Fprintf(ctx, "fetch %q from %q\n", vp.Path, from)
 		} else {
-			fmt.Fprintf(ctx, "fetch %q\n", vp.Path, from)
+			fmt.Fprintf(ctx, "fetch %q\n", vp.Path)
 		}
 		if dryrun {
 			continue
