@@ -310,7 +310,7 @@ func (ctx *Context) setPackage(dir, canonical, local, gopath string, status Stat
 			originDir = od
 		}
 	}
-	if status.Location == LocationUnknown && strings.HasPrefix(canonical, ctx.RootImportPath) {
+	if status.Location == LocationUnknown && filepath.HasPrefixDir(canonical, ctx.RootImportPath) {
 		status.Location = LocationLocal
 	}
 	spec, err := pkgspec.Parse("", canonical)
@@ -433,7 +433,7 @@ func (ctx *Context) determinePackageStatus() error {
 		if pkg.Status.Location != LocationUnknown {
 			continue
 		}
-		if strings.HasPrefix(pkg.Path, ctx.RootImportPath) {
+		if filepath.HasPrefixDir(pkg.Path, ctx.RootImportPath) {
 			pkg.Status.Location = LocationLocal
 			continue
 		}
