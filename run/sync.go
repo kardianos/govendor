@@ -15,6 +15,7 @@ import (
 func (r *runner) Sync(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	flags := flag.NewFlagSet("sync", flag.ContinueOnError)
 	insecure := flags.Bool("insecure", false, "allow insecure network updates")
+	dryrun := flags.Bool("n", false, "dry run, print what would be done")
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
@@ -25,5 +26,8 @@ func (r *runner) Sync(w io.Writer, subCmdArgs []string) (help.HelpMessage, error
 		return help.MsgSync, err
 	}
 	ctx.Insecure = *insecure
-	return help.MsgNone, ctx.Sync()
+	if *dryrun {
+		ctx.Logger = w
+	}
+	return help.MsgNone, ctx.Sync(*dryrun)
 }

@@ -287,7 +287,7 @@ func vcsIsSecure(repo string) bool {
 
 // Sync checks for outdated packages in the vendor folder and fetches the
 // correct revision from the remote.
-func (ctx *Context) Sync() (err error) {
+func (ctx *Context) Sync(dryrun bool) (err error) {
 	// vcs.ShowCmd = true
 	outOfDate, err := ctx.VerifyVendor()
 	if err != nil {
@@ -314,6 +314,14 @@ func (ctx *Context) Sync() (err error) {
 		from := vp.Path
 		if len(vp.Origin) > 0 {
 			from = vp.Origin
+		}
+		if from != vp.Path {
+			fmt.Fprintf(ctx, "fetch %q from %q\n", vp.Path, from)
+		} else {
+			fmt.Fprintf(ctx, "fetch %q\n", vp.Path, from)
+		}
+		if dryrun {
+			continue
 		}
 		pkgDir := filepath.Join(cacheRoot, from)
 

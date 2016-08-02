@@ -132,6 +132,7 @@ var helpFetch = `govendor fetch [options] ( +status or package-spec )
 var helpSync = `govendor sync
 	Ensures the contents of the vendor folder matches the vendor file.
 	Options:
+		-n           dry run, print out action only
 		-insecure    allow downloading over insecure connection
 `
 
