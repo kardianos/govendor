@@ -279,3 +279,60 @@ func TestFetchAgain(t *testing.T) {
  s  strings < ["co1/vendor/`+remotePkg+`"]
 	`)
 }
+
+func TestFetchSimilarRoot(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("remote")
+	g.In("remote")
+	remote := gt.NewHttpHandler(g, "git")
+
+	root := remote.HttpAddr() + "/remote/co1/"
+
+	g.Setup("remote/co1/A",
+		gt.File("a.go", root+"B/C"),
+	)
+	g.Setup("remote/co1/B",
+		gt.File("b.go", root+"A"),
+	)
+	g.Setup("remote/co1/B/C",
+		gt.File("c.go", "strings"),
+	)
+	remote.Setup().Commit()
+
+	g.Setup(root+"A",
+		gt.File("a.go", root+"B/C"),
+	)
+	g.Setup(root+"B",
+		gt.File("b.go", root+"A"),
+	)
+	g.Setup(root+"B/C",
+		gt.File("c.go", "strings"),
+	)
+
+	g.In(root + "B")
+	c := ctx(g)
+
+	list(g, c, "1", `
+e  `+root+`A < ["`+root+`B"]
+l  `+root+`B < []
+l  `+root+`B/C < ["`+root+`A"]
+s  strings < ["`+root+`B/C"]
+		`)
+
+	// +outside
+	status := StatusGroup{Status: []Status{{Location: LocationExternal}, {Presence: PresenceMissing}}}
+	g.Check(c.ModifyStatus(status, Fetch))
+
+	g.Check(c.Alter())
+	g.Check(c.WriteVendorFile())
+
+	list(g, c, "2", `
+ v  `+root+`B/vendor/`+root+`A [`+root+`A] < ["`+root+`B"]
+ l  `+root+`B < []
+ l  `+root+`B/C < ["`+root+`B/vendor/`+root+`A"]
+ s  strings < ["`+root+`B/C"]
+
+	`)
+}

@@ -191,6 +191,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 
 	processDeps := func(deps []string) error {
 		// Queue up any missing package deps.
+	depLoop:
 		for _, dep := range deps {
 			dep = strings.TrimSpace(dep)
 			if len(dep) == 0 {
@@ -202,15 +203,13 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 				continue
 			}
 
-			hasDep := false
 			for _, test := range f.Ctx.Package {
-				if test.Path == dep && test.Status.Location == LocationVendor {
-					hasDep = true
-					break
+				if test.Path == dep {
+					switch test.Status.Location {
+					case LocationVendor, LocationLocal:
+						continue depLoop
+					}
 				}
-			}
-			if hasDep {
-				continue
 			}
 
 			// Look for std lib deps
