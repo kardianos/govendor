@@ -42,16 +42,24 @@ func (ctx *Context) loadPackage() error {
 		if info == nil {
 			return err
 		}
+		if !info.IsDir() {
+			_, err = ctx.addFileImports(path, ctx.RootGopath)
+			return err
+		}
 		name := info.Name()
 		// Still go into "_workspace" to aid godep migration.
-		if info.IsDir() && (name[0] == '.' || name[0] == '_' || name == "testdata") && name != "_workspace" {
-			return filepath.SkipDir
-		}
-		if info.IsDir() {
+		if name == "_workspace" {
 			return nil
 		}
-		_, err = ctx.addFileImports(path, ctx.RootGopath)
-		return err
+		switch name[0] {
+		case '.', '_':
+			return filepath.SkipDir
+		}
+		switch name {
+		case "testdata", "node_modules":
+			return filepath.SkipDir
+		}
+		return nil
 	})
 	if err != nil {
 		return err
