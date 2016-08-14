@@ -38,11 +38,20 @@ func (ctx *Context) loadPackage() error {
 	ctx.dirty = false
 	ctx.statusCache = nil
 	ctx.Package = make(map[string]*Package, len(ctx.Package))
-	err := filepath.Walk(ctx.RootDir, func(path string, info os.FileInfo, err error) error {
+	// We following the root symlink only in case the root of the repo is symlinked into the GOPATH
+	// This could happen during on some CI that didn't checkout into the GOPATH
+	rootdir, err := filepath.EvalSymlinks(ctx.RootDir)
+	if err != nil {
+		return err
+	}
+	err = filepath.Walk(rootdir, func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return err
 		}
 		if !info.IsDir() {
+			// We replace the directory path (followed by the symlink), to the real go repo package name/path
+			// ex : replace "<somewhere>/govendor.source.repo" to "github.com/kardianos/govendor"
+			path = strings.Replace(path, rootdir, ctx.RootDir, 1)
 			_, err = ctx.addFileImports(path, ctx.RootGopath)
 			return err
 		}

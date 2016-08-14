@@ -11,3 +11,7 @@ func Split(path string) (string, string) {
 func Join(parts ...string) string {
 	return filepath.Join(parts...)
 }
+
+func EvalSymlinks(path string) (string, error) {
+	return filepath.EvalSymlinks(path)
+}
