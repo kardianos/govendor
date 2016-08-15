@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -210,15 +211,32 @@ func (r *runner) freePort() int {
 	return port
 }
 
+// Prevents a race condition in runAsync.
+type safeBuf struct {
+	sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *safeBuf) Write(b []byte) (int, error) {
+	s.Lock()
+	defer s.Unlock()
+	return s.buf.Write(b)
+}
+func (s *safeBuf) String() string {
+	s.Lock()
+	defer s.Unlock()
+	return s.buf.String()
+}
+
 func (r *runner) runAsync(checkFor string, args ...string) *exec.Cmd {
 	cmd := exec.Command(r.execPath, args...)
 	cmd.Dir = r.t.Current()
 
-	var buf *bytes.Buffer
-	var bufErr *bytes.Buffer
+	var buf *safeBuf
+	var bufErr *safeBuf
 	if checkFor != "" {
-		buf = &bytes.Buffer{}
-		bufErr = &bytes.Buffer{}
+		buf = &safeBuf{}
+		bufErr = &safeBuf{}
 		cmd.Stdout = buf
 		cmd.Stderr = bufErr
 	}
@@ -242,13 +260,14 @@ func (r *runner) runAsync(checkFor string, args ...string) *exec.Cmd {
 			cmd.Process.Kill()
 		case <-done:
 		}
-		r.t.Logf("%q StdOut: %s\n", cmd.Path, buf.Bytes())
-		r.t.Logf("%q StdErr: %s\n", cmd.Path, bufErr.Bytes())
+
+		r.t.Logf("%q StdOut: %s\n", cmd.Path, buf.String())
+		r.t.Logf("%q StdErr: %s\n", cmd.Path, bufErr.String())
 	})
 	if checkFor != "" {
 		for i := 0; i < 100; i++ {
 			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-				r.t.Fatalf("unexpected stop %q %q\n%s\n%s\n", r.execPath, args, buf.Bytes(), bufErr.Bytes())
+				r.t.Fatalf("unexpected stop %q %q\n%s\n%s\n", r.execPath, args, buf.String(), bufErr.String())
 			}
 			if strings.Contains(buf.String(), checkFor) {
 				return cmd
@@ -258,7 +277,7 @@ func (r *runner) runAsync(checkFor string, args ...string) *exec.Cmd {
 			}
 			time.Sleep(time.Millisecond * 10)
 		}
-		r.t.Fatalf("failed to read expected output %q from %q %q\n%s\n", checkFor, r.execPath, args, bufErr.Bytes())
+		r.t.Fatalf("failed to read expected output %q from %q %q\n%s\n", checkFor, r.execPath, args, bufErr.String())
 	}
 	return cmd
 }
