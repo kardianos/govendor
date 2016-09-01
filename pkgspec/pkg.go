@@ -14,6 +14,7 @@ type Pkg struct {
 	IncludeTree bool
 	MatchTree   bool
 	HasVersion  bool
+	HasOrigin   bool
 	Version     string
 
 	Uncommitted bool

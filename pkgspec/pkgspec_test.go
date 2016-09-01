@@ -21,7 +21,7 @@ func TestParse(t *testing.T) {
 		{Spec: "abc/def::", Err: ErrEmptyOrigin},
 		{Spec: "abc/def::foo/bar/vendor/abc/def"},
 		{Spec: "abc/def::foo/bar/vendor/abc/def@"},
-		{Spec: "abc/def::foo/bar/vendor/abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}},
+		{Spec: "abc/def::foo/bar/vendor/abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasOrigin: true, Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}},
 		{Spec: "abc/def@", Pkg: &Pkg{Path: "abc/def", HasVersion: true}},
 		{Spec: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}},
 		{Spec: "./def@v1.2.3", Str: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, WD: "abc/"},
@@ -59,7 +59,7 @@ func TestParse(t *testing.T) {
 		}
 		if item.Pkg != nil {
 			diffA := pkg.Path != item.Pkg.Path || pkg.Origin != item.Pkg.Origin || pkg.Version != item.Pkg.Version
-			diffB := pkg.HasVersion != item.Pkg.HasVersion || pkg.MatchTree != item.Pkg.MatchTree || pkg.IncludeTree != item.Pkg.IncludeTree
+			diffB := pkg.HasVersion != item.Pkg.HasVersion || pkg.HasOrigin != item.Pkg.HasOrigin || pkg.MatchTree != item.Pkg.MatchTree || pkg.IncludeTree != item.Pkg.IncludeTree
 			if diffA || diffB {
 				t.Errorf("For %q, pkg detail diff: got %#v", item.Spec, pkg)
 			}

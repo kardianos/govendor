@@ -51,7 +51,8 @@ func Parse(currentGoPath, s string) (*Pkg, error) {
 	}
 
 	pkg := &Pkg{
-		Path: s,
+		Path:      s,
+		HasOrigin: (originIndex >= 0),
 	}
 
 	if versionIndex > 0 {

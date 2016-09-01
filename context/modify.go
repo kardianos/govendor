@@ -274,7 +274,9 @@ func (ctx *Context) modify(ps *pkgspec.Pkg, mod Modify, mops []ModifyOption) err
 		pkg.Origin = ps.PathOrigin()
 		pkg.Path = ps.Path
 	}
-	if ps.Origin != pkg.Origin {
+
+	pkg.HasOrigin = ps.HasOrigin
+	if ps.HasOrigin {
 		pkg.Origin = ps.Origin
 	}
 
@@ -406,7 +408,10 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 	if pkg.IncludeTree {
 		vp.Tree = pkg.IncludeTree
 	}
-	vp.Origin = pkg.Origin
+
+	if pkg.HasOrigin {
+		vp.Origin = pkg.Origin
+	}
 	if pkg.Path != pkg.Local && pkg.inVendor && vp.Add {
 		vp.Origin = pkg.Local
 	}
