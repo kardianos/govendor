@@ -15,7 +15,7 @@ A: Run `govendor add +external`.
 #### Q: I have copied dependencies into "vendor". I want to update from $GOPATH.
 A: Run `govendor update +vendor`.
 
-#### Q: I'm getting missing packages from `appengine` but I don't care about `appengine`. How do I ignore these pacakges?
+#### Q: I'm getting missing packages from `appengine` but I don't care about `appengine`. How do I ignore these packages?
 A: Edit the `vendor/vendor.json` file. Update the "ignore" field to include "appengine".
 If you are already ignoring tests, it will look like: `"ignore": "test appengine",`.
 
@@ -23,7 +23,7 @@ If you are already ignoring tests, it will look like: `"ignore": "test appengine
 A: Run `govendor update -uncommitted <updated-package-import-path>`.
 
 #### Q: I've forked a package and I haven't upstreamed the changes yet. What should I do?
-A: Assuming you've pushed your changes to a accessable repsoitory, run 
+A: Assuming you've pushed your changes to an accessable repository, run 
 `govendor fetch github.com/normal/pkg::github.com/myfork/pkg`. This will
 fetch from "myfork" but place package in "normal".
 
