@@ -71,6 +71,9 @@ func (h *HttpHandler) Setup() VcsHandle {
 }
 
 func NewHttpHandler(g *GopathTest, vcsName string) *HttpHandler {
+	if runtime.GOOS == "windows" {
+		g.Skip("ports in the import path currently don't work on windows"
+	}
 	// Test if git is installed. If it is, enable the git test.
 	// If enabled, start the http server and accept git server registrations.
 	l, err := net.Listen("tcp", "localhost:0")
