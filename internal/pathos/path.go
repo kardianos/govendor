@@ -111,6 +111,11 @@ func FileStringEquals(s1, s2 string) bool {
 	return s1 == s2
 }
 
+// EscapeImport removes invalid chars for a given FS from file paths.
+func EscapeImport(p string) string {
+	return strings.Replace(p, ":", "_", -1)
+}
+
 // GoEnv parses a "go env" line and checks for a specific
 // variable name.
 func GoEnv(name, line string) (value string, ok bool) {
