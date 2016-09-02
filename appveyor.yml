@@ -4,13 +4,13 @@ os: Windows Server 2012 R2
 
 environment:
   GOPATH: c:\gopath
-  TMP: C:\tmp
 #  GOVERSION: 1.7
 
 clone_folder: c:\gopath\src\github.com\kardianos\govendor
 
 install:
   - mkdir c:\tmp
+  - set TMP=C:\tmp
   - go version
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
 #  - rmdir c:\go /s /q
