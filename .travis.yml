@@ -1,5 +1,5 @@
 language: go
-go: 1.6
+go: 1.7
 install: 
 before_deploy:
 - GOOS=linux GOARCH=amd64 go build -o govendor_linux_amd64
