@@ -10,6 +10,7 @@ import "bytes"
 
 type Pkg struct {
 	Path        string
+	FilePath    string
 	Origin      string
 	IncludeTree bool
 	MatchTree   bool

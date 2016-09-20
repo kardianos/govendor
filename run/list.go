@@ -19,6 +19,7 @@ func (r *runner) List(w io.Writer, subCmdArgs []string) (help.HelpMessage, error
 	listFlags := flag.NewFlagSet("list", flag.ContinueOnError)
 	listFlags.SetOutput(nullWriter{})
 	verbose := listFlags.Bool("v", false, "verbose")
+	asFilePath := listFlags.Bool("p", false, "show file path to package instead of import path")
 	noStatus := listFlags.Bool("no-status", false, "do not show the status")
 	err := listFlags.Parse(subCmdArgs)
 	if err != nil {
@@ -105,10 +106,17 @@ func (r *runner) List(w io.Writer, subCmdArgs []string) (help.HelpMessage, error
 			continue
 		}
 
-		if item.Local == item.Pkg.Path {
-			fmt.Fprintf(tw, formatSame, item.Status, item.Pkg.Path, item.Pkg.Version, item.VersionExact)
+		var path string
+		if *asFilePath {
+			path = item.Pkg.FilePath
 		} else {
-			fmt.Fprintf(tw, formatDifferent, item.Status, item.Pkg.Path, strings.TrimPrefix(item.Local, ctx.RootImportPath), item.Pkg.Version, item.VersionExact)
+			path = item.Pkg.Path
+		}
+
+		if item.Local == item.Pkg.Path {
+			fmt.Fprintf(tw, formatSame, item.Status, path, item.Pkg.Version, item.VersionExact)
+		} else {
+			fmt.Fprintf(tw, formatDifferent, item.Status, path, strings.TrimPrefix(item.Local, ctx.RootImportPath), item.Pkg.Version, item.VersionExact)
 		}
 		if *verbose {
 			for i, imp := range item.ImportedBy {

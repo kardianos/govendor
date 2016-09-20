@@ -234,7 +234,7 @@ func (ctx *Context) updateStatusCache() error {
 
 		li := StatusItem{
 			Status:       pkg.Status,
-			Pkg:          &pkgspec.Pkg{Path: pkg.Path, IncludeTree: pkg.IncludeTree, Origin: origin, Version: version},
+			Pkg:          &pkgspec.Pkg{Path: pkg.Path, IncludeTree: pkg.IncludeTree, Origin: origin, Version: version, FilePath: pkg.Dir},
 			Local:        pkg.Local,
 			VersionExact: versionExact,
 			ImportedBy:   make([]*Package, 0, len(pkg.referenced)),

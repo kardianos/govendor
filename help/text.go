@@ -81,9 +81,11 @@ var helpList = `govendor list [options]  ( +status or import-path-filter )
 	List all dependencies and packages in folder tree.
 	Options:
 		-v           verbose listing, show dependencies of each package
+		-p           show file path to package instead of import path
 		-no-status   do not prefix status to list, package names only
 Examples:
 	$ govendor list -no-status +local
+	$ govendor list -p -no-status +local
 	$ govendor list +vend,prog +local,program
 	$ govendor list +local,^prog
 `
