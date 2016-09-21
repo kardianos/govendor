@@ -96,14 +96,18 @@ func (g *GopathTest) onClean(f func()) {
 }
 func (g *GopathTest) Clean() {
 	os.Chdir(g.initPath)
-	err := os.RemoveAll(g.base)
-	if err != nil {
-		g.Fatal(err)
-	}
+	g.Log("run Clean")
 	for i := len(g.cleaners) - 1; i >= 0; i-- {
-		g.cleaners[i]()
+		func(i int) {
+			defer recover()
+			g.cleaners[i]()
+		}(i)
 	}
 	g.cleaners = nil
+	err := os.RemoveAll(g.base)
+	if err != nil {
+		g.Log("failed to remove temp dir", g.base, err)
+	}
 }
 
 // Check is fatal to the test if err is not nil.

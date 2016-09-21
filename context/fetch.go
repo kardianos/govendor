@@ -72,7 +72,6 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// If we have a specific revision, update to that revision.
 
 	pkgDir := filepath.Join(f.CacheRoot, pathos.SlashToFilepath(ps.PathOrigin()))
-	pkgDir = pathos.EscapeImport(pkgDir)
 	sysVcsCmd, repoRoot, err := vcs.FromDir(pkgDir, f.CacheRoot)
 	var vcsCmd *VCSCmd
 	repoRootDir := filepath.Join(f.CacheRoot, repoRoot)
@@ -89,7 +88,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 		}
 
 		vcsCmd = updateVcsCmd(rr.VCS)
-		repoRoot = pathos.EscapeImport(rr.Root)
+		repoRoot = rr.Root
 		repoRootDir = filepath.Join(f.CacheRoot, repoRoot)
 
 		err = vcsCmd.Create(repoRootDir, rr.Repo)
@@ -176,7 +175,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// Once downloaded, be sure to set the revision and revisionTime
 	// in the vendor file package.
 	// Find the VCS information.
-	system, err := gvvcs.FindVcs(f.CacheRoot, pathos.EscapeImport(op.Src))
+	system, err := gvvcs.FindVcs(f.CacheRoot, op.Src)
 	if err != nil {
 		return nextOps, fmt.Errorf("failed to find vcs in %q %v", op.Src, err)
 	}

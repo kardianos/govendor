@@ -50,6 +50,7 @@ func (h *HttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.g.Log("http meta: ", p)
 	fmt.Fprintf(out, templ, h.httpAddr+"/"+handle.pkg(), h.vcsName, h.vcsAddr+handle.pkg()+"/.git")
 }
 
@@ -71,14 +72,20 @@ func (h *HttpHandler) Setup() VcsHandle {
 }
 
 func NewHttpHandler(g *GopathTest, vcsName string) *HttpHandler {
+	listenOn := "localhost:0"
+	// Windows does not allow ":" in a folder name. Thus they are not
+	// allowed in the import path either. Require port 80.
 	if runtime.GOOS == "windows" {
-		g.Skip("ports in the import path currently don't work on windows")
+		listenOn = "localhost:80"
 	}
 	// Test if git is installed. If it is, enable the git test.
 	// If enabled, start the http server and accept git server registrations.
-	l, err := net.Listen("tcp", "localhost:0")
+	l, err := net.Listen("tcp", listenOn)
 	if err != nil {
-		return nil
+		if runtime.GOOS == "windows" {
+			g.Skip("skip test on windows, unable to bind port", err)
+		}
+		g.Fatal(err)
 	}
 
 	h := &HttpHandler{
@@ -88,7 +95,7 @@ func NewHttpHandler(g *GopathTest, vcsName string) *HttpHandler {
 		},
 		pkg:      g.pkg,
 		vcsName:  vcsName,
-		httpAddr: l.Addr().String(),
+		httpAddr: strings.TrimSuffix(l.Addr().String(), ":80"),
 		l:        l,
 		g:        g,
 
@@ -112,14 +119,24 @@ func NewHttpHandler(g *GopathTest, vcsName string) *HttpHandler {
 		panic("unknown vcs type")
 	case "git":
 		port := h.freePort()
-		h.vcsAddr = fmt.Sprintf("git://localhost:%d/", port)
+		switch port {
+		default:
+			h.vcsAddr = fmt.Sprintf("git://localhost:%d/", port)
+		case 80:
+			h.vcsAddr = "git://localhost/"
+		}
 
+		// TODO(kardianos): on windows we fail to kill the process tree. This
+		// results in failing to clean up the temp dir. Find a way to
+		// kill the "git daemon" processes.
+
+		// git on windows still needs forward slashes in paths or it will fail
+		// to serve, even with --export-all.
 		h.runAsync(" Ready ", "daemon",
 			"--listen=localhost", fmt.Sprintf("--port=%d", port),
 			"--export-all", "--verbose", "--informative-errors",
-			"--base-path="+g.Path(""), h.cwd,
+			"--base-path="+strings.Replace(g.Path(""), `\`, "/", -1), strings.Replace(h.cwd, `\`, "/", -1),
 		)
-		fmt.Printf("base-path %q, serve %q\n", g.Path(""), h.cwd)
 
 		h.newer = func(h *HttpHandler) VcsHandle {
 			return &gitVcsHandle{
@@ -164,6 +181,7 @@ func (vcs *gitVcsHandle) remove() {
 	delete(vcs.h.handles, vcs.pkg())
 }
 func (vcs *gitVcsHandle) create() {
+	vcs.t.Log("create repo: ", vcs.cwd)
 	vcs.run("init")
 	vcs.run("config", "user.name", "tests")
 	vcs.run("config", "user.email", "tests@govendor.io")
@@ -232,6 +250,7 @@ func (s *safeBuf) String() string {
 }
 
 func (r *runner) runAsync(checkFor string, args ...string) *exec.Cmd {
+	r.t.Log("starting:", r.execPath, args)
 	cmd := exec.Command(r.execPath, args...)
 	cmd.Dir = r.t.Current()
 
