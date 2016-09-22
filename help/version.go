@@ -4,4 +4,4 @@
 
 package help
 
-var version = "v1.0.7"
+var version = "v1.0.8"
