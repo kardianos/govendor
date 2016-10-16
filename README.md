@@ -91,7 +91,7 @@ Packages can be specified by their "status".
 	+vendor   (v) packages in the vendor folder
 	+std      (s) packages in the standard library
 
-	+excluded (x) external packages explicitely excluded from vendoring
+	+excluded (x) external packages explicitly excluded from vendoring
 	+unused   (u) packages in the vendor folder, but unused
 	+missing  (m) referenced packages but not found
 

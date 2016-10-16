@@ -247,7 +247,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 			imp = path.Join(importPath, imp)
 		}
 		pf.Imports[i] = imp
-		if pkg.Status.Presence != PresenceExcluded { // do not add package imports if it was explicitely excluded
+		if pkg.Status.Presence != PresenceExcluded { // do not add package imports if it was explicitly excluded
 			_, err = ctx.addSingleImport(pkg.Dir, imp, pkg.IncludeTree)
 			if err != nil {
 				return pkg, err
