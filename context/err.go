@@ -31,7 +31,7 @@ type ErrDirtyPackage struct {
 }
 
 func (err ErrDirtyPackage) Error() string {
-	return fmt.Sprintf("Package %q has uncommited changes in the vcs.", err.ImportPath)
+	return fmt.Sprintf("Package %q has uncommitted changes in the vcs.", err.ImportPath)
 }
 
 // ErrPackageExists returns if package already exists.

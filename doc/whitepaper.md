@@ -14,7 +14,7 @@
 ## Secondary Workflows
 
  * Working on pkg A, want to test it in cmd B (in a different repo) before checking
-	it in. Run `govendor add pkgA -uncommited` in cmd B project. This will update
+	it in. Run `govendor add pkgA -uncommitted` in cmd B project. This will update
 	the files, but not update the checksum or revision.
 	This way `govendor sync` will revert the files and `govendor status` will show
 	this package as out-of-date.
