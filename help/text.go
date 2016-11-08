@@ -136,6 +136,7 @@ var helpSync = `govendor sync
 	Options:
 		-n           dry run, print out action only
 		-insecure    allow downloading over insecure connection
+		-v           verbose output
 `
 
 var helpStatus = `govendor status
