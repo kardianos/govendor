@@ -151,5 +151,5 @@ func (r *runner) Status(w io.Writer, subCmdArgs []string) (help.HelpMessage, err
 	for _, pkg := range outOfDate {
 		fmt.Fprintf(w, "\t%s\n", pkg.Path)
 	}
-	return help.MsgNone, nil
+	return help.MsgNone, fmt.Errorf("status failed for %d package(s)", len(outOfDate))
 }
