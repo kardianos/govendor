@@ -74,11 +74,12 @@ func (r *runner) Get(w io.Writer, subCmdArgs []string) (help.HelpMessage, error)
 		logger = nil
 	}
 	for _, a := range flags.Args() {
-		err = context.Get(logger, a, *insecure)
+		pkg, err := context.Get(logger, a, *insecure)
 		if err != nil {
 			return help.MsgNone, err
 		}
-		r.GoCmd("install", []string{a})
+
+		r.GoCmd("install", []string{pkg.Path})
 	}
 	return help.MsgNone, nil
 }

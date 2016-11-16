@@ -14,24 +14,24 @@ import (
 	"golang.org/x/tools/go/vcs"
 )
 
-func Get(logger io.Writer, pkgspecName string, insecure bool) error {
+func Get(logger io.Writer, pkgspecName string, insecure bool) (*pkgspec.Pkg, error) {
 	// Get the GOPATHs.
 	all := os.Getenv("GOPATH")
 	if len(all) == 0 {
-		return ErrMissingGOPATH
+		return nil, ErrMissingGOPATH
 	}
 	gopathList := filepath.SplitList(all)
 	gopath := gopathList[0]
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	ps, err := pkgspec.Parse(cwd, pkgspecName)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return get(logger, filepath.Join(gopath, "src"), ps, insecure)
+	return ps, get(logger, filepath.Join(gopath, "src"), ps, insecure)
 }
 
 func get(logger io.Writer, gopath string, ps *pkgspec.Pkg, insecure bool) error {
