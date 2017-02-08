@@ -1,4 +1,4 @@
-// +build linux darwin freebsd openbsd netbsd dragonfly
+// +build linux darwin freebsd openbsd netbsd dragonfly solaris
 
 // Copyright 2013-2015 Bowery, Inc.
 
