@@ -1,0 +1,7 @@
+- [Larz Conwell](https://github.com/larzconwell)
+- [Steve Kaliski](https://github.com/sjkaliski)
+- [NHOrus](https://github.com/NHOrus)
+- [Attila Fülöp](https://github.com/AttilaFueloep)
+- [Gereon Frey](https://github.com/gfrey)
+- [Aaron Bieber](https://github.com/qbit)
+- [Ricky Medina](https://github.com/r-medina)
