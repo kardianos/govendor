@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "mBpqi6N3JJTdSpq71vI8vwuffl8=",
+			"checksumSHA1": "GMO8r3qzoHlPklY2QX9AaMv1mwE=",
 			"path": "github.com/Bowery/prompt",
-			"revision": "2708577f3274d7884e1c737218c625f651ba14b3",
-			"revisionTime": "2017-02-08T14:51:51Z"
+			"revision": "3d81310f21c3919c7a0001b57856f08739b2b3fb",
+			"revisionTime": "2017-02-16T05:18:37Z"
 		},
 		{
 			"checksumSHA1": "6VGFARaK8zd23IAiDf7a+gglC8k=",
