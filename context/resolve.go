@@ -77,7 +77,7 @@ func (ctx *Context) loadPackage() error {
 	return ctx.determinePackageStatus()
 }
 
-func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []string, err error) {
+func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags *TagSet, imports []string, err error) {
 	_, filenameExt := filepath.Split(pathname)
 
 	if strings.HasSuffix(pathname, ".go") == false {
@@ -89,9 +89,9 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 			return nil, nil, nil
 		}
 	}
-	tags = make([]string, 0, 6)
+	tags = &TagSet{}
 	if strings.HasSuffix(f.Name.Name, "_test") {
-		tags = append(tags, "test")
+		tags.AddFileTag("test")
 	}
 	pkgNameNormalized := strings.TrimSuffix(f.Name.Name, "_test")
 
@@ -106,18 +106,18 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 
 	if n := len(l); n > 1 && l[n-1] == "test" {
 		l = l[:n-1]
-		tags = append(tags, "test")
+		tags.AddFileTag("test")
 	}
 	n := len(l)
 	if n >= 2 && knownOS[l[n-2]] && knownArch[l[n-1]] {
-		tags = append(tags, l[n-2])
-		tags = append(tags, l[n-1])
+		tags.AddFileTag(l[n-2])
+		tags.AddFileTag(l[n-1])
 	}
 	if n >= 1 && knownOS[l[n-1]] {
-		tags = append(tags, l[n-1])
+		tags.AddFileTag(l[n-1])
 	}
 	if n >= 1 && knownArch[l[n-1]] {
-		tags = append(tags, l[n-1])
+		tags.AddFileTag(l[n-1])
 	}
 
 	const buildPrefix = "// +build "
@@ -125,10 +125,7 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags, imports []s
 		for _, c := range cc.List {
 			if strings.HasPrefix(c.Text, buildPrefix) {
 				text := strings.TrimPrefix(c.Text, buildPrefix)
-				ss := strings.Fields(text)
-				for _, s := range ss {
-					tags = append(tags, strings.Split(s, ",")...)
-				}
+				tags.AddBuildTags(text)
 			}
 		}
 	}
@@ -189,15 +186,9 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	// if file has "// +build ignore", can mix package main with normal package.
-	isIgnore := false
-	for _, tag := range tags {
-		if tag == "ignore" {
-			isIgnore = true
-		}
-	}
+	// If file has "// +build ignore", can mix package main with normal package.
 	// For now, just ignore ignored packages.
-	if isIgnore {
+	if tags.IgnoreItem() {
 		return nil, nil
 	}
 
@@ -215,13 +206,9 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 		ctx.Package[importPath] = pkg
 	}
 	if pkg.Status.Location != LocationLocal {
-		for _, tag := range tags {
-			for _, ignore := range ctx.ignoreTag {
-				if tag == ignore {
-					pkg.ignoreFile = append(pkg.ignoreFile, filenameExt)
-					return pkg, nil
-				}
-			}
+		if tags.IgnoreItem(ctx.ignoreTag...) {
+			pkg.ignoreFile = append(pkg.ignoreFile, filenameExt)
+			return pkg, nil
 		}
 		// package excluded if non-local && same name or sub-package of an excluded package
 		for _, exclude := range ctx.excludePackage {
