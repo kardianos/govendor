@@ -348,15 +348,7 @@ func (ctx *Context) getIngoreFiles(src string) (ignoreFile, imports []string, er
 			return nil, nil, err
 		}
 
-		ignoreItem := false
-		for _, tag := range tags {
-			for _, ignore := range ctx.ignoreTag {
-				if tag == ignore {
-					ignoreItem = true
-				}
-			}
-		}
-		if ignoreItem {
+		if tags.IgnoreItem(ctx.ignoreTag...) {
 			ignoreFile = append(ignoreFile, fi.Name())
 		} else {
 			// Only add imports for non-ignored files.
