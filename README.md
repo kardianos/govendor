@@ -23,7 +23,7 @@ Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
 
 ## Notes
 
- * The project must be within a $GOPATH.
+ * The project must be within a $GOPATH/src.
  * If using go1.5, ensure you `set GO15VENDOREXPERIMENT=1`.
 
 ### Quick Start, also see the [FAQ](doc/faq.md)
