@@ -367,10 +367,17 @@ func (ctx *Context) addSingleImport(pkgInDir, imp string, tree bool) (*Package, 
 	dir, gopath, err := ctx.findImportDir(pkgInDir, imp)
 	if err != nil {
 		if _, is := err.(ErrNotInGOPATH); is {
+			presence := PresenceMissing
+			// excluded packages, don't need to be present
+			for _, exclude := range ctx.excludePackage {
+				if imp == exclude || strings.HasPrefix(imp, exclude+"/") {
+					presence = PresenceExcluded
+				}
+			}
 			return ctx.setPackage("", imp, imp, "", Status{
 				Type:     TypePackage,
 				Location: LocationNotFound,
-				Presence: PresenceMissing,
+				Presence: presence,
 			}), nil
 		}
 		return nil, err
