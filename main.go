@@ -46,7 +46,10 @@ func main() {
 	if err != nil {
 		os.Exit(2)
 	}
-	if msg != help.MsgNone {
+	switch msg {
+	case help.MsgNone, help.MsgGovendorVersion, help.MsgGovendorLicense:
+		os.Exit(0)
+	default:
 		os.Exit(1)
 	}
 }
