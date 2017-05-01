@@ -9,6 +9,7 @@ import (
 	"unsafe"
 )
 
+// keyEventType is the key event type for an input record.
 const keyEventType = 0x0001
 
 var (
@@ -43,25 +44,22 @@ type AnsiReader struct {
 
 // NewAnsiReader creates a AnsiReader from the given input file.
 func NewAnsiReader(in *os.File) *AnsiReader {
-	return &AnsiReader{fd: in.Fd(), buf: make([]rune, 0)}
+	return &AnsiReader{fd: in.Fd()}
 }
 
 // Read reads data from the input converting to ANSI escape codes that can be
 // read over multiple Reads.
 func (ar *AnsiReader) Read(b []byte) (int, error) {
-	var read uint32
-	n := 0
-
 	if len(b) == 0 {
 		return 0, nil
 	}
 
 	if len(ar.buf) == 0 {
 		var runes []rune
+		var read uint32
+		rec := new(inputRecord)
 
 		for runes == nil {
-			rec := new(inputRecord)
-
 			ret, _, err := readConsoleInput.Call(ar.fd, uintptr(unsafe.Pointer(rec)),
 				1, uintptr(unsafe.Pointer(&read)))
 			if ret == 0 {
@@ -188,6 +186,7 @@ func (ar *AnsiReader) Read(b []byte) (int, error) {
 	}
 
 	// Get items from the buffer.
+	var n int
 	for i, r := range ar.buf {
 		if utf8.RuneLen(r) > len(b) {
 			ar.buf = ar.buf[i:]
@@ -258,7 +257,7 @@ type AnsiWriter struct {
 
 // NewAnsiWriter creates a AnsiWriter from the given output.
 func NewAnsiWriter(out *os.File) *AnsiWriter {
-	return &AnsiWriter{file: out, buf: make([]byte, 0)}
+	return &AnsiWriter{file: out}
 }
 
 // Write writes the buffer filtering out ANSI escape codes and converting to
@@ -273,7 +272,7 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 	if !needsProcessing {
 		return aw.file.Write(b)
 	}
-	p := make([]byte, 0)
+	var p []byte
 
 	for _, char := range b {
 		// Found the beginning of an escape.
@@ -307,7 +306,12 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 		// Keyboard functions.
 		if len(aw.buf) == 1 && (char == '=' || char == '>') {
 			aw.buf = append(aw.buf, char)
-			aw.finish(nil)
+
+			err := aw.finish(nil)
+			if err != nil {
+				return 0, err
+			}
+
 			continue
 		}
 
@@ -341,7 +345,12 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 		if len(aw.buf) >= 2 && aw.buf[1] == ' ' && (char == 'F' || char == 'G' ||
 			char == 'L' || char == 'M' || char == 'N') {
 			aw.buf = append(aw.buf, char)
-			aw.finish(nil)
+
+			err := aw.finish(nil)
+			if err != nil {
+				return 0, err
+			}
+
 			continue
 		}
 
@@ -361,7 +370,12 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 		// Percentage functions.
 		if len(aw.buf) >= 2 && aw.buf[1] == '%' && (char == '@' || char == 'G') {
 			aw.buf = append(aw.buf, char)
-			aw.finish(nil)
+
+			err := aw.finish(nil)
+			if err != nil {
+				return 0, err
+			}
+
 			continue
 		}
 
@@ -372,7 +386,12 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 			char <= 'C') || char == 'E' || char == 'H' || char == 'K' ||
 			char == 'Q' || char == 'R' || char == 'Y') {
 			aw.buf = append(aw.buf, char)
-			aw.finish(nil)
+
+			err := aw.finish(nil)
+			if err != nil {
+				return 0, err
+			}
+
 			continue
 		}
 
@@ -382,7 +401,10 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 
 			// End of APC.
 			if char == '\\' && aw.buf[len(aw.buf)-1] == escKey {
-				aw.finish(nil)
+				err := aw.finish(nil)
+				if err != nil {
+					return 0, err
+				}
 			}
 
 			continue
@@ -429,7 +451,11 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 
 			// Capture incomplete code.
 			if len(aw.buf) == 4 && aw.buf[2] == '0' && char == ';' {
-				aw.finish(nil)
+				err := aw.finish(nil)
+				if err != nil {
+					return 0, err
+				}
+
 				continue
 			}
 
@@ -461,7 +487,7 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 
 		// Normal character, resets escape buffer.
 		if len(aw.buf) > 0 {
-			aw.buf = make([]byte, 0)
+			aw.buf = nil
 		}
 		p = append(p, char)
 	}
@@ -479,6 +505,6 @@ func (aw *AnsiWriter) finish(parse func([]byte) error) error {
 		err = parse(aw.buf[2:])
 	}
 
-	aw.buf = make([]byte, 0)
+	aw.buf = nil
 	return err
 }

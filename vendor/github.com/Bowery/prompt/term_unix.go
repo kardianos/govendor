@@ -5,15 +5,16 @@
 package prompt
 
 import (
-	"bufio"
 	"os"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
+// List of unsupported $TERM values.
 var unsupported = []string{"", "dumb", "cons25"}
 
-// supportedTerminal checks if the terminal supports ansi escapes.
-func supportedTerminal() bool {
+// supportsEditing checks if the terminal supports ansi escapes.
+func supportsEditing() bool {
 	term := os.Getenv("TERM")
 
 	for _, t := range unsupported {
@@ -25,35 +26,27 @@ func supportedTerminal() bool {
 	return true
 }
 
-// IsNotTerminal checks if an error is related to io not being a terminal.
-func IsNotTerminal(err error) bool {
-	if err == syscall.ENOTTY {
-		return true
-	}
-
-	return false
+// isNotTerminal checks if an error is related to the input not being a terminal.
+func isNotTerminal(err error) bool {
+	return err == unix.ENOTTY
 }
 
 // terminal contains the private fields for a Unix terminal.
 type terminal struct {
-	supported    bool
-	simpleReader *bufio.Reader
-	origMode     Termios
+	supportsEditing bool
+	fd              uintptr
+	origMode        unix.Termios
 }
 
-// NewTerminal creates a terminal and sets it to raw input mode.
-func NewTerminal() (*Terminal, error) {
-	term := &Terminal{
-		In:       os.Stdin,
-		Out:      os.Stdout,
-		History:  make([]string, 0, 10),
-		histIdx:  -1,
-		terminal: new(terminal),
-	}
-	if !supportedTerminal() {
+// newTerminal creates a terminal and sets it to raw input mode.
+func newTerminal(in *os.File) (*terminal, error) {
+	term := &terminal{fd: in.Fd()}
+
+	if !supportsEditing() {
 		return term, nil
 	}
-	t, err := getTermios(term.In.Fd(), uintptr(tcgets))
+
+	t, err := getTermios(term.fd)
 	if err != nil {
 		if IsNotTerminal(err) {
 			return term, nil
@@ -63,26 +56,26 @@ func NewTerminal() (*Terminal, error) {
 	}
 	term.origMode = *t
 	mode := term.origMode
-	term.supported = true
+	term.supportsEditing = true
 
 	// Set new mode flags, for reference see cfmakeraw(3).
-	mode.Iflag &^= (syscall.BRKINT | syscall.IGNBRK | syscall.ICRNL |
-		syscall.INLCR | syscall.IGNCR | syscall.ISTRIP | syscall.IXON |
-		syscall.PARMRK)
+	mode.Iflag &^= (unix.BRKINT | unix.IGNBRK | unix.ICRNL |
+		unix.INLCR | unix.IGNCR | unix.ISTRIP | unix.IXON |
+		unix.PARMRK)
 
-	mode.Oflag &^= syscall.OPOST
+	mode.Oflag &^= unix.OPOST
 
-	mode.Lflag &^= (syscall.ECHO | syscall.ECHONL | syscall.ICANON |
-		syscall.ISIG | syscall.IEXTEN)
+	mode.Lflag &^= (unix.ECHO | unix.ECHONL | unix.ICANON |
+		unix.ISIG | unix.IEXTEN)
 
-	mode.Cflag &^= (syscall.CSIZE | syscall.PARENB)
-	mode.Cflag |= syscall.CS8
+	mode.Cflag &^= (unix.CSIZE | unix.PARENB)
+	mode.Cflag |= unix.CS8
 
 	// Set controls; min num of bytes, and timeouts.
-	mode.Cc[syscall.VMIN] = 1
-	mode.Cc[syscall.VTIME] = 0
+	mode.Cc[unix.VMIN] = 1
+	mode.Cc[unix.VTIME] = 0
 
-	err = setTermios(term.In.Fd(), uintptr(tcsetsf), &mode)
+	err = setTermios(term.fd, true, &mode)
 	if err != nil {
 		return nil, err
 	}
@@ -90,30 +83,10 @@ func NewTerminal() (*Terminal, error) {
 	return term, nil
 }
 
-// GetPrompt gets a line with the prefix and echos input.
-func (term *Terminal) GetPrompt(prefix string) (string, error) {
-	if !term.supported {
-		return term.simplePrompt(prefix)
-	}
-
-	buf := NewBuffer(prefix, term.Out, true)
-	return term.prompt(buf, term.In)
-}
-
-// GetPassword gets a line with the prefix and doesn't echo input.
-func (term *Terminal) GetPassword(prefix string) (string, error) {
-	if !term.supported {
-		return term.simplePrompt(prefix)
-	}
-
-	buf := NewBuffer(prefix, term.Out, false)
-	return term.password(buf, term.In)
-}
-
 // Close disables the terminals raw input.
-func (term *Terminal) Close() error {
-	if term.supported {
-		err := setTermios(term.In.Fd(), uintptr(tcsets), &term.origMode)
+func (term *terminal) Close() error {
+	if term.supportsEditing {
+		err := setTermios(term.fd, false, &term.origMode)
 		if err != nil {
 			return err
 		}

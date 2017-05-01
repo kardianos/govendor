@@ -18,7 +18,6 @@ for more info and for API details.
 ## Todo
 - Multi-line prompt as a Terminal option
 - Make refresh less jittery on Windows([possible reason](https://github.com/Bowery/prompt/blob/master/output_windows.go#L108))
-- Add support for BSD systems
 - Multi-byte character support on Windows
 - `AnsiWriter` should execute the equivalent ANSI escape code functionality on Windows
 - Support for more ANSI escape codes on Windows.
@@ -31,6 +30,8 @@ Make sure Go is setup and running the latest release version, and make sure your
 Follow the guidelines [here](https://guides.github.com/activities/contributing-to-open-source/#contributing).
 
 Please be sure to `gofmt` any code before doing commits. You can simply run `gofmt -w .` to format all the code in the directory.
+
+Lastly don't forget to add your name to [`CONTRIBUTORS.md`](https://github.com/Bowery/prompt/blob/master/CONTRIBUTORS.md)
 
 ## License
 

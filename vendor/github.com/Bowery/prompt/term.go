@@ -11,10 +11,13 @@ import (
 )
 
 var (
+	// ErrCTRLC is returned when CTRL+C is pressed stopping the prompt.
 	ErrCTRLC = errors.New("Interrupted (CTRL+C)")
-	ErrEOF   = errors.New("EOF (CTRL+D)")
+	// ErrEOF is returned when CTRL+D is pressed stopping the prompt.
+	ErrEOF = errors.New("EOF (CTRL+D)")
 )
 
+// Possible events that may occur when reading from input.
 const (
 	evChar = iota
 	evSkip
@@ -32,13 +35,42 @@ const (
 	evDel
 )
 
+// IsNotTerminal checks if an error is related to the input not being a terminal.
+func IsNotTerminal(err error) bool {
+	return isNotTerminal(err)
+}
+
+// TerminalSize retrieves the columns/rows for the terminal connected to out.
+func TerminalSize(out *os.File) (int, int, error) {
+	return terminalSize(out)
+}
+
 // Terminal contains the state for raw terminal input.
 type Terminal struct {
-	In      *os.File
-	Out     *os.File
-	History []string
-	histIdx int
-	*terminal
+	In           *os.File
+	Out          *os.File
+	History      []string
+	histIdx      int
+	simpleReader *bufio.Reader
+	t            *terminal
+}
+
+// NewTerminal creates a terminal and sets it to raw input mode.
+func NewTerminal() (*Terminal, error) {
+	in := os.Stdin
+
+	term, err := newTerminal(in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Terminal{
+		In:      in,
+		Out:     os.Stdout,
+		History: make([]string, 0, 10),
+		histIdx: -1,
+		t:       term,
+	}, nil
 }
 
 // Basic gets input and if required tests to ensure input was given.
@@ -79,7 +111,7 @@ func (term *Terminal) Ask(question string) (bool, error) {
 		return "", true
 	})
 
-	ok := false
+	var ok bool
 	if input != "" {
 		ok = true
 	}
@@ -91,8 +123,8 @@ func (term *Terminal) Ask(question string) (bool, error) {
 // check if the input is valid, a true return will return the string.
 func (term *Terminal) Custom(prefix string, test func(string) (string, bool)) (string, error) {
 	var err error
-	input := ""
-	ok := false
+	var input string
+	var ok bool
 
 	for !ok {
 		input, err = term.GetPrompt(prefix)
@@ -109,7 +141,7 @@ func (term *Terminal) Custom(prefix string, test func(string) (string, bool)) (s
 // Password retrieves a password from stdin without echoing it.
 func (term *Terminal) Password(prefix string) (string, error) {
 	var err error
-	input := ""
+	var input string
 
 	for input == "" {
 		input, err = term.GetPassword(prefix)
@@ -121,13 +153,41 @@ func (term *Terminal) Password(prefix string) (string, error) {
 	return input, nil
 }
 
+// GetPrompt gets a line with the prefix and echos input.
+func (term *Terminal) GetPrompt(prefix string) (string, error) {
+	if !term.t.supportsEditing {
+		return term.simplePrompt(prefix)
+	}
+
+	buf := NewBuffer(prefix, term.Out, true)
+	return term.prompt(buf, NewAnsiReader(term.In))
+}
+
+// GetPassword gets a line with the prefix and doesn't echo input.
+func (term *Terminal) GetPassword(prefix string) (string, error) {
+	if !term.t.supportsEditing {
+		return term.simplePrompt(prefix)
+	}
+
+	buf := NewBuffer(prefix, term.Out, false)
+	return term.password(buf, NewAnsiReader(term.In))
+}
+
+func (term *Terminal) Close() error {
+	return term.t.Close()
+}
+
 // simplePrompt is a fallback prompt without line editing support.
 func (term *Terminal) simplePrompt(prefix string) (string, error) {
 	if term.simpleReader == nil {
 		term.simpleReader = bufio.NewReader(term.In)
 	}
 
-	term.Out.Write([]byte(prefix))
+	_, err := term.Out.Write([]byte(prefix))
+	if err != nil {
+		return "", err
+	}
+
 	line, err := term.simpleReader.ReadString('\n')
 	line = strings.TrimRight(line, "\r\n ")
 	line = strings.TrimLeft(line, " ")
@@ -141,6 +201,7 @@ func (term *Terminal) setup(buf *Buffer, in io.Reader) (*bufio.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	buf.Cols = cols
 	input := bufio.NewReader(in)
 
@@ -269,6 +330,7 @@ func (term *Terminal) prompt(buf *Buffer, in io.Reader) (string, error) {
 			if err != nil {
 				return buf.String(), err
 			}
+
 			term.History[curHistIdx] = buf.String()
 		case evSkip:
 			continue
@@ -294,6 +356,7 @@ func (term *Terminal) prompt(buf *Buffer, in io.Reader) (string, error) {
 			if err != nil {
 				return buf.String(), err
 			}
+
 			term.History[curHistIdx] = buf.String()
 		case evClear:
 			err = buf.ClsScreen()
@@ -316,10 +379,11 @@ func (term *Terminal) prompt(buf *Buffer, in io.Reader) (string, error) {
 				idx--
 			}
 
-			err := buf.Set([]rune(term.History[idx])...)
+			err = buf.Set([]rune(term.History[idx])...)
 			if err != nil {
 				return buf.String(), err
 			}
+
 			term.histIdx = idx
 		case evDown:
 			idx := term.histIdx
@@ -327,10 +391,11 @@ func (term *Terminal) prompt(buf *Buffer, in io.Reader) (string, error) {
 				idx++
 			}
 
-			err := buf.Set([]rune(term.History[idx])...)
+			err = buf.Set([]rune(term.History[idx])...)
 			if err != nil {
 				return buf.String(), err
 			}
+
 			term.histIdx = idx
 		case evRight:
 			err = buf.Right()
@@ -347,6 +412,7 @@ func (term *Terminal) prompt(buf *Buffer, in io.Reader) (string, error) {
 			if err != nil {
 				return buf.String(), err
 			}
+
 			term.History[curHistIdx] = buf.String()
 		}
 	}

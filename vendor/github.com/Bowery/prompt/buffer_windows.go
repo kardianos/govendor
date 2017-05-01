@@ -77,7 +77,7 @@ func (buf *Buffer) Refresh() error {
 // ClsScreen clears the screen and refreshes.
 func (buf *Buffer) ClsScreen() error {
 	var written uint32
-	coords := &coord{x: 0, y: 0}
+	coords := new(coord)
 
 	csbi := new(consoleScreenBufferInfo)
 	ret, _, err := getConsoleScreenBufferInfo.Call(buf.Out.Fd(),
@@ -109,7 +109,7 @@ func (buf *Buffer) ClsScreen() error {
 // code and write over contents and then remove everything to the right.
 func (buf *Buffer) delLine(csbi *consoleScreenBufferInfo) error {
 	var written uint32
-	coords := &coord{x: 0, y: csbi.cursorPosition.y}
+	coords := &coord{y: csbi.cursorPosition.y}
 
 	ret, _, err := fillConsoleOutputCharacter.Call(buf.Out.Fd(), uintptr(' '),
 		uintptr(csbi.size.x), uintptr(*(*int32)(unsafe.Pointer(coords))),
@@ -124,7 +124,7 @@ func (buf *Buffer) delLine(csbi *consoleScreenBufferInfo) error {
 // mvLeftEdge moves the cursor to the beginning of the line the csbi cursor
 // is positioned on.
 func (buf *Buffer) mvLeftEdge(csbi *consoleScreenBufferInfo) error {
-	coords := &coord{x: 0, y: csbi.cursorPosition.y}
+	coords := &coord{y: csbi.cursorPosition.y}
 
 	ret, _, err := setConsoleCursorPosition.Call(buf.Out.Fd(),
 		uintptr(*(*int32)(unsafe.Pointer(coords))))
