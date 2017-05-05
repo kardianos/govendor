@@ -56,7 +56,7 @@ func TestTagComplex(t *testing.T) {
 			ignoreList: "appengine test",
 			file:       []string{},
 			buildTags:  "mips,appengine",
-			ignored:    false,
+			ignored:    true,
 		},
 		{
 			ignoreList: "appengine test solaris",
@@ -74,6 +74,12 @@ func TestTagComplex(t *testing.T) {
 			ignoreList: "darwin dragonfly freebsd linux nacl netbsd openbsd solaris",
 			file:       []string{},
 			buildTags:  "darwin dragonfly freebsd linux nacl netbsd openbsd solaris",
+			ignored:    true,
+		},
+		{
+			ignoreList: "test",
+			file:       []string{"test"},
+			buildTags:  "go1.8",
 			ignored:    true,
 		},
 	}

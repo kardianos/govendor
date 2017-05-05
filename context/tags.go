@@ -76,25 +76,21 @@ func (l logical) ignored(ignoreTags []logicalTag) bool {
 	if l.and {
 		// Must have all tags in ignoreTags to be ignored.
 		for _, t := range l.tag {
-			hasTag := false
 			for _, it := range ignoreTags {
 				if t.match(it) {
-					hasTag = true
+					return true
 				}
-			}
-			if !hasTag {
-				return false
 			}
 		}
 
 		// Must ignore all sub-logicals to be ignored.
 		for _, sub := range l.sub {
-			if !sub.ignored(ignoreTags) {
-				return false
+			if sub.ignored(ignoreTags) {
+				return true
 			}
 		}
 
-		return true
+		return false
 	}
 
 	hasOne := false
