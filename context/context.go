@@ -198,7 +198,12 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 	gopathGoroot := make([]string, 0, len(gopathList)+1)
 	gopathGoroot = append(gopathGoroot, goroot)
 	for _, gopath := range gopathList {
-		gopathGoroot = append(gopathGoroot, filepath.Join(gopath, "src")+string(filepath.Separator))
+		srcPath := filepath.Join(gopath, "src") + string(filepath.Separator)
+		srcPathEvaled, err := filepath.EvalSymlinks(srcPath)
+		if err != nil {
+			return nil, err
+		}
+		gopathGoroot = append(gopathGoroot, srcPath, srcPathEvaled+string(filepath.Separator))
 	}
 
 	rootToVendorFile, _ := filepath.Split(vendorFilePathRel)

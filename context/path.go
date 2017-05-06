@@ -91,11 +91,23 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 
 // findImportPath takes a absolute directory and returns the import path and go path.
 func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err error) {
+	dirResolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", "", err
+	}
+	dirs := make([]string, 1)
+	dirs = append(dirs, dir)
+	if dir != dirResolved {
+		dirs = append(dirs, dirResolved)
+	}
+
 	for _, gopath := range ctx.GopathList {
-		if pathos.FileHasPrefix(dir, gopath) {
-			importPath = pathos.FileTrimPrefix(dir, gopath)
-			importPath = pathos.SlashToImportPath(importPath)
-			return importPath, gopath, nil
+		for _, dir := range dirs {
+			if pathos.FileHasPrefix(dir, gopath) {
+				importPath = pathos.FileTrimPrefix(dir, gopath)
+				importPath = pathos.SlashToImportPath(importPath)
+				return importPath, gopath, nil
+			}
 		}
 	}
 	return "", "", ErrNotInGOPATH{dir}

@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/kardianos/govendor/internal/gt"
+	"github.com/kardianos/govendor/internal/pathos"
 	"github.com/kardianos/govendor/pkgspec"
 )
 
@@ -1107,6 +1108,47 @@ func TestAddMissing(t *testing.T) {
  l  co1/pk1 < []
   m co2/pk1 < ["co1/pk1"]
 `)
+}
+
+func TestSymlinkedGopath(t *testing.T) {
+	g := gt.New(t)
+	defer g.Clean()
+
+	g.Setup("co1/pk1",
+		gt.File("a.go", "co2/pk1"),
+	)
+	g.In("co1")
+
+	base := os.Getenv("GOPATH")
+
+	sPath := base + "_symlink"
+	os.Symlink(base, sPath)
+	defer os.Remove(sPath)
+
+	os.Setenv("GOPATH", sPath)
+
+	c := ctx(g)
+
+	found := false
+	for _, gopath := range c.GopathList {
+		if pathos.FileHasPrefix(gopath, base) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("Original base path %s is not in the GopathList", base)
+	}
+
+	resolvedPath, err := filepath.EvalSymlinks(sPath)
+	if err != nil {
+		t.Errorf("Error converting %s to symlink: %s", sPath, err)
+	}
+
+	if !pathos.FileHasPrefix(c.RootGopath, resolvedPath) {
+		t.Errorf("c.RootGopath(%s) should include symlink(%s)", c.RootGopath, resolvedPath)
+	}
 }
 
 func TestTree(t *testing.T) {
