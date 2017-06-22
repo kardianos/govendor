@@ -9,6 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"runtime"
+	"runtime/pprof"
 
 	"github.com/kardianos/govendor/context"
 	"github.com/kardianos/govendor/help"
@@ -48,6 +51,9 @@ func (r *runner) run(w io.Writer, appArgs []string, ask prompt.Prompt) (help.Hel
 	flags := flag.NewFlagSet("govendor", flag.ContinueOnError)
 	licenses := flags.Bool("govendor-licenses", false, "show govendor's licenses")
 	version := flags.Bool("version", false, "show govendor version")
+	cpuProfile := flags.String("cpuprofile", "", "write a CPU profile to `file` to help debug slow operations")
+	heapProfile := flags.String("heapprofile", "", "write a heap profile to `file` to help debug slow operations")
+
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(appArgs[1:])
 	if err != nil {
@@ -58,6 +64,15 @@ func (r *runner) run(w io.Writer, appArgs []string, ask prompt.Prompt) (help.Hel
 	}
 	if *version {
 		return help.MsgGovendorVersion, nil
+	}
+
+	if *cpuProfile != "" {
+		done := collectCPUProfile(*cpuProfile)
+		defer done()
+	}
+	if *heapProfile != "" {
+		done := collectHeapProfile(*cpuProfile)
+		defer done()
 	}
 
 	args := flags.Args()
@@ -114,4 +129,46 @@ If in doubt, run "govendor init" in the project root.
 		return help.MsgNone, err
 	}
 	return help.MsgNone, err
+}
+
+// collectHeapProfile collects a CPU profile for as long as
+// `done()` is not invoked.
+func collectCPUProfile(filename string) (done func()) {
+	cpuProf, err := os.Create(filename)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create file for cpu profile: %v\n", err)
+		return func() {}
+	}
+	if err := pprof.StartCPUProfile(cpuProf); err != nil {
+		_ = cpuProf.Close()
+		fmt.Fprintf(os.Stderr, "failed to write cpu profile to file: %v\n", err)
+		return func() {}
+	}
+	return func() {
+		pprof.StopCPUProfile()
+		if err := cpuProf.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close file for cpu profile: %v\n", err)
+		}
+	}
+}
+
+// collectHeapProfile collects a heap profile _when_ `done()` is called.
+func collectHeapProfile(filename string) (done func()) {
+	heapProf, err := os.Create(filename)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create file for heap profile: %v\n", err)
+		return
+	}
+	return func() {
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(heapProf); err != nil {
+			_ = heapProf.Close()
+			fmt.Fprintf(os.Stderr, "failed to write heap profile to file: %v\n", err)
+			return
+		}
+		if err := heapProf.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to close file for heap profile: %v\n", err)
+			return
+		}
+	}
 }

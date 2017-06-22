@@ -15,6 +15,8 @@ import (
 var helpFull = `govendor (` + version + `): record dependencies and copy into vendor folder
 	-govendor-licenses    Show govendor's licenses.
 	-version              Show govendor version
+	-cpuprofile 'file'    Writes a CPU profile to 'file' for debugging.
+	-memprofile 'file'    Writes a heap profile to 'file' for debugging.
 
 Sub-Commands
 
@@ -163,6 +165,8 @@ var helpLicense = `govendor license [options] ( +status or package-spec )
 `
 var helpShell = `govendor shell
 	Open a govendor "shell". Useful for faster queries on large projects.
+	Options:
+		-pprof-handler    expose a pprof HTTP server on the given address
 `
 
 var msgGovendorVersion = version + `

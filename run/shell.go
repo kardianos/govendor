@@ -8,7 +8,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
+
+	"net/http"
+	_ "net/http/pprof" // imported for side effect of registering handler
 
 	"github.com/kardianos/govendor/help"
 
@@ -18,10 +22,17 @@ import (
 
 func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, error) {
 	flags := flag.NewFlagSet("shell", flag.ContinueOnError)
+
+	pprofHandlerAddr := flags.String("pprof-handler", "", "if set, turns on an HTTP server that offers pprof handlers")
+
 	flags.SetOutput(nullWriter{})
 	err := flags.Parse(subCmdArgs)
 	if err != nil {
 		return help.MsgShell, err
+	}
+
+	if *pprofHandlerAddr != "" {
+		tryEnableHTTPPprofHandler(*pprofHandlerAddr)
 	}
 
 	out := os.Stdout
@@ -59,4 +70,25 @@ func (r *runner) Shell(w io.Writer, subCmdArgs []string) (help.HelpMessage, erro
 	}
 
 	return help.MsgNone, nil
+}
+
+// tryEnableHTTPPprofHandler tries to provide an http/pprof handler on `addr`.
+// if it fails, it logs an error but does not otherwise do anything.
+func tryEnableHTTPPprofHandler(addr string) {
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "http/pprof handlers failed to create a listener: %v\n", err)
+		return
+	}
+	// port 0 means a randomly allocated one, so we
+	// need to figure out where our listener ended up
+	realAddr := l.Addr()
+
+	fmt.Fprintf(os.Stderr, "http/pprof handlers are available on %v\n", realAddr)
+	go func() {
+		defer l.Close()
+		if err := http.Serve(l, nil); err != nil {
+			fmt.Fprintf(os.Stderr, "http/pprof handlers failed to start: %v\n", err)
+		}
+	}()
 }
