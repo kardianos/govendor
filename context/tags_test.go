@@ -82,6 +82,12 @@ func TestTagComplex(t *testing.T) {
 			buildTags:  "go1.8",
 			ignored:    true,
 		},
+		{
+			ignoreList: "",
+			file:       []string{"!go1.8"},
+			buildTags:  "go1.8",
+			ignored:    true,
+		},
 	}
 
 	run := -1

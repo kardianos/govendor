@@ -39,6 +39,10 @@ func (lt logicalTag) match(lt2 logicalTag) bool {
 	return lt.tag != lt2.tag
 }
 
+func (lt logicalTag) conflict(lt2 logicalTag) bool {
+	return lt.tag == lt2.tag && lt.not != lt2.not
+}
+
 func (lt logicalTag) String() string {
 	if lt.not {
 		return "!" + lt.tag
@@ -120,6 +124,20 @@ func (l logical) ignored(ignoreTags []logicalTag) bool {
 	return hasOne
 }
 
+func (l logical) conflict(lt logicalTag) bool {
+	for _, t := range l.tag {
+		if t.conflict(lt) {
+			return true
+		}
+	}
+	for _, s := range l.sub {
+		if s.conflict(lt) {
+			return true
+		}
+	}
+	return false
+}
+
 func (l logical) String() string {
 	buf := bytes.Buffer{}
 	if l.and {
@@ -169,6 +187,13 @@ func (ts *TagSet) IgnoreItem(ignoreList ...string) bool {
 	if ts.ignore {
 		return true
 	}
+	for _, fileTag := range ts.root.tag {
+		for _, buildTag := range ts.root.sub {
+			if buildTag.conflict(fileTag) {
+				return true
+			}
+		}
+	}
 	ts.root.and = true
 	ignoreTags := make([]logicalTag, len(ignoreList))
 	for i := 0; i < len(ignoreList); i++ {
@@ -182,7 +207,7 @@ func (ts *TagSet) AddFileTag(tag string) {
 		return
 	}
 	ts.root.and = true
-	ts.root.tag = append(ts.root.tag, logicalTag{tag: tag})
+	ts.root.tag = append(ts.root.tag, newLogicalTag(tag))
 }
 func (ts *TagSet) AddBuildTags(tags string) {
 	if ts == nil {
