@@ -37,6 +37,12 @@
 			"path": "golang.org/x/tools/go/vcs",
 			"revision": "1727758746e7a08feaaceb9366d1468498ac2ac2",
 			"revisionTime": "2016-06-24T22:27:06Z"
+		},
+		{
+			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
+			"revisionTime": "2017-04-07T17:21:22Z"
 		}
 	],
 	"rootPath": "github.com/kardianos/govendor"
