@@ -31,7 +31,9 @@ func (lt logicalTag) match(lt2 logicalTag) bool {
 	if lt.not || lt2.not {
 		return false
 	}
-	return lt.tag == lt2.tag
+	if lt.tag == lt2.tag{
+		return true
+	}
 
 	if lt.not == lt2.not {
 		return lt.tag == lt2.tag
