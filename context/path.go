@@ -103,7 +103,7 @@ func (ctx *Context) findImportPath(dir string) (importPath, gopath string, err e
 
 	for _, gopath := range ctx.GopathList {
 		for _, dir := range dirs {
-			if pathos.FileHasPrefix(dir, gopath) {
+			if pathos.FileHasPrefix(dir, gopath) || pathos.FileStringEquals(dir, gopath) {
 				importPath = pathos.FileTrimPrefix(dir, gopath)
 				importPath = pathos.SlashToImportPath(importPath)
 				return importPath, gopath, nil

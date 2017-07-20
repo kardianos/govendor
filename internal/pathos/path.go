@@ -113,6 +113,25 @@ func caseInsensitiveEq(s1, s2 string) bool {
 	return s1 == s2
 }
 
+// ParseGoEnvLine parses a "go env" line into a key value pair.
+func ParseGoEnvLine(line string) (key, value string, ok bool) {
+	// Remove any leading "set " found on windows.
+	// Match the name to the env var + "=".
+	// Remove any quotes.
+	// Return result.
+	line = strings.TrimPrefix(line, "set ")
+	parts := strings.SplitN(line, "=", 2)
+	if len(parts) < 2 {
+		return "", "", false
+	}
+
+	un, err := strconv.Unquote(parts[1])
+	if err != nil {
+		return parts[0], parts[1], true
+	}
+	return parts[0], un, true
+}
+
 // GoEnv parses a "go env" line and checks for a specific
 // variable name.
 func GoEnv(name, line string) (value string, ok bool) {

@@ -85,7 +85,7 @@ func (r *runner) Get(w io.Writer, subCmdArgs []string) (help.HelpMessage, error)
 }
 
 func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
-	ctx, err := r.NewContextWD(context.RootVendorOrWD)
+	ctx, err := r.NewContextWD(context.RootVendorOrWDOrFirstGOPATH)
 	if err != nil {
 		return help.MsgNone, err
 	}
