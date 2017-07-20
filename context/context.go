@@ -108,6 +108,7 @@ const (
 	RootVendor RootType = iota
 	RootWD
 	RootVendorOrWD
+	RootVendorOrWDOrFirstGOPATH
 )
 
 func (pkg *Package) String() string {
@@ -125,6 +126,27 @@ func (li packageList) Less(i, j int) bool {
 	return li[i].Local < li[j].Local
 }
 
+type Env map[string]string
+
+func NewEnv() (Env, error) {
+	env := Env{}
+
+	// If GOROOT is not set, get from go cmd.
+	cmd := exec.Command("go", "env")
+	var goEnv []byte
+	goEnv, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	for _, line := range strings.Split(string(goEnv), "\n") {
+		if k, v, ok := pathos.ParseGoEnvLine(line); ok {
+			env[k] = v
+		}
+	}
+
+	return env, nil
+}
+
 // NewContextWD creates a new context. It looks for a root folder by finding
 // a vendor file.
 func NewContextWD(rt RootType) (*Context, error) {
@@ -132,12 +154,22 @@ func NewContextWD(rt RootType) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	pathToVendorFile := filepath.Join("vendor", vendorFilename)
 	rootIndicator := "vendor"
-	vendorFolder := "vendor"
 
 	root := wd
-	if rt == RootVendor || rt == RootVendorOrWD {
+	if rt == RootVendorOrWDOrFirstGOPATH {
+		env, err := NewEnv()
+		if err != nil {
+			return nil, err
+		}
+		allgopath := env["GOPATH"]
+
+		if len(allgopath) == 0 {
+			return nil, ErrMissingGOPATH
+		}
+		gopathList := filepath.SplitList(allgopath)
+		root = filepath.Join(gopathList[0], "src")
+	} else if rt == RootVendor || rt == RootVendorOrWD {
 		tryRoot, err := findRoot(wd, rootIndicator)
 		switch rt {
 		case RootVendor:
@@ -158,6 +190,14 @@ func NewContextWD(rt RootType) (*Context, error) {
 		return nil, ErrOldVersion{`Use the "migrate" command to update.`}
 	}
 
+	return NewContextRoot(root)
+}
+
+// NewContextRoot creates a new context for the given root folder.
+func NewContextRoot(root string) (*Context, error) {
+	pathToVendorFile := filepath.Join("vendor", vendorFilename)
+	vendorFolder := "vendor"
+
 	return NewContext(root, pathToVendorFile, vendorFolder, false)
 }
 
@@ -167,30 +207,19 @@ func NewContext(root, vendorFilePathRel, vendorFolder string, rewriteImports boo
 	dprintf("CTX: %s\n", root)
 	var err error
 
-	// Get GOROOT. First check ENV, then run "go env" and find the GOROOT line.
-	goroot := os.Getenv("GOROOT")
-	if len(goroot) == 0 {
-		// If GOROOT is not set, get from go cmd.
-		cmd := exec.Command("go", "env")
-		var goEnv []byte
-		goEnv, err = cmd.CombinedOutput()
-		if err != nil {
-			return nil, err
-		}
-		for _, line := range strings.Split(string(goEnv), "\n") {
-			if v, ok := pathos.GoEnv("GOROOT", line); ok {
-				goroot = v
-				break
-			}
-		}
+	env, err := NewEnv()
+	if err != nil {
+		return nil, err
 	}
+	goroot := env["GOROOT"]
+	all := env["GOPATH"]
+
 	if goroot == "" {
 		return nil, ErrMissingGOROOT
 	}
 	goroot = filepath.Join(goroot, "src")
 
 	// Get the GOPATHs. Prepend the GOROOT to the list.
-	all := os.Getenv("GOPATH")
 	if len(all) == 0 {
 		return nil, ErrMissingGOPATH
 	}

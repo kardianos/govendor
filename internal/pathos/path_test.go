@@ -46,12 +46,16 @@ func TestGoEnv(t *testing.T) {
 	}
 
 	for index, item := range list {
-		result, ok := GoEnv(item.name, item.line)
-		if ok != item.ok {
-			t.Errorf("index %d line %#v expected ok %t but got %t", index, item, item.ok, ok)
+		key, value, ok := ParseGoEnvLine(item.line)
+		if key != item.name {
+			ok = false
 		}
-		if result != item.result {
-			t.Errorf("index %d line %#v expected result %q but got %q", index, item, item.result, result)
+		if ok != item.ok {
+			t.Errorf("index %d line %#v expected ok %t but got %t (key=%q value=%q line=%q)", index, item, item.ok, ok, key, value, item.line)
+			continue
+		}
+		if ok && value != item.result {
+			t.Errorf("index %d line %#v expected result %q but got %q", index, item, item.result, value)
 		}
 	}
 }
