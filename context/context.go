@@ -158,17 +158,20 @@ func NewContextWD(rt RootType) (*Context, error) {
 
 	root := wd
 	if rt == RootVendorOrWDOrFirstGOPATH {
-		env, err := NewEnv()
+		root, err = findRoot(wd, rootIndicator)
 		if err != nil {
-			return nil, err
-		}
-		allgopath := env["GOPATH"]
+			env, err := NewEnv()
+			if err != nil {
+				return nil, err
+			}
+			allgopath := env["GOPATH"]
 
-		if len(allgopath) == 0 {
-			return nil, ErrMissingGOPATH
+			if len(allgopath) == 0 {
+				return nil, ErrMissingGOPATH
+			}
+			gopathList := filepath.SplitList(allgopath)
+			root = filepath.Join(gopathList[0], "src")
 		}
-		gopathList := filepath.SplitList(allgopath)
-		root = filepath.Join(gopathList[0], "src")
 	} else if rt == RootVendor || rt == RootVendorOrWD {
 		tryRoot, err := findRoot(wd, rootIndicator)
 		switch rt {
