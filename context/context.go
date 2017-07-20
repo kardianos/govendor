@@ -157,7 +157,19 @@ func NewContextWD(rt RootType) (*Context, error) {
 	rootIndicator := "vendor"
 
 	root := wd
-	if rt == RootVendorOrWDOrFirstGOPATH {
+	switch rt {
+	case RootVendor:
+		tryRoot, err := findRoot(wd, rootIndicator)
+		if err != nil {
+			return nil, err
+		}
+		root = tryRoot
+	case RootVendorOrWD:
+		tryRoot, err := findRoot(wd, rootIndicator)
+		if err == nil {
+			root = tryRoot
+		}
+	case RootVendorOrWDOrFirstGOPATH:
 		root, err = findRoot(wd, rootIndicator)
 		if err != nil {
 			env, err := NewEnv()
@@ -171,19 +183,6 @@ func NewContextWD(rt RootType) (*Context, error) {
 			}
 			gopathList := filepath.SplitList(allgopath)
 			root = filepath.Join(gopathList[0], "src")
-		}
-	} else if rt == RootVendor || rt == RootVendorOrWD {
-		tryRoot, err := findRoot(wd, rootIndicator)
-		switch rt {
-		case RootVendor:
-			if err != nil {
-				return nil, err
-			}
-			root = tryRoot
-		case RootVendorOrWD:
-			if err == nil {
-				root = tryRoot
-			}
 		}
 	}
 
