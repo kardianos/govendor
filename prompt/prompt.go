@@ -15,8 +15,8 @@ type Option struct {
 	validation string
 	other      bool
 
-	Choosen bool   // Set to true if choosen.
-	Value   string // Value used if choosen and option is "other".
+	Chosen bool   // Set to true if chosen.
+	Value  string // Value used if chosen and option is "other".
 }
 
 type OptionType byte
@@ -64,8 +64,8 @@ func ValidateOption(opt Option, validation string) Option {
 
 		validation: validation,
 
-		Choosen: opt.Choosen,
-		Value:   opt.Value,
+		Chosen: opt.Chosen,
+		Value:  opt.Value,
 	}
 }
 
@@ -80,12 +80,12 @@ func (q *Question) AnswerMultiple(must bool) []*Option {
 	ans := []*Option{}
 	for i := range q.Options {
 		o := &q.Options[i]
-		if o.Choosen {
+		if o.Chosen {
 			ans = append(ans, o)
 		}
 	}
 	if must && len(ans) == 0 {
-		panic("If no option is choosen, response must be cancelled")
+		panic("If no option is chosen, response must be cancelled")
 	}
 	return ans
 }
@@ -98,16 +98,16 @@ func (q *Question) AnswerSingle(must bool) *Option {
 	found := false
 	for i := range q.Options {
 		o := &q.Options[i]
-		if found && o.Choosen {
+		if found && o.Chosen {
 			panic("Must only respond with single option")
 		}
-		if o.Choosen {
+		if o.Chosen {
 			found = true
 			ans = o
 		}
 	}
 	if must && !found {
-		panic("If no option is choosen, response must be cancelled")
+		panic("If no option is chosen, response must be cancelled")
 	}
 	return ans
 }

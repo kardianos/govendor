@@ -379,7 +379,7 @@ func (ctx *Context) Sync(dryrun bool) (err error) {
 		src := pkgDir
 
 		// Scan go files for files that should be ignored based on tags and filenames.
-		ignoreFiles, _, err := ctx.getIngoreFiles(src)
+		ignoreFiles, _, err := ctx.getIgnoreFiles(src)
 		if err != nil {
 			rem = append(rem, remoteFailure{Msg: "failed to get ignore files", Path: vp.Path, Err: err})
 			continue

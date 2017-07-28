@@ -42,7 +42,7 @@
 		on standard git command, but also might look into
 		"github.com/src-d/go-git" for inspecting versions remotely.
  - [x] Change fetch and sync to download into ORIGIN, not PATH.
- - [x] Record choosen version in vendor file.
+ - [x] Record chosen version in vendor file.
  - [x] When fetching dependencies, if it is a new package, see if there exists
 		another package in the same repo and use that revision and version.
  - [x] Add version info to list output.

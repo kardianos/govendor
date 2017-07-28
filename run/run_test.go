@@ -34,7 +34,7 @@ func (p *testPrompt) Ask(q *prompt.Question) (prompt.Response, error) {
 		}
 	}
 	if opt != nil {
-		opt.Choosen = true
+		opt.Chosen = true
 	}
 	return prompt.RespAnswer, nil
 }

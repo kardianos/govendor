@@ -40,7 +40,7 @@ func (r *runner) Modify(w io.Writer, subCmdArgs []string, mod context.Modify, as
 				prompt.NewOption("", "What?", true),
 			},
 		}
-		q.Options[2].Choosen = true
+		q.Options[2].Chosen = true
 		q.Options[2] = prompt.ValidateOption(q.Options[2], "Choose again!")
 		resp, err := ask.Ask(q)
 		if err != nil {
@@ -50,9 +50,9 @@ func (r *runner) Modify(w io.Writer, subCmdArgs []string, mod context.Modify, as
 			fmt.Printf("Cancelled\n")
 			return help.MsgNone, nil
 		}
-		choosen := q.AnswerSingle(true)
+		chosen := q.AnswerSingle(true)
 
-		fmt.Printf("Choosen: %s\n", choosen.String())
+		fmt.Printf("Chosen: %s\n", chosen.String())
 	*/
 
 	listFlags := flag.NewFlagSet("mod", flag.ContinueOnError)

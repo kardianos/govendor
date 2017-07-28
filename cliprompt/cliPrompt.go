@@ -42,20 +42,20 @@ func (p *Prompt) Ask(q *prompt.Question) (prompt.Response, error) {
 func getSingle(term *cp.Terminal, q *prompt.Question) (prompt.Response, error) {
 	if len(q.Options) == 1 && q.Options[0].Other() {
 		opt := &q.Options[0]
-		opt.Choosen = true
+		opt.Chosen = true
 		return setOther(term, q, opt)
 	}
 
-	choosen := q.AnswerSingle(false)
-	if choosen == nil {
+	chosen := q.AnswerSingle(false)
+	if chosen == nil {
 		return setOption(term, q)
 	}
-	resp, err := setOther(term, q, choosen)
+	resp, err := setOther(term, q, chosen)
 	if err != nil {
 		return prompt.RespCancel, err
 	}
 	if resp == prompt.RespCancel {
-		choosen.Choosen = false
+		chosen.Chosen = false
 		return setOption(term, q)
 	}
 	return resp, nil
@@ -138,14 +138,14 @@ func setOption(term *cp.Terminal, q *prompt.Question) (prompt.Response, error) {
 			continue
 		}
 		opt := &q.Options[index]
-		opt.Choosen = true
+		opt.Chosen = true
 		if opt.Other() {
 			res, err := setOther(term, q, opt)
 			if err != nil {
 				return prompt.RespCancel, err
 			}
 			if res == prompt.RespCancel {
-				opt.Choosen = false
+				opt.Chosen = false
 				continue
 			}
 		}

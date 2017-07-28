@@ -61,7 +61,7 @@ The following would *not* match: v10, foo-v1.4, v1-40
 
 After matching acceptable labels, they must be sorted and a single label
 returned. Of the following: "v1.4, v1.8, v1.12, v1.12-beta --> v1.12 would 
-be choosen.
+be chosen.
 
 There is no precedence between branches and tags, they are both searched for
 labels and sorted all together to find the correct match. In case of two

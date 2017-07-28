@@ -162,7 +162,7 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 	// /tmp/cache/1/[[github.com/kardianos/govendor]]context
 	op.Src = pkgDir
 	var deps []string
-	op.IgnoreFile, deps, err = f.Ctx.getIngoreFiles(op.Src)
+	op.IgnoreFile, deps, err = f.Ctx.getIgnoreFiles(op.Src)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nextOps, nil

@@ -120,7 +120,7 @@ fileLoop:
 			nextSrcPath := filepath.Join(srcPath, name)
 			var nextIgnoreFiles, deps []string
 			if !isTestdata && !strings.Contains(pkgPath, "/testdata/") {
-				nextIgnoreFiles, deps, err = ctx.getIngoreFiles(nextSrcPath)
+				nextIgnoreFiles, deps, err = ctx.getIgnoreFiles(nextSrcPath)
 				if err != nil {
 					return err
 				}

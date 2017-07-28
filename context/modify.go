@@ -324,7 +324,7 @@ func (ctx *Context) modify(ps *pkgspec.Pkg, mod Modify, mops []ModifyOption) err
 	}
 }
 
-func (ctx *Context) getIngoreFiles(src string) (ignoreFile, imports []string, err error) {
+func (ctx *Context) getIgnoreFiles(src string) (ignoreFile, imports []string, err error) {
 	srcDir, err := os.Open(src)
 	if err != nil {
 		return nil, nil, err
@@ -376,7 +376,7 @@ func (ctx *Context) modifyAdd(pkg *Package, uncommitted bool) error {
 		ignoreFile = cpkg.ignoreFile
 	} else {
 		var err error
-		ignoreFile, _, err = ctx.getIngoreFiles(src)
+		ignoreFile, _, err = ctx.getIgnoreFiles(src)
 		if err != nil {
 			return err
 		}
