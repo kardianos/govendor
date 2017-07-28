@@ -11,8 +11,8 @@ import (
 
 // Build tags come in the format "tagA tagB,tagC" -> "taga OR (tagB AND tagC)"
 // File tags compose with this as "ftag1 AND ftag2 AND (<build-tags>)".
-// However in govendor all questions are reversed. Rather then asking
-// "What should be built?" we ask "What should be ingored?".
+// However in govendor all questions are reversed. Rather than asking
+// "What should be built?" we ask "What should be ignored?".
 
 type logical struct {
 	and bool
@@ -31,7 +31,7 @@ func (lt logicalTag) match(lt2 logicalTag) bool {
 	if lt.not || lt2.not {
 		return false
 	}
-	if lt.tag == lt2.tag{
+	if lt.tag == lt2.tag {
 		return true
 	}
 
@@ -72,7 +72,7 @@ func (l logical) empty() bool {
 }
 
 func (l logical) ignored(ignoreTags []logicalTag) bool {
-	// A logical is ingored if ANY AND conditions match or ALL OR conditions match.
+	// A logical is ignored if ANY AND conditions match or ALL OR conditions match.
 	if len(ignoreTags) == 0 {
 		return false
 	}

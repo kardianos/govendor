@@ -24,7 +24,7 @@
 		Do not integrate yet.
  - [x] Add a function to decide if a version is a label or revision.
 		A revision will either be a valid base64 string or a number without
-		any letters and greater then 100. A version will be anything else.
+		any letters and greater than 100. A version will be anything else.
 		A revision might be a short hash or long hash.
  - [x] Move existing commands to use the pkg-spec parser.
  - [x] Add common code to verify package's checksum, report package or folder trees that are not valid.

@@ -154,7 +154,7 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 	if strings.HasSuffix(pathname, ".go") == false {
 		return nil, nil
 	}
-	// No need to add the same file more then once.
+	// No need to add the same file more than once.
 	for _, pkg := range ctx.Package {
 		if pathos.FileStringEquals(pkg.Dir, dir) == false {
 			continue

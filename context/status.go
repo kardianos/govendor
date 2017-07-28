@@ -55,7 +55,7 @@ func (s Status) String() string {
 	}
 	switch s.Location {
 	default:
-		panic("Unkown Location type")
+		panic("Unknown Location type")
 	case LocationUnknown:
 		l = '_'
 	case LocationNotFound:

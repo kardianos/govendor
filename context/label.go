@@ -184,7 +184,7 @@ func (l labelAnalysisList) Less(i, j int) bool {
 			return true
 		}
 	}
-	// We ran out of things to check. Assume one is not "less" then the other.
+	// We ran out of things to check. Assume one is not "less" than the other.
 	df("PT D\n")
 	return false
 }

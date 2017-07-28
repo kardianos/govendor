@@ -535,7 +535,7 @@ func (ctx *Context) modifyFetch(pkg *Package, uncommitted, hasVersion bool, vers
 	return nil
 }
 
-// Check returns any conflicts when more then one package can be moved into
+// Check returns any conflicts when more than one package can be moved into
 // the same path.
 func (ctx *Context) Check() []*Conflict {
 	// Find duplicate packages that have been marked for moving.

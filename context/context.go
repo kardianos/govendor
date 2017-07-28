@@ -56,9 +56,9 @@ type Context struct {
 	// Package is a map where the import path is the key.
 	// Populated with LoadPackage.
 	Package map[string]*Package
-	// Change to unkown structure (rename). Maybe...
+	// Change to unknown structure (rename). Maybe...
 
-	// MoveRule provides the translation from origional import path to new import path.
+	// MoveRule provides the translation from original import path to new import path.
 	RewriteRule map[string]string // map[from]to
 
 	Operation []*Operation
@@ -84,7 +84,7 @@ type Package struct {
 	Gopath string // Includes trailing "src".
 	Files  []*File
 
-	inVendor bool // Different then Status.Location, this is in *any* vendor tree.
+	inVendor bool // Different than Status.Location, this is in *any* vendor tree.
 	inTree   bool
 
 	ignoreFile []string
