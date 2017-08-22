@@ -204,6 +204,7 @@ func (ctx *Context) ModifyImport(imp *pkgspec.Pkg, mod Modify, mops ...ModifyOpt
 			item.Pkg.HasVersion = true
 			item.Pkg.Version = imp.Version
 		}
+		item.Pkg.HasOrigin = imp.HasOrigin
 		item.Pkg.Origin = path.Join(imp.PathOrigin(), strings.TrimPrefix(item.Pkg.Path, imp.Path))
 		err = ctx.modify(item.Pkg, mod, mops)
 		if err != nil {
