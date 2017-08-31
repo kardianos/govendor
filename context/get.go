@@ -6,9 +6,9 @@ package context
 
 import (
 	"fmt"
+	"go/build"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/kardianos/govendor/pkgspec"
@@ -17,12 +17,7 @@ import (
 
 func Get(logger io.Writer, pkgspecName string, insecure bool) (*pkgspec.Pkg, error) {
 	// Get the GOPATHs.
-	cmd := exec.Command("go", "env", "GOPATH")
-	all, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-	gopathList := filepath.SplitList(string(all))
+	gopathList := filepath.SplitList(build.Default.GOPATH)
 	gopath := gopathList[0]
 
 	cwd, err := os.Getwd()
