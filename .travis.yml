@@ -1,9 +1,7 @@
 language: go
 go:
-  - 1.7.x
   - 1.8.x
   - 1.9.x
-  - tip
 install: 
 before_deploy:
 - GOOS=linux GOARCH=amd64 go build -o govendor_linux_amd64
