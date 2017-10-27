@@ -7,6 +7,7 @@ package context
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -229,11 +230,17 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 			version := ""
 			hasVersion := false
 			revision := ""
+			hasOrigin := false
+			origin := ""
 			for _, vv := range f.Ctx.VendorFile.Package {
 				if vv.Remove {
 					continue
 				}
 				if strings.HasPrefix(dep, vv.Path+"/") {
+					if len(vv.Origin) > 0 {
+						origin = path.Join(vv.PathOrigin(), strings.TrimPrefix(dep, vv.Path))
+						hasOrigin = true
+					}
 					if len(vv.Version) > 0 {
 						version = vv.Version
 						hasVersion = true
@@ -244,6 +251,23 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 						revision = vv.Revision
 					}
 				}
+			}
+
+			// Look for tree match in explicit imports
+			for _, item := range f.Ctx.TreeImport {
+				if item.Path != dep && !strings.HasPrefix(dep, item.Path+"/") {
+					continue
+				}
+				if len(item.Origin) > 0 {
+					origin = path.Join(item.PathOrigin(), strings.TrimPrefix(dep, item.Path))
+					hasOrigin = true
+				}
+				if len(item.Version) > 0 {
+					version = item.Version
+					hasVersion = true
+					revision = ""
+				}
+				break
 			}
 
 			f.HavePkg[dep] = true
@@ -257,16 +281,26 @@ func (f *fetcher) op(op *Operation) ([]*Operation, error) {
 					Path:     dep,
 					Revision: revision,
 					Version:  version,
+					Origin:   origin,
 				}
 				f.Ctx.VendorFile.Package = append(f.Ctx.VendorFile.Package, vp)
 			}
 			if hasVersion {
 				vp.Version = version
 			}
+			if hasOrigin {
+				vp.Origin = origin
+			}
 			if len(vp.Revision) == 0 {
 				vp.Revision = revision
 			}
-			spec := &pkgspec.Pkg{Path: dep, Version: version, HasVersion: hasVersion}
+			spec := &pkgspec.Pkg{
+				Path:       dep,
+				Version:    version,
+				HasVersion: hasVersion,
+				Origin:     origin,
+				HasOrigin:  hasOrigin,
+			}
 			nextOps = append(nextOps, &Operation{
 				Type: OpFetch,
 				Pkg:  &Package{Pkg: spec},

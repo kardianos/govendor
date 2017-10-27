@@ -211,6 +211,8 @@ func (ctx *Context) ModifyImport(imp *pkgspec.Pkg, mod Modify, mops ...ModifyOpt
 			return err
 		}
 	}
+	// cache for later use
+	ctx.TreeImport = append(ctx.TreeImport, imp)
 	return nil
 }
 

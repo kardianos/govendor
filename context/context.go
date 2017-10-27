@@ -61,6 +61,8 @@ type Context struct {
 	// MoveRule provides the translation from original import path to new import path.
 	RewriteRule map[string]string // map[from]to
 
+	TreeImport []*pkgspec.Pkg
+
 	Operation []*Operation
 
 	loaded, dirty  bool
