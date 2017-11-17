@@ -1,7 +1,7 @@
 language: go
 go:
-  - 1.8.x
-  - 1.9.x
+- 1.8.x
+- 1.9.x
 install: 
 before_deploy:
 - GOOS=linux GOARCH=amd64 go build -o govendor_linux_amd64
@@ -11,10 +11,9 @@ before_deploy:
 - GOOS=windows GOARCH=amd64 go build -o govendor_windows_amd64.exe
 - GOOS=windows GOARCH=386 go build -o govendor_windows_386.exe
 deploy:
-  skip_cleanup: true
   provider: releases
   api_key:
-    secure: pRyZ9BkbDmgJUAd+pxPcuhels+3wuYgPCwKrH0C5Urrn8goO2ABaVDD4dbz96I0ecLcE2qDmFl/GpPtlhhLwngWBnpUdWS/M6imoubneZ+NneRVfnGSNUeDrZf8vVcGV9N6lpfDktIRb51XBCYaLcKvpHtpYjZtSbm+ENWddBz2wX2OUPHnO1lxdrDj4bpLBnzoNDucLO+zF+s6yjyHgC7eTkocfC+ywLm+zyE1zjKFJeAecWZgPACdOTKD/Nh4hY2vAo8Il37Ju4sCVWYrJYerrMzCJJsxGUGu5+jJBlIKLluTePbrvjAvTBa+HXcxHu2vpZlezPShczaiQYe0yMkkl4c90pzllWuWCpNRLFJvHsdvi7OxRMyfdccg9cppxvtqVLZsaIFmhI7VOm49Yd9LyHnbt/hfBchxQSaUEoVNx9AS8exZx/uH2oyhmFom1K+tQBhaMBUnP9kesiJ9YeUwS9YK+ubE/MU8e4X7IorxyekaiuqtYVisLhkoaUlJYcYcmdu41mLeqbZ8sqxFCbXWbOblKirsWi8BR+lh84qgyRjXSwmiyO7e/TyvfeEVXfOQPlq7YqfJpHg2Bfwza4H4p9YsFsjO6cWAPsvHJWy8HcB6/hmfLEWktHU01MM4TE/Ajanzt/LjR8SMm9lMyC4fSY8D1gVPWpr2gM2GA8gY=
+    secure: D4zFkClhHZBIGCWK2WkwKW0cgERHqs8cRjYdgAahEwzPKdXwHBkjsTIg58xU6tnnjNbCydAIw8U1mzJaJx6WioknWJKjnfT1MDiScdf1DFBmop6uuNLpE76PtQ3Au7XEKOKeiOs62OVL6ov2Ah/DEx8hRfilENVidKDnRa2uRw2mKn9rLj4T1zif0VDtgmVS75/IFKh469RYUbsVvvmzJsCbMjYvXo1oJQw1iXfUifX5Fawz7G3xAvYoOLWBc72hTdj8383GYOujnhlsM4paWc2blSJ8ImRim5yOnhB1jg022A49BMpyGJtIdXtXWTpkQ5RdOr4CbzgYJQQEIqkl6GjUcDx78Kxt+FLvl4M2MjJhtTjo0XF/SgI45CP5QMEwpw2tRlFH7slmJWv0cDf/K1o3VkIztlWLR6AwNJlMGy0kAf4K94wUpNZm1Z35fa3w1xV59RdSpS940Pz+bOhpR/vI8KDtGOsUX9asRMgW9aEOv6ak3W7DuEE1+LwYXRunTk/5PcyCbee3qDdFaYxbcBIVBYYKwIlTHC3VG9J6vCjlZ9efpEHJ9IVr/BCGhIGNt6Mv0Mfp2Y7zN6R4BvP1F7rZI1hjbPAgum8L3T2cz80O92sToibPBgEGEIoZ7XGPPNuw41aw5IQcQU1nD/mcgQ6JnfuEBKANgT8xGfehxdY=
   file:
   - govendor_linux_amd64
   - govendor_linux_386
@@ -22,6 +21,7 @@ deploy:
   - govendor_darwin_amd64
   - govendor_windows_amd64.exe
   - govendor_windows_386.exe
+  
   on:
     tags: true
     repo: kardianos/govendor
