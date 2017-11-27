@@ -193,6 +193,13 @@ func (vcs *gitVcsHandle) Commit() (rev string, commitTime string) {
 	out := vcs.run("show", "--pretty=format:%H@%ai", "-s")
 
 	line := strings.TrimSpace(string(out))
+
+	// remove gpg parts from git show
+	gpgLine := strings.Split(line, "\n")
+	if len(gpgLine) > 1 {
+		line = gpgLine[len(gpgLine)-1]
+	}
+
 	ss := strings.Split(line, "@")
 	rev = ss[0]
 	tm, err := time.Parse("2006-01-02 15:04:05 -0700", ss[1])

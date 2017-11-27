@@ -38,12 +38,20 @@ func (VcsGit) Find(dir string) (*VcsInfo, error) {
 	}
 
 	cmd = exec.Command("git", "show", "--pretty=format:%H@%ai", "-s")
+
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
 	line := strings.TrimSpace(string(output))
+
+	// remove gpg parts from git show
+	gpgLine := strings.Split(line, "\n")
+	if len(gpgLine) > 1 {
+		line = gpgLine[len(gpgLine)-1]
+	}
+
 	ss := strings.Split(line, "@")
 	info.Revision = ss[0]
 	tm, err := time.Parse("2006-01-02 15:04:05 -0700", ss[1])
