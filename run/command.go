@@ -101,16 +101,25 @@ func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
 	otherArgs := make([]string, 1, len(args)+1)
 	otherArgs[0] = subcmd
 
+	// We keep track of whether any filtering was requested, and if so,
+	// whether a filter actually matched any items.
+	var filtersRequested, filtersFound bool
+
 	// Expand any status flags in-place. Some wrapped commands the order is
 	// important to the operation of the command.
 	for _, a := range args {
-		if a[0] == '+' {
+		if len(a) > 0 && a[0] == '+' {
+			filtersRequested = true
+
 			f, err := parseFilter(cgp, []string{a})
 			if err != nil {
 				return help.MsgNone, err
 			}
+
 			for _, item := range list {
 				if f.HasStatus(item) {
+					filtersFound = true
+
 					add := item.Local
 					// "go tool vet" takes dirs, not pkgs, so special case it.
 					if subcmd == "tool" && len(args) > 0 && args[0] == "vet" {
@@ -122,6 +131,13 @@ func (r *runner) GoCmd(subcmd string, args []string) (help.HelpMessage, error) {
 		} else {
 			otherArgs = append(otherArgs, a)
 		}
+	}
+
+	// If at least one filter was requested but we didn't match any packages,
+	// we want to bail out; otherwise, the command will behave as if we ran it
+	// against the current package instead of the requested filters' packages.
+	if filtersRequested && !filtersFound {
+		return help.MsgNone, nil
 	}
 
 	cmd := exec.Command("go", otherArgs...)
