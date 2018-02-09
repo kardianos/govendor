@@ -33,10 +33,10 @@
 			"revisionTime": "2018-02-02T13:35:31Z"
 		},
 		{
-			"checksumSHA1": "uwKP1AVzd+lrTMlXVFjZXXHzB7U=",
+			"checksumSHA1": "ULu8vRll6GP40qFH7OrHVcDSUOc=",
 			"path": "golang.org/x/tools/go/vcs",
-			"revision": "1727758746e7a08feaaceb9366d1468498ac2ac2",
-			"revisionTime": "2016-06-24T22:27:06Z"
+			"revision": "70252dea49c01dbfc3f800978304eb00eb15b698",
+			"revisionTime": "2018-02-09T16:58:40Z"
 		},
 		{
 			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
