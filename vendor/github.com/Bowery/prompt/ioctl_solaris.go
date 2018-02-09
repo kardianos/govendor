@@ -37,5 +37,5 @@ func setTermios(fd uintptr, flush bool, mode *unix.Termios) error {
 		req = tcsetsf
 	}
 
-	return unix.IoctlSetTermios(int(fd), req, mode)
+	return unix.IoctlSetTermios(int(fd), uint(req), mode)
 }

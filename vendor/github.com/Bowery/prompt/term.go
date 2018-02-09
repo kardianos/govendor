@@ -86,7 +86,7 @@ func (term *Terminal) Basic(prefix string, required bool) (string, error) {
 
 // BasicDefault gets input and if empty uses the given default.
 func (term *Terminal) BasicDefault(prefix, def string) (string, error) {
-	return term.Custom(prefix+"(Default: "+def+")", func(input string) (string, bool) {
+	return term.Custom(prefix+" (Default: "+def+")", func(input string) (string, bool) {
 		if input == "" {
 			input = def
 		}
@@ -98,7 +98,7 @@ func (term *Terminal) BasicDefault(prefix, def string) (string, error) {
 // Ask gets input and checks if it's truthy or not, and returns that
 // in a boolean fashion.
 func (term *Terminal) Ask(question string) (bool, error) {
-	input, err := term.Custom(question+"?(y/n)", func(input string) (string, bool) {
+	input, err := term.Custom(question+"? (y/n)", func(input string) (string, bool) {
 		if input == "" {
 			return "", false
 		}
@@ -155,6 +155,8 @@ func (term *Terminal) Password(prefix string) (string, error) {
 
 // GetPrompt gets a line with the prefix and echos input.
 func (term *Terminal) GetPrompt(prefix string) (string, error) {
+	prefix += " "
+
 	if !term.t.supportsEditing {
 		return term.simplePrompt(prefix)
 	}
@@ -165,6 +167,8 @@ func (term *Terminal) GetPrompt(prefix string) (string, error) {
 
 // GetPassword gets a line with the prefix and doesn't echo input.
 func (term *Terminal) GetPassword(prefix string) (string, error) {
+	prefix += " "
+
 	if !term.t.supportsEditing {
 		return term.simplePrompt(prefix)
 	}

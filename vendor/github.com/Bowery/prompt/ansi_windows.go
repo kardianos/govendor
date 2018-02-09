@@ -281,7 +281,7 @@ func (aw *AnsiWriter) Write(b []byte) (int, error) {
 			continue
 		}
 
-		// Funtion identifiers.
+		// Function identifiers.
 		if len(aw.buf) == 1 && (char == '_' || char == 'P' || char == '[' ||
 			char == ']' || char == '^' || char == ' ' || char == '#' ||
 			char == '%' || char == '(' || char == ')' || char == '*' ||
