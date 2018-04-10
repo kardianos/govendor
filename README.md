@@ -118,7 +118,7 @@ Status can be logically composed:
 ## Package specifier
 
 The full package-spec is:
-`<path>[::<origin>][{/...|/^}][@[<version-spec>]]`
+`<path>[{/...|/^}][::<origin>][@[<version-spec>]]`
 
 Some examples:
 

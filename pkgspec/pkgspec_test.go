@@ -22,6 +22,7 @@ func TestParse(t *testing.T) {
 		{Spec: "abc/def::foo/bar/vendor/abc/def"},
 		{Spec: "abc/def::foo/bar/vendor/abc/def@"},
 		{Spec: "abc/def::foo/bar/vendor/abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasOrigin: true, Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}},
+		{Spec: "abc/def/^::foo/bar/vendor/abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", IncludeTree: true, HasOrigin: true, Origin: "foo/bar/vendor/abc/def", HasVersion: true, Version: "v1.2.3"}},
 		{Spec: "abc/def@", Pkg: &Pkg{Path: "abc/def", HasVersion: true}},
 		{Spec: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}},
 		{Spec: "./def@v1.2.3", Str: "abc/def@v1.2.3", Pkg: &Pkg{Path: "abc/def", HasVersion: true, Version: "v1.2.3"}, WD: "abc/"},
