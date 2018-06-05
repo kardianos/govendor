@@ -32,6 +32,8 @@ func FileHasPrefix(s, prefix string) bool {
 func FileTrimPrefix(s, prefix string) string {
 	if FileHasPrefix(s, prefix) {
 		return s[len(prefix):]
+	} else if FileStringEquals(s, prefix) {
+		return ""
 	}
 	return s
 }
@@ -46,6 +48,8 @@ func FileHasSuffix(s, suffix string) bool {
 func FileTrimSuffix(s, suffix string) string {
 	if FileHasSuffix(s, suffix) {
 		return s[:len(s)-len(suffix)]
+	} else if FileStringEquals(s, suffix) {
+		return ""
 	}
 	return s
 }
