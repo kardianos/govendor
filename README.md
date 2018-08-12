@@ -19,7 +19,7 @@ Uses the go1.5+ vendor folder. Multiple workflows supported, single tool.
 	remotes with `govendor fetch`.
  * Migrate from legacy systems with `govendor migrate`.
  * Supports Linux, OS X, Windows, probably all others.
- * Supports git, hg, svn, bzr (must be installed an on the PATH).
+ * Supports git, hg, svn, bzr (must be installed and on the PATH).
 
 ## Notes
 
