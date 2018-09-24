@@ -271,7 +271,7 @@ func (r *runner) runAsync(checkFor string, args ...string) *exec.Cmd {
 	}
 	err := cmd.Start()
 	if err != nil {
-		r.t.Fatalf("Failed to start %q %q: %v", r.execPath, args)
+		r.t.Fatalf("Failed to start %q: %v", r.execPath, args)
 	}
 	r.t.onClean(func() {
 		if cmd.Process == nil {
