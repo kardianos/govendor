@@ -40,7 +40,8 @@ func (VcsGit) Find(dir string) (*VcsInfo, error) {
 	cmd = exec.Command("git", "show", "--pretty=format:%H@%ai", "-s")
 
 	cmd.Dir = dir
-	output, err := cmd.CombinedOutput()
+	cmd.Stderr = nil
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
