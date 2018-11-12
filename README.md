@@ -1,5 +1,29 @@
-# The Vendor Tool for Go
+## The Vendor Tool for Go
 `go get -u github.com/kardianos/govendor`
+
+# Use Go modules
+
+[Go modules](https://golang.org/cmd/go/#hdr-Modules__module_versions__and_more)
+were initially released with Go1.11. Fixes and improvements
+in Go1.11.2 and the to-be-released Go1.12 have and will make Go modules
+even better.
+
+Go modules as a release and build tool are ready to use now.
+Tool support for Go modules (such as static analysis tools or
+auto-complete tools in editors) should be in a much better state
+when Go1.12 is released.
+
+Please begin thinking about code organization in terms of modules today.
+Please begin to release modules with standardized build tags (vX.Y.Z) today.
+Please consider adding go.mod files to your projects if you consider them
+more of a "library" module. Please use Go modules in small or personal projects.
+
+For larger code bases with many different programmers, you may wish to
+hold off on migrating to Go modules until you have verified that all your existing
+tooling (editors, static analizers, and code generators) have support for
+Go modules.
+
+# Govendor Introduction
 
 New users please read the [FAQ](doc/faq.md)
 
