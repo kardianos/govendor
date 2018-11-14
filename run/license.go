@@ -87,7 +87,7 @@ func (r *runner) License(w io.Writer, subCmdArgs []string) (help.HelpMessage, er
 	}
 
 	for _, item := range list {
-		if f.HasStatus(item) == false {
+		if !f.HasStatus(item) {
 			continue
 		}
 		if len(f.Import) != 0 && f.FindImport(item) == nil {

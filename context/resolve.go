@@ -80,7 +80,7 @@ func (ctx *Context) loadPackage() error {
 func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags *TagSet, imports []string, err error) {
 	_, filenameExt := filepath.Split(pathname)
 
-	if strings.HasSuffix(pathname, ".go") == false {
+	if !strings.HasSuffix(pathname, ".go") {
 		return nil, nil, nil
 	}
 	if f == nil {
@@ -151,12 +151,12 @@ func (ctx *Context) addFileImports(pathname, gopath string) (*Package, error) {
 	importPath = pathos.SlashToImportPath(importPath)
 	importPath = strings.Trim(importPath, "/")
 
-	if strings.HasSuffix(pathname, ".go") == false {
+	if !strings.HasSuffix(pathname, ".go") {
 		return nil, nil
 	}
 	// No need to add the same file more than once.
 	for _, pkg := range ctx.Package {
-		if pathos.FileStringEquals(pkg.Dir, dir) == false {
+		if !pathos.FileStringEquals(pkg.Dir, dir) {
 			continue
 		}
 		for _, f := range pkg.Files {

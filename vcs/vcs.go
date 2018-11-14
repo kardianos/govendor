@@ -70,7 +70,7 @@ func FindVcs(root, packageDir string) (info *VcsInfo, err error) {
 		if nextPath == path {
 			return nil, nil
 		}
-		if pathos.FileHasPrefix(nextPath, root) == false {
+		if !pathos.FileHasPrefix(nextPath, root) {
 			return nil, nil
 		}
 		path = nextPath

@@ -112,7 +112,7 @@ func hasDirs(root string, dd ...string) bool {
 		if err != nil {
 			return false
 		}
-		if fi.IsDir() == false {
+		if !fi.IsDir() {
 			return false
 		}
 	}
@@ -125,7 +125,7 @@ func hasFiles(root string, dd ...string) bool {
 		if err != nil {
 			return false
 		}
-		if fi.IsDir() == true {
+		if fi.IsDir() {
 			return false
 		}
 	}

@@ -23,7 +23,7 @@ func (VcsHg) Find(dir string) (*VcsInfo, error) {
 		}
 		return nil, err
 	}
-	if fi.IsDir() == false {
+	if !fi.IsDir() {
 		return nil, nil
 	}
 

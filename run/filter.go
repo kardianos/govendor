@@ -164,7 +164,7 @@ func insertListToAllNot(sg *context.StatusGroup, list []context.Status) {
 	if len(sg.Group) == 0 {
 		allStatusNot := true
 		for _, s := range sg.Status {
-			if s.Not == false {
+			if !s.Not {
 				allStatusNot = false
 				break
 			}

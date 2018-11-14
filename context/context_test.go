@@ -1065,7 +1065,7 @@ func TestRemove(t *testing.T) {
 	if err != nil {
 		t.Fatal("vendor folder should still be present", err)
 	}
-	if vi.IsDir() == false {
+	if !vi.IsDir() {
 		t.Fatal("vendor folder is not a dir")
 	}
 }

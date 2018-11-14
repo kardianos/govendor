@@ -99,7 +99,7 @@ func (r *runner) List(w io.Writer, subCmdArgs []string) (help.HelpMessage, error
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	defer tw.Flush()
 	for _, item := range list {
-		if f.HasStatus(item) == false {
+		if !f.HasStatus(item) {
 			continue
 		}
 		if len(f.Import) != 0 && f.FindImport(item) == nil {

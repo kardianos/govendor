@@ -24,7 +24,7 @@ func (ctx *Context) isStdLib(importPath string) (yes bool, err error) {
 	if fi == nil {
 		return
 	}
-	if fi.IsDir() == false {
+	if !fi.IsDir() {
 		return
 	}
 
@@ -54,7 +54,7 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 			if err != nil {
 				continue
 			}
-			if fi.IsDir() == false {
+			if !fi.IsDir() {
 				continue
 			}
 			for _, gopath = range ctx.GopathList {
@@ -80,7 +80,7 @@ func (ctx *Context) findImportDir(relative, importPath string) (dir, gopath stri
 		if fi == nil {
 			continue
 		}
-		if fi.IsDir() == false {
+		if !fi.IsDir() {
 			continue
 		}
 
@@ -117,7 +117,7 @@ func findRoot(folder, vendorPath string) (root string, err error) {
 	for i := 0; i <= looplimit; i++ {
 		test := filepath.Join(folder, vendorPath)
 		_, err := os.Stat(test)
-		if os.IsNotExist(err) == false {
+		if !os.IsNotExist(err) {
 			return folder, nil
 		}
 		nextFolder := filepath.Clean(filepath.Join(folder, ".."))
@@ -146,7 +146,7 @@ func hasGoFileInFolder(folder string) (bool, error) {
 		return false, err
 	}
 	for _, fi := range fl {
-		if fi.IsDir() == false && filepath.Ext(fi.Name()) == ".go" {
+		if !fi.IsDir() && filepath.Ext(fi.Name()) == ".go" {
 			return true, nil
 		}
 	}
@@ -210,7 +210,7 @@ func RemovePackage(path, root string, tree bool) error {
 		if len(fl) > 0 {
 			allAreLicense := true
 			for _, fi := range fl {
-				if isLicenseFile(fi.Name()) == false {
+				if !isLicenseFile(fi.Name()) {
 					allAreLicense = false
 					break
 				}

@@ -101,13 +101,13 @@ func (ctx *Context) rewrite() error {
 		Tabwidth: 8,
 	}
 	for _, fileInfo := range filePaths {
-		if pathos.FileHasPrefix(fileInfo.Path, ctx.RootDir) == false {
+		if !pathos.FileHasPrefix(fileInfo.Path, ctx.RootDir) {
 			continue
 		}
 
 		// Read the file into AST, modify the AST.
 		fileset := token.NewFileSet()
-		f, err := parser.ParseFile(fileset, fileInfo.Path, nil, parser.ParseComments)
+		f, _ := parser.ParseFile(fileset, fileInfo.Path, nil, parser.ParseComments)
 		if f == nil {
 			return nil
 		}

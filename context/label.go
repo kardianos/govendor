@@ -74,7 +74,7 @@ func (item *labelAnalysis) fillSections(buf *bytes.Buffer) {
 			if err != nil {
 				value = -1
 			}
-			if isBreak(r) == false {
+			if !isBreak(r) {
 				r = 0
 			}
 			group.sections = append(group.sections, labelSection{
@@ -209,7 +209,7 @@ func FindLabel(version string, labels []Label) Label {
 			}
 			continue
 		}
-		if strings.HasPrefix(label.Text, version) == false {
+		if !strings.HasPrefix(label.Text, version) {
 			continue
 		}
 		remain := strings.TrimPrefix(label.Text, version)

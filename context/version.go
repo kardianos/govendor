@@ -29,7 +29,7 @@ func isVersion(s string) bool {
 	if hasPunct {
 		return true
 	}
-	if onlyHexLetter == false {
+	if !onlyHexLetter {
 		return true
 	}
 

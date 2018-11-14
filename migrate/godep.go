@@ -93,7 +93,7 @@ func (sysGodep) Migrate(root string) error {
 
 	for _, d := range godeps.Deps {
 		for _, pkg := range ctx.Package {
-			if strings.HasPrefix(pkg.Path, d.ImportPath) == false {
+			if !strings.HasPrefix(pkg.Path, d.ImportPath) {
 				continue
 			}
 			vf := ctx.VendorFilePackagePath(pkg.Path)
