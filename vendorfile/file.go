@@ -81,19 +81,6 @@ func (list packageList) String() string {
 	return buf.String()
 }
 
-func allString(all map[string]interface{}) string {
-	obj, _ := all["package"]
-	buf := &bytes.Buffer{}
-	for _, itemObj := range obj.([]interface{}) {
-		item := itemObj.(map[string]interface{})
-		buf.WriteString("\t")
-		buf.WriteString(item["path"].(string))
-		buf.WriteRune('\n')
-	}
-	buf.WriteRune('\n')
-	return buf.String()
-}
-
 var (
 	rootPathNames     = []string{"rootPath"}
 	packageNames      = []string{"package", "Package"}

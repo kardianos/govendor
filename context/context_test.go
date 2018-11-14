@@ -132,21 +132,6 @@ func vendorFile(g *gt.GopathTest, name, expected string, ignore ...string) {
 	}
 }
 
-func showRewriteRule(c *Context, t *testing.T) {
-	for from, to := range c.RewriteRule {
-		t.Logf("R: %s to %s\n", from, to)
-	}
-}
-func showCurrentVendorFile(c *Context, t *testing.T) {
-	t.Log("Vendor File (memory)")
-	for _, vp := range c.VendorFile.Package {
-		if vp.Remove {
-			continue
-		}
-		t.Logf("\tPKG:: P: %s, O: %s\n", vp.Path, vp.Origin)
-	}
-}
-
 func TestSimple(t *testing.T) {
 	g := gt.New(t)
 	defer g.Clean()

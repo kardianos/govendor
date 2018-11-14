@@ -112,31 +112,6 @@ func getHash(root, fp string, h hash.Hash, skipper func(name string, isDir bool)
 	return nil
 }
 
-// similarSegments compares two paths and determines if they have
-// similar prefix segments. For example github.com/kardianos/rdb and
-// github.com/kardianos/govendor have 2 similar segments.
-func similarSegments(p1, p2 string) (string, int) {
-	seg1 := strings.Split(p1, "/")
-	seg2 := strings.Split(p2, "/")
-
-	ct := len(seg1)
-	if len(seg2) < ct {
-		ct = len(seg2)
-	}
-
-	similar := &bytes.Buffer{}
-	for i := 0; i < ct; i++ {
-		if seg1[i] != seg2[i] {
-			return similar.String(), i
-		}
-		if i != 0 {
-			similar.WriteRune('/')
-		}
-		similar.WriteString(seg1[i])
-	}
-	return similar.String(), ct
-}
-
 type remoteFailure struct {
 	Path string
 	Msg  string
