@@ -177,7 +177,9 @@ func licenseCopy(root, startIn, vendorRoot, pkgPath string) error {
 			return errors.Errorf("Source license path doesn't exist %q", srcPath)
 		}
 		destDir, _ := filepath.Split(destPath)
-		os.MkdirAll(destDir, 0777)
+		if err = os.MkdirAll(destDir, 0777); err != nil {
+			return errors.Wrapf(err, "Failed to create the directory %q", destDir)
+		}
 		return errors.Wrapf(copyFile(destPath, srcPath, nil), "copyFile dest=%q src=%q", destPath, srcPath)
 	})
 }

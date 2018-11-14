@@ -79,7 +79,10 @@ func (r *runner) Get(w io.Writer, subCmdArgs []string) (help.HelpMessage, error)
 			return help.MsgNone, err
 		}
 
-		r.GoCmd("install", []string{pkg.Path})
+		helpMessage, err := r.GoCmd("install", []string{pkg.Path})
+		if err != nil {
+			return helpMessage, err
+		}
 	}
 	return help.MsgNone, nil
 }

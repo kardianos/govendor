@@ -84,7 +84,7 @@ func (ctx *Context) getFileTags(pathname string, f *ast.File) (tags *TagSet, imp
 		return nil, nil, nil
 	}
 	if f == nil {
-		f, err = parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
+		f, _ = parser.ParseFile(token.NewFileSet(), pathname, nil, parser.ImportsOnly|parser.ParseComments)
 		if f == nil {
 			return nil, nil, nil
 		}

@@ -23,7 +23,9 @@ func (ctx *Context) rewrite() error {
 		return nil
 	}
 	if ctx.dirty {
-		ctx.loadPackage()
+		if err := ctx.loadPackage(); err != nil {
+			return err
+		}
 	}
 	ctx.dirty = true
 
