@@ -1,3 +1,5 @@
+// +build aix solaris
+
 // Copyright 2013-2015 Bowery, Inc.
 
 package prompt

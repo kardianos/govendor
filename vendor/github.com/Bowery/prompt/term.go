@@ -177,8 +177,22 @@ func (term *Terminal) GetPassword(prefix string) (string, error) {
 	return term.password(buf, NewAnsiReader(term.In))
 }
 
+// Close calls close on the internal terminal.
 func (term *Terminal) Close() error {
 	return term.t.Close()
+}
+
+// Reopen re-opens an internal terminal.
+func (term *Terminal) Reopen() error {
+	in := os.Stdin
+
+	t, err := newTerminal(in)
+	if err != nil {
+		return err
+	}
+
+	term.t = t
+	return nil
 }
 
 // simplePrompt is a fallback prompt without line editing support.
@@ -340,7 +354,19 @@ func (term *Terminal) prompt(buf *Buffer, in io.Reader) (string, error) {
 			continue
 		case evReturn:
 			err = buf.EndLine()
-			return buf.String(), err
+			if err != nil {
+				return buf.String(), err
+			}
+
+			line := buf.String()
+			if line == "" {
+				term.histIdx = curHistIdx - 1
+				term.History = term.History[:curHistIdx]
+			} else {
+				term.History[curHistIdx] = line
+			}
+
+			return line, nil
 		case evEOF:
 			err = buf.EndLine()
 			if err == nil {

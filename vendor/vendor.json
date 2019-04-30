@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "ZQJSiJXqf+iSGZaOZT/rxEG/Wf8=",
+			"checksumSHA1": "kwUfnTXFn6mjfw31/cmVIizn/Q4=",
 			"path": "github.com/Bowery/prompt",
-			"revision": "94b504f42fdd503acc3b3c79ec2b517d90e0de8a",
-			"revisionTime": "2018-02-09T14:12:55Z"
+			"revision": "972d0ceb96f55132a1ba9714cb771ce19b3821ab",
+			"revisionTime": "2019-04-19T14:42:37Z"
 		},
 		{
 			"checksumSHA1": "6VGFARaK8zd23IAiDf7a+gglC8k=",
@@ -27,10 +27,10 @@
 			"revisionTime": "2016-06-27T22:23:52Z"
 		},
 		{
-			"checksumSHA1": "CNHEeGnucEUlTHJrLS2kHtfNbws=",
+			"checksumSHA1": "M19t1y+ecnozxkTN9N5/J/uf1AI=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
-			"revisionTime": "2018-02-02T13:35:31Z"
+			"revision": "53818c742c03109fe2abe531e7f7ece7ab06a461",
+			"revisionTime": "2019-04-19T09:16:35Z"
 		},
 		{
 			"checksumSHA1": "ULu8vRll6GP40qFH7OrHVcDSUOc=",
