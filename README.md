@@ -198,9 +198,9 @@ listed, and thus not vendored.
 
 To exclude packages, also use the "ignore" field of the "vendor.json" file.
 Packages are identified by their name, they should contain a "/" character
-(possibly at the end):
+(but not at the end):
 ```
 {
-	"ignore": "test appengine foo/",
+	"ignore": "test appengine foo/bar",
 }
 ```
